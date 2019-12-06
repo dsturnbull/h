@@ -1,0 +1,153 @@
+cabal-version:          3.0
+name:                   h
+version:                0.0.1
+build-type:             Simple
+
+flag dev
+    description: whether to compile test things
+    default: False
+    manual: True
+
+common config
+  ghc-options:          -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wredundant-constraints -msse4.2
+  default-language:     Haskell2010
+
+common common-deps
+  build-depends:
+      base                        >= 4.7          && < 5
+    , ansi-terminal              ^>= 0.10.2
+    , array                      ^>= 0.5.3.0
+    , bytestring                 ^>= 0.10.10.0
+    , generic-lens               ^>= 1.1.0.0
+    , hw-bits                    ^>= 0.7.0.9
+    , lens                       ^>= 4.18.1
+    , megaparsec                 ^>= 8.0.0
+    , mtl                        ^>= 2.2.2
+    , qm-interpolated-string     ^>= 0.3.0.0
+    , text                       ^>= 1.2.4.0
+    , vector                     ^>= 0.12.0.3
+
+library
+  import:               common-deps, config
+  exposed-modules:      ASM.Assembler
+                        ASM.Lexer
+                        ASM.Parser
+                        CPU
+                        CPU.Program
+                        CPU.Run
+                        CPU.Instruction
+                        CPU.Instructions.ADC
+                        CPU.Instructions.AND
+                        CPU.Instructions.ASL
+                        CPU.Instructions.B
+                        CPU.Instructions.BRK
+                        CPU.Instructions.CL
+                        CPU.Instructions.CMP
+                        CPU.Instructions.CPX
+                        CPU.Instructions.CPY
+                        CPU.Instructions.DE
+                        CPU.Instructions.EOR
+                        CPU.Instructions.IN
+                        CPU.Instructions.JMP
+                        CPU.Instructions.JSR
+                        CPU.Instructions.LDA
+                        CPU.Instructions.LDX
+                        CPU.Instructions.LDY
+                        CPU.Instructions.LSR
+                        CPU.Instructions.NOP
+                        CPU.Instructions.ORA
+                        CPU.Instructions.PH
+                        CPU.Instructions.PL
+                        CPU.Instructions.ROL
+                        CPU.Instructions.RT
+                        CPU.Instructions.SE
+                        CPU.Instructions.SBC
+                        CPU.Instructions.STA
+                        CPU.Instructions.STX
+                        CPU.Instructions.STY
+                        CPU.Instructions.T
+  hs-source-dirs:       src
+  if flag(dev)
+    build-depends:      hedgehog
+                      , hspec
+                      , hw-hspec-hedgehog
+  build-tool-depends:   alex:alex, happy:happy
+
+-- library sasm-lib
+--   import:               common-deps, config
+--   exposed-modules:      Assembler
+--                         Assembly
+--   hs-source-dirs:       sasm
+--   build-depends:        h
+--   build-tool-depends:   alex:alex
+
+executable sasm
+  import:               common-deps, config
+  main-is:              Main.hs
+  hs-source-dirs:       sasm
+  ghc-options:          -threaded -rtsopts
+  build-depends:        h
+  --, sasm-lib
+
+-- library cpu-lib
+--   import:               common-deps, config
+--   build-depends:        h, sasm-lib
+--   exposed-modules:      Run
+--   hs-source-dirs:       cpu
+
+executable cpu
+  import:               common-deps, config
+  main-is:              Main.hs
+  hs-source-dirs:       cpu
+  ghc-options:          -threaded -rtsopts
+  build-depends:        h
+  --, sasm-lib, cpu-lib
+
+test-suite h-test
+  import:               common-deps, config
+  type:                 exitcode-stdio-1.0
+  main-is:              Spec.hs
+  other-modules:        CPU.Gen
+                        CPU.Instructions.Gen
+                        ASM.AssemblerSpec
+                        CPU.RunSpec
+                        CPU.Instructions.ADCSpec
+                        CPU.Instructions.ANDSpec
+                        CPU.Instructions.ASLSpec
+                        CPU.Instructions.BSpec
+                        CPU.Instructions.BRKSpec
+                        CPU.Instructions.CLSpec
+                        CPU.Instructions.CMPSpec
+                        CPU.Instructions.CPXSpec
+                        CPU.Instructions.CPYSpec
+                        CPU.Instructions.DESpec
+                        CPU.Instructions.EORSpec
+                        CPU.Instructions.INSpec
+                        CPU.Instructions.JMPSpec
+                        CPU.Instructions.JSRSpec
+                        CPU.Instructions.LDASpec
+                        CPU.Instructions.LDXSpec
+                        CPU.Instructions.LDYSpec
+                        CPU.Instructions.LSRSpec
+                        CPU.Instructions.NOPSpec
+                        CPU.Instructions.ORASpec
+                        CPU.Instructions.PHSpec
+                        CPU.Instructions.PLSpec
+                        CPU.Instructions.ROLSpec
+                        CPU.Instructions.RTSpec
+                        CPU.Instructions.SESpec
+                        CPU.Instructions.SBCSpec
+                        CPU.Instructions.STASpec
+                        CPU.Instructions.STXSpec
+                        CPU.Instructions.STYSpec
+                        CPU.Instructions.TSpec
+  hs-source-dirs:       test
+  ghc-options:          -threaded -rtsopts -with-rtsopts=-N
+  build-tool-depends:   hspec-discover:hspec-discover
+  build-depends:        h
+                      , hedgehog
+                      , hspec
+                      , hw-hspec-hedgehog
+                      , hspec-megaparsec           ^>= 2.1.0
+                      -- , sasm-lib
+                      -- , cpu-lib
