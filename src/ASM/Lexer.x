@@ -35,9 +35,6 @@ tokens :-
   adc                           { const TokenADC }
   and                           { const TokenAND }
   asl                           { const TokenASL }
-  lda                           { const TokenLDA }
-  ldx                           { const TokenLDX }
-  ldy                           { const TokenLDY }
   bcc                           { const TokenBCC }
   bcs                           { const TokenBCS }
   beq                           { const TokenBEQ }
@@ -46,6 +43,10 @@ tokens :-
   bpl                           { const TokenBPL }
   bvc                           { const TokenBVC }
   bvs                           { const TokenBVS }
+  clc                           { const TokenCLC }
+  cli                           { const TokenCLI }
+  clv                           { const TokenCLV }
+  cld                           { const TokenCLD }
   cmp                           { const TokenCMP }
   cpx                           { const TokenCPX }
   cpy                           { const TokenCPY }
@@ -53,6 +54,26 @@ tokens :-
   dex                           { const TokenDEX }
   dey                           { const TokenDEY }
   eor                           { const TokenEOR }
+  inc                           { const TokenINC }
+  inx                           { const TokenINX }
+  iny                           { const TokenINY }
+  jmp                           { const TokenJMP }
+  lda                           { const TokenLDA }
+  ldx                           { const TokenLDX }
+  ldy                           { const TokenLDY }
+  lsr                           { const TokenLSR }
+  nop                           { const TokenNOP }
+  ora                           { const TokenORA }
+  sec                           { const TokenSEC }
+  sei                           { const TokenSEI }
+  sed                           { const TokenSED }
+  rol                           { const TokenROL }
+  tax                           { const TokenTAX }
+  txa                           { const TokenTXA }
+  tay                           { const TokenTAY }
+  tya                           { const TokenTYA }
+  tsx                           { const TokenTSX }
+  txs                           { const TokenTXS }
 
   -- Syntax
   "$"                           { const TokenDollar }
@@ -68,9 +89,6 @@ data Token
   = TokenADC
   | TokenAND
   | TokenASL
-  | TokenLDA
-  | TokenLDX
-  | TokenLDY
   | TokenBCC
   | TokenBCS
   | TokenBEQ
@@ -79,6 +97,10 @@ data Token
   | TokenBPL
   | TokenBVC
   | TokenBVS
+  | TokenCLC
+  | TokenCLI
+  | TokenCLV
+  | TokenCLD
   | TokenCMP
   | TokenCPX
   | TokenCPY
@@ -86,6 +108,26 @@ data Token
   | TokenDEX
   | TokenDEY
   | TokenEOR
+  | TokenINC
+  | TokenINX
+  | TokenINY
+  | TokenJMP
+  | TokenLDA
+  | TokenLDX
+  | TokenLDY
+  | TokenLSR
+  | TokenNOP
+  | TokenORA
+  | TokenSEC
+  | TokenSEI
+  | TokenSED
+  | TokenROL
+  | TokenTAX
+  | TokenTXA
+  | TokenTAY
+  | TokenTYA
+  | TokenTSX
+  | TokenTXS
   | TokenWord8  Word8
   | TokenWord16 Word16
   | TokenDollar

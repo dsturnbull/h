@@ -1,6 +1,7 @@
 {-# LANGUAGE AllowAmbiguousTypes   #-}
 {-# LANGUAGE DataKinds             #-}
 {-# LANGUAGE DeriveGeneric         #-}
+{-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RankNTypes            #-}
@@ -51,11 +52,11 @@ runShow cpu = do
 
 step :: CPU -> CPU
 step cpu = do
-  cpu & execute ins
-      & field @"pc" %~ (flip (+) len)
-  where ins  = decode @Instruction mem'
-        mem' = DVS.drop (fromIntegral (pc cpu)) (mem cpu)
-        len  = fromIntegral $ insLength ins
+  cpu & execute ins & updatePC
+  where ins      = decode @Instruction mem'
+        mem'     = DVS.drop (fromIntegral (pc cpu)) (mem cpu)
+        len      = fromIntegral $ insLength ins
+        updatePC = if jumps ins then id else field @"pc" %~ (flip (+) len)
 
 class Decodes a where
   decode :: DVS.Vector Word8 -> Instruction
@@ -96,6 +97,11 @@ instance Decodes Instruction where
       0x0E -> ASL (Abs  addr)
       0x1E -> ASL (AbsX addr)
 
+      0x18 -> CLC
+      0x58 -> CLI
+      0xB8 -> CLV
+      0xD8 -> CLD
+
       0xC9 -> CMP (Imm imm)
       0xC5 -> CMP (Zpg imm)
       0xD5 -> CMP (ZpgX imm)
@@ -130,6 +136,16 @@ instance Decodes Instruction where
       0x41 -> EOR (IndX imm)
       0x51 -> EOR (IndY imm)
 
+      0xE6 -> INC (Zpg imm)
+      0xF6 -> INC (Zpg imm)
+      0xEE -> INC (Abs addr)
+      0xFE -> INC (Abs addr)
+
+      0xE8 -> INX
+      0xC8 -> INY
+
+      0x4C -> JMP (Abs addr)
+      0x6C -> JMP (Ind addr)
 
       0xA9 -> LDA (Imm  imm)
       0xAD -> LDA (Abs  addr)
@@ -152,6 +168,40 @@ instance Decodes Instruction where
       0xA4 -> LDY (Zpg  imm)
       0xB4 -> LDY (ZpgX imm)
 
+      0x4A -> LSR Acc
+      0x46 -> LSR (Zpg  imm)
+      0x56 -> LSR (ZpgX imm)
+      0x4E -> LSR (Abs  addr)
+      0x5E -> LSR (AbsX addr)
+
+      0xEA -> NOP
+
+      0x09 -> ORA (Imm imm)
+      0x05 -> ORA (Zpg imm)
+      0x15 -> ORA (ZpgX imm)
+      0x0D -> ORA (Abs addr)
+      0x1D -> ORA (AbsX addr)
+      0x19 -> ORA (AbsY addr)
+      0x01 -> ORA (IndX imm)
+      0x11 -> ORA (IndY imm)
+
+      0x38 -> SEC
+      0x78 -> SEI
+      0xF8 -> SED
+
+      0x2A -> ROL Acc
+      0x26 -> ROL (Zpg  imm)
+      0x36 -> ROL (ZpgX imm)
+      0x2E -> ROL (Abs  addr)
+      0x3E -> ROL (AbsX addr)
+
+      0xAA -> TAX
+      0x8A -> TXA
+      0xA8 -> TAY
+      0x98 -> TYA
+      0x9A -> TSX
+      0xBA -> TXS
+
       0x00 -> BRK
       _    -> undefined
 
@@ -159,119 +209,175 @@ instance Decodes Instruction where
           imm         = m ! 1
           addr        = (w16 $ DVS.take 2 (DVS.drop 1 m))
 
+execute :: Instruction -> CPU -> CPU
+execute i =
+    case i of
+      ADC (Imm w)  -> adcImm w
+      ADC (Zpg w)  -> adcZpg w
+      ADC (ZpgX w) -> adcZpgX w
+      ADC (Abs w)  -> adcAbs w
+      ADC (AbsX w) -> adcAbsX w
+      ADC (AbsY w) -> adcAbsY w
+      ADC (IndX w) -> adcIndX w
+      ADC (IndY w) -> adcIndY w
+      ADC _        -> undefined
+
+      AND (Imm w)  -> andImm w
+      AND (Zpg w)  -> andZpg w
+      AND (ZpgX w) -> andZpgX w
+      AND (Abs w)  -> andAbs w
+      AND (AbsX w) -> andAbsX w
+      AND (AbsY w) -> andAbsY w
+      AND (IndX w) -> andIndX w
+      AND (IndY w) -> andIndY w
+      AND _        -> undefined
+
+      ASL Acc      -> aslAcc
+      ASL (Zpg w)  -> aslZpg w
+      ASL (ZpgX w) -> aslZpgX w
+      ASL (Abs w)  -> aslAbs w
+      ASL (AbsX w) -> aslAbsX w
+      ASL _        -> undefined
+
+      BPL (Rel w)  -> bpl w
+      BMI (Rel w)  -> bmi w
+      BVC (Rel w)  -> bvc w
+      BVS (Rel w)  -> bvs w
+      BCC (Rel w)  -> bcc w
+      BCS (Rel w)  -> bcs w
+      BNE (Rel w)  -> bne w
+      BEQ (Rel w)  -> beq w
+
+      BPL _        -> undefined
+      BMI _        -> undefined
+      BVC _        -> undefined
+      BVS _        -> undefined
+      BCC _        -> undefined
+      BCS _        -> undefined
+      BNE _        -> undefined
+      BEQ _        -> undefined
+
+      CLC          -> clc
+      CLI          -> cli
+      CLV          -> clv
+      CLD          -> cld
+
+      CMP (Imm  w) -> cmpImm w
+      CMP (Zpg  w) -> cmpZpg w
+      CMP (ZpgX w) -> cmpZpgX w
+      CMP (Abs  w) -> cmpAbs w
+      CMP (AbsX w) -> cmpAbsX w
+      CMP (AbsY w) -> cmpAbsY w
+      CMP (IndX w) -> cmpIndX w
+      CMP (IndY w) -> cmpIndY w
+      CMP _        -> undefined
+
+      CPX (Imm w)  -> cpxImm w
+      CPX (Zpg w)  -> cpxZpg w
+      CPX (Abs w)  -> cpxAbs w
+      CPX _        -> undefined
+
+      CPY (Imm w)  -> cpyImm w
+      CPY (Zpg w)  -> cpyZpg w
+      CPY (Abs w)  -> cpyAbs w
+      CPY _        -> undefined
+
+      DEC (Zpg w)  -> decZpg w
+      DEC (ZpgX w) -> decZpgX w
+      DEC (Abs w)  -> decAbs w
+      DEC (AbsX w) -> decAbsX w
+      DEC _        -> undefined
+
+      DEX          -> dex
+      DEY          -> dey
+
+      EOR (Imm  w) -> eorImm w
+      EOR (Zpg  w) -> eorZpg w
+      EOR (ZpgX w) -> eorZpgX w
+      EOR (Abs  w) -> eorAbs w
+      EOR (AbsX w) -> eorAbsX w
+      EOR (AbsY w) -> eorAbsY w
+      EOR (IndX w) -> eorIndX w
+      EOR (IndY w) -> eorIndY w
+      EOR _        -> undefined
+
+      INC (Zpg w)  -> incZpg w
+      INC (ZpgX w) -> incZpgX w
+      INC (Abs w)  -> incAbs w
+      INC (AbsX w) -> incAbsX w
+      INC _        -> undefined
+
+      INX          -> inx
+      INY          -> iny
+
+      JMP (Abs w)  -> jmpAbs w
+      JMP (Ind w)  -> jmpInd w
+      JMP _        -> undefined
+
+      LDA (Imm w)  -> ldaImm w
+      LDA (Zpg w)  -> ldaZpg w
+      LDA (ZpgX w) -> ldaZpgX w
+      LDA (Abs w)  -> ldaAbs w
+      LDA (AbsX w) -> ldaAbsX w
+      LDA (AbsY w) -> ldaAbsY w
+      LDA (IndX w) -> ldaIndX w
+      LDA (IndY w) -> ldaIndY w
+      LDA _        -> undefined
+
+      LDX (Imm w)  -> ldxImm w
+      LDX (Zpg w)  -> ldxZpg w
+      LDX (ZpgY w) -> ldxZpgY w
+      LDX (Abs w)  -> ldxAbs w
+      LDX (AbsY w) -> ldxAbsY w
+      LDX _        -> undefined
+
+      LDY (Imm w)  -> ldyImm w
+      LDY (Zpg w)  -> ldyZpg w
+      LDY (ZpgX w) -> ldyZpgX w
+      LDY (Abs w)  -> ldyAbs w
+      LDY (AbsX w) -> ldyAbsX w
+      LDY _        -> undefined
+
+      LSR Acc      -> lsrAcc
+      LSR (Zpg w)  -> lsrZpg w
+      LSR (ZpgX w) -> lsrZpgX w
+      LSR (Abs w)  -> lsrAbs w
+      LSR (AbsX w) -> lsrAbsX w
+      LSR _        -> undefined
+
+      NOP          -> nop
+
+      ORA (Imm  w) -> oraImm w
+      ORA (Zpg  w) -> oraZpg w
+      ORA (ZpgX w) -> oraZpgX w
+      ORA (Abs  w) -> oraAbs w
+      ORA (AbsX w) -> oraAbsX w
+      ORA (AbsY w) -> oraAbsY w
+      ORA (IndX w) -> oraIndX w
+      ORA (IndY w) -> oraIndY w
+      ORA _        -> undefined
+
+      TAX          -> tax
+      TXA          -> txa
+      TAY          -> tay
+      TYA          -> tya
+      TSX          -> tsx
+      TXS          -> txs
+
+      ROL Acc      -> rolAcc
+      ROL (Zpg w)  -> rolZpg w
+      ROL (ZpgX w) -> rolZpgX w
+      ROL (Abs w)  -> rolAbs w
+      ROL (AbsX w) -> rolAbsX w
+      ROL _        -> undefined
+
+      SEC          -> sec
+      SEI          -> sei
+      SED          -> sed
+
+      BRK          -> brk
+
 w16 :: DVS.Vector Word8 -> Word16
 w16 v = (addrH `shiftL` 8) .|. addrL
   where addrL = fromIntegral (v ! 0)
         addrH = fromIntegral (v ! 1)
-
-execute :: Instruction -> CPU -> CPU
-execute i cpu =
-  case i of
-    ADC (Imm w)  -> cpu & adcImm w
-    ADC (Zpg w)  -> cpu & adcZpg w
-    ADC (ZpgX w) -> cpu & adcZpgX w
-    ADC (Abs w)  -> cpu & adcAbs w
-    ADC (AbsX w) -> cpu & adcAbsX w
-    ADC (AbsY w) -> cpu & adcAbsY w
-    ADC (IndX w) -> cpu & adcIndX w
-    ADC (IndY w) -> cpu & adcIndY w
-    ADC _        -> undefined
-
-    AND (Imm w)  -> cpu & andImm w
-    AND (Zpg w)  -> cpu & andZpg w
-    AND (ZpgX w) -> cpu & andZpgX w
-    AND (Abs w)  -> cpu & andAbs w
-    AND (AbsX w) -> cpu & andAbsX w
-    AND (AbsY w) -> cpu & andAbsY w
-    AND (IndX w) -> cpu & andIndX w
-    AND (IndY w) -> cpu & andIndY w
-    AND _        -> undefined
-
-    ASL Acc      -> cpu & aslAcc
-    ASL (Zpg w)  -> cpu & aslZpg w
-    ASL (ZpgX w) -> cpu & aslZpgX w
-    ASL (Abs w)  -> cpu & aslAbs w
-    ASL (AbsX w) -> cpu & aslAbsX w
-    ASL _        -> undefined
-
-    BPL (Rel w)  -> cpu & bpl w
-    BPL _        -> undefined
-    BMI (Rel w)  -> cpu & bmi w
-    BMI _        -> undefined
-    BVC (Rel w)  -> cpu & bvc w
-    BVC _        -> undefined
-    BVS (Rel w)  -> cpu & bvs w
-    BVS _        -> undefined
-    BCC (Rel w)  -> cpu & bcc w
-    BCC _        -> undefined
-    BCS (Rel w)  -> cpu & bcs w
-    BCS _        -> undefined
-    BNE (Rel w)  -> cpu & bne w
-    BNE _        -> undefined
-    BEQ (Rel w)  -> cpu & beq w
-    BEQ _        -> undefined
-
-    CMP (Imm  w) -> cpu & cmpImm w
-    CMP (Zpg  w) -> cpu & cmpZpg w
-    CMP (ZpgX w) -> cpu & cmpZpgX w
-    CMP (Abs  w) -> cpu & cmpAbs w
-    CMP (AbsX w) -> cpu & cmpAbsX w
-    CMP (AbsY w) -> cpu & cmpAbsY w
-    CMP (IndX w) -> cpu & cmpIndX w
-    CMP (IndY w) -> cpu & cmpIndY w
-    CMP _        -> undefined
-
-    CPX (Imm w)  -> cpu & cpxImm w
-    CPX (Zpg w)  -> cpu & cpxZpg w
-    CPX (Abs w)  -> cpu & cpxAbs w
-    CPX _        -> undefined
-
-    CPY (Imm w)  -> cpu & cpyImm w
-    CPY (Zpg w)  -> cpu & cpyZpg w
-    CPY (Abs w)  -> cpu & cpyAbs w
-    CPY _        -> undefined
-
-    DEC (Zpg w)  -> cpu & decZpg w
-    DEC (ZpgX w) -> cpu & decZpgX w
-    DEC (Abs w)  -> cpu & decAbs w
-    DEC (AbsX w) -> cpu & decAbsX w
-    DEC _        -> undefined
-
-    DEX          -> cpu & dex
-    DEY          -> cpu & dey
-
-    EOR (Imm  w) -> cpu & eorImm w
-    EOR (Zpg  w) -> cpu & eorZpg w
-    EOR (ZpgX w) -> cpu & eorZpgX w
-    EOR (Abs  w) -> cpu & eorAbs w
-    EOR (AbsX w) -> cpu & eorAbsX w
-    EOR (AbsY w) -> cpu & eorAbsY w
-    EOR (IndX w) -> cpu & eorIndX w
-    EOR (IndY w) -> cpu & eorIndY w
-    EOR _        -> undefined
-
-    LDA (Imm w)  -> cpu & ldaImm w
-    LDA (Zpg w)  -> cpu & ldaZpg w
-    LDA (ZpgX w) -> cpu & ldaZpgX w
-    LDA (Abs w)  -> cpu & ldaAbs w
-    LDA (AbsX w) -> cpu & ldaAbsX w
-    LDA (AbsY w) -> cpu & ldaAbsY w
-    LDA (IndX w) -> cpu & ldaIndX w
-    LDA (IndY w) -> cpu & ldaIndY w
-    LDA _        -> undefined
-
-    LDX (Imm w)  -> cpu & ldxImm w
-    LDX (Zpg w)  -> cpu & ldxZpg w
-    LDX (ZpgY w) -> cpu & ldxZpgY w
-    LDX (Abs w)  -> cpu & ldxAbs w
-    LDX (AbsY w) -> cpu & ldxAbsY w
-    LDX _        -> undefined
-
-    LDY (Imm w)  -> cpu & ldyImm w
-    LDY (Zpg w)  -> cpu & ldyZpg w
-    LDY (ZpgX w) -> cpu & ldyZpgX w
-    LDY (Abs w)  -> cpu & ldyAbs w
-    LDY (AbsX w) -> cpu & ldyAbsX w
-    LDY _        -> undefined
-
-    BRK          -> cpu & brk

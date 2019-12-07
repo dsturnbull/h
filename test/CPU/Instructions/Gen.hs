@@ -22,9 +22,18 @@ genInstruction = do
                   , genCPY
                   , genDE
                   , genEOR
+                  , genIN
+                  -- , genJMP
                   , genLDA
                   , genLDX
                   , genLDY
+                  , genLSR
+                  , genNOP
+                  , genORA
+                  , genCL
+                  , genSE
+                  , genROL
+                  , genT
                   ]
   return ins
 
@@ -74,6 +83,15 @@ genDE = G.choice [ DEC <$> G.choice [genZpg, genZpgX, genAbs, genAbsX]
 genEOR :: MonadGen m => m Instruction
 genEOR = EOR <$> G.choice [genImm, genZpg, genZpgX, genAbs, genAbsX, genAbsY, genIndX, genIndY]
 
+genIN :: MonadGen m => m Instruction
+genIN = G.choice [ INC <$> G.choice [genZpg, genZpgX, genAbs, genAbsX]
+                 , pure INX
+                 , pure INY
+                 ]
+
+genJMP :: MonadGen m => m Instruction
+genJMP = JMP <$> G.choice [genAbs, genInd]
+
 genLDA :: MonadGen m => m Instruction
 genLDA = LDA <$> G.choice [genImm, genZpg, genZpgX, genAbs, genAbsX, genAbsY]
 
@@ -82,6 +100,40 @@ genLDX = LDX <$> G.choice [genImm, genZpg, genZpgY, genAbs, genAbsY]
 
 genLDY :: MonadGen m => m Instruction
 genLDY = LDY <$> G.choice [genImm, genZpg, genZpgX, genAbs, genAbsX]
+
+genLSR :: MonadGen m => m Instruction
+genLSR = LSR <$> G.choice [genAcc, genZpg, genZpgX, genAbs, genAbsX]
+
+genNOP :: MonadGen m => m Instruction
+genNOP = pure NOP
+
+genORA :: MonadGen m => m Instruction
+genORA = ORA <$> G.choice [genImm, genZpg, genZpgX, genAbs, genAbsX, genAbsY, genIndX, genIndY]
+
+genSE :: MonadGen m => m Instruction
+genSE = G.choice [ pure SEC
+                 , pure SEI
+                 , pure SED
+                 ]
+
+genCL :: MonadGen m => m Instruction
+genCL = G.choice [ pure CLC
+                 , pure CLI
+                 , pure CLV
+                 , pure CLD
+                 ]
+
+genROL :: MonadGen m => m Instruction
+genROL = ROL <$> G.choice [genAcc, genZpg, genZpgX, genAbs, genAbsX]
+
+genT :: MonadGen m => m Instruction
+genT = G.choice [ pure TAX
+                , pure TXA
+                , pure TAY
+                , pure TYA
+                , pure TSX
+                , pure TXS
+                ]
 
 genAcc :: MonadGen m => m Oper
 genAcc = return Acc
@@ -109,6 +161,9 @@ genAbsY = AbsY <$> w16
 
 genIndX :: MonadGen m => m Oper
 genIndX = IndX <$> w8
+
+genInd :: MonadGen m => m Oper
+genInd = Ind <$> w16
 
 genIndY :: MonadGen m => m Oper
 genIndY = IndY <$> w8

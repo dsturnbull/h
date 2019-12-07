@@ -5,6 +5,7 @@ module CPU.Program
   , InstructionLength(..)
   , Assembles(..)
   , Instruction(..)
+  , Jumps(..)
   , Oper(..)
   ) where
 
@@ -51,6 +52,10 @@ data Instruction
   | BPL Oper
   | BVC Oper
   | BVS Oper
+  | CLC
+  | CLI
+  | CLV
+  | CLD
   | CMP Oper
   | CPX Oper
   | CPY Oper
@@ -58,11 +63,76 @@ data Instruction
   | DEX
   | DEY
   | EOR Oper
+  | INC Oper
+  | INX
+  | INY
+  | JMP Oper
   | LDA Oper
   | LDX Oper
   | LDY Oper
+  | LSR Oper
+  | NOP
+  | ORA Oper
+  | SEC
+  | SEI
+  | SED
+  | ROL Oper
+  | TAX
+  | TXA
+  | TAY
+  | TYA
+  | TSX
+  | TXS
   | BRK
   deriving (Eq, Show)
+
+class Jumps a where
+  jumps :: a -> Bool
+
+instance Jumps Instruction where
+  jumps (ADC _) = False
+  jumps (AND _) = False
+  jumps (ASL _) = False
+  jumps (BCC _) = True
+  jumps (BCS _) = True
+  jumps (BEQ _) = True
+  jumps (BMI _) = True
+  jumps (BNE _) = True
+  jumps (BPL _) = True
+  jumps (BVC _) = True
+  jumps (BVS _) = True
+  jumps CLC     = False
+  jumps CLI     = False
+  jumps CLV     = False
+  jumps CLD     = False
+  jumps (CMP _) = False
+  jumps (CPX _) = False
+  jumps (CPY _) = False
+  jumps (DEC _) = False
+  jumps DEX     = False
+  jumps DEY     = False
+  jumps (EOR _) = False
+  jumps (INC _) = False
+  jumps INX     = False
+  jumps INY     = False
+  jumps (JMP _) = True
+  jumps (LDA _) = False
+  jumps (LDX _) = False
+  jumps (LDY _) = False
+  jumps (LSR _) = False
+  jumps NOP     = False
+  jumps (ORA _) = False
+  jumps SEC     = False
+  jumps SEI     = False
+  jumps SED     = False
+  jumps (ROL _) = False
+  jumps TAX     = False
+  jumps TXA     = False
+  jumps TAY     = False
+  jumps TYA     = False
+  jumps TSX     = False
+  jumps TXS     = False
+  jumps BRK     = False
 
 class Assembles a where
   asm :: a -> [Word8]
@@ -113,6 +183,11 @@ instance Assembles Instruction where
   asm (BNE _)        = undefined
   asm (BEQ _)        = undefined
 
+  asm CLC            = [0x18]
+  asm CLI            = [0x58]
+  asm CLV            = [0xB8]
+  asm CLD            = [0xD8]
+
   asm (CMP (Imm  w)) = [0xC9, w]
   asm (CMP (Zpg  w)) = [0xC5, w]
   asm (CMP (ZpgX w)) = [0xD5, w]
@@ -152,6 +227,19 @@ instance Assembles Instruction where
   asm (EOR (IndY w)) = [0x51, w]
   asm (EOR _)        = undefined
 
+  asm (INC (Zpg w))  = [0xE6, w]
+  asm (INC (ZpgX w)) = [0xF6, w]
+  asm (INC (Abs w))  = [0xEE, l w, h w]
+  asm (INC (AbsX w)) = [0xFE, l w, h w]
+  asm (INC _)        = undefined
+
+  asm INX            = [0xE8]
+  asm INY            = [0xC8]
+
+  asm (JMP (Abs w))  = [0x4C, l w, h w]
+  asm (JMP (Ind w))  = [0x6C, l w, h w]
+  asm (JMP _)        = undefined
+
   asm (LDA (Imm  w)) = [0xA9, w]
   asm (LDA (Zpg  w)) = [0xA5, w]
   asm (LDA (ZpgX w)) = [0xB5, w]
@@ -175,6 +263,48 @@ instance Assembles Instruction where
   asm (LDY (Abs  w)) = [0xAC, l w, h w]
   asm (LDY (AbsX w)) = [0xBC, l w, h w]
   asm (LDY _)        = undefined
+
+  asm (LSR Acc)      = [0x4A]
+  asm (LSR (Zpg  w)) = [0x46, w]
+  asm (LSR (ZpgX w)) = [0x56, w]
+  asm (LSR (Abs  w)) = [0x4E, l w, h w]
+  asm (LSR (AbsX w)) = [0x5E, l w, h w]
+  asm (LSR _)        = undefined
+
+  asm NOP            = [0xEA]
+
+  asm (ORA (Imm w))  = [0x09, w]
+  asm (ORA (Zpg w))  = [0x05, w]
+  asm (ORA (ZpgX w)) = [0x15, w]
+  asm (ORA (Abs w))  = [0x0D, l w, h w]
+  asm (ORA (AbsX w)) = [0x1D, l w, h w]
+  asm (ORA (AbsY w)) = [0x19, l w, h w]
+  asm (ORA (IndX w)) = [0x01, w]
+  asm (ORA (IndY w)) = [0x11, w]
+  asm (ORA _)        = undefined
+
+  asm SEC            = [0x38]
+  asm SEI            = [0x78]
+  asm SED            = [0xF8]
+
+  asm (ROL Acc)      = [0xAA]
+  asm (ROL (Zpg  w)) = [0x26, w]
+  asm (ROL (ZpgX w)) = [0x36, w]
+  asm (ROL (Abs  w)) = [0x2E, l w, h w]
+  asm (ROL (AbsX w)) = [0x3E, l w, h w]
+  asm (ROL _)        = undefined
+
+  asm TAX            = [0xAA]
+  asm TXA            = [0x8A]
+  asm TAY            = [0xA8]
+  asm TYA            = [0x98]
+  asm TSX            = [0x9A]
+  asm TXS            = [0xBA]
+
+  -- PHA = [0x48]
+  -- PLA = [0x68]
+  -- PHP = [0x08]
+  -- PLP = [0x28]
 
   asm BRK            = [0x00]
 
@@ -227,6 +357,11 @@ instance InstructionLength Instruction where
   insLength (BNE _)        = undefined
   insLength (BEQ _)        = undefined
 
+  insLength CLC            = 1
+  insLength CLI            = 1
+  insLength CLV            = 1
+  insLength CLD            = 1
+
   insLength (CMP (Imm  _)) = 2
   insLength (CMP (Zpg  _)) = 2
   insLength (CMP (ZpgX _)) = 2
@@ -266,6 +401,19 @@ instance InstructionLength Instruction where
   insLength (EOR (IndY _)) = 2
   insLength (EOR _)        = undefined
 
+  insLength (INC (Zpg _))  = 2
+  insLength (INC (ZpgX _)) = 2
+  insLength (INC (Abs _))  = 3
+  insLength (INC (AbsX _)) = 3
+  insLength (INC _)        = undefined
+
+  insLength INX            = 1
+  insLength INY            = 1
+
+  insLength (JMP (Abs _))  = 3
+  insLength (JMP (Ind _))  = 3
+  insLength (JMP _)        = undefined
+
   insLength (LDA (Imm _))  = 2
   insLength (LDA (Zpg _))  = 2
   insLength (LDA (ZpgX _)) = 2
@@ -294,7 +442,44 @@ instance InstructionLength Instruction where
   insLength (LDY (IndY _)) = 2
   insLength (LDY _)        = undefined
 
-  insLength  BRK           = 1
+  insLength (LSR Acc)      = 1
+  insLength (LSR (Zpg _))  = 2
+  insLength (LSR (ZpgX _)) = 2
+  insLength (LSR (Abs _))  = 3
+  insLength (LSR (AbsX _)) = 3
+  insLength (LSR _)        = undefined
+
+  insLength NOP            = 1
+
+  insLength (ORA (Imm  _)) = 2
+  insLength (ORA (Zpg  _)) = 2
+  insLength (ORA (ZpgX _)) = 2
+  insLength (ORA (Abs  _)) = 3
+  insLength (ORA (AbsX _)) = 3
+  insLength (ORA (AbsY _)) = 3
+  insLength (ORA (IndX _)) = 2
+  insLength (ORA (IndY _)) = 2
+  insLength (ORA _)        = undefined
+
+  insLength SEC            = 1
+  insLength SEI            = 1
+  insLength SED            = 1
+
+  insLength (ROL Acc)      = 1
+  insLength (ROL (Zpg _))  = 2
+  insLength (ROL (ZpgX _)) = 2
+  insLength (ROL (Abs _))  = 3
+  insLength (ROL (AbsX _)) = 3
+  insLength (ROL _)        = undefined
+
+  insLength TAX            = 1
+  insLength TXA            = 1
+  insLength TAY            = 1
+  insLength TYA            = 1
+  insLength TSX            = 1
+  insLength TXS            = 1
+
+  insLength BRK            = 1
 
 data Oper
   = Acc
@@ -305,6 +490,7 @@ data Oper
   | Abs  Word16
   | AbsX Word16
   | AbsY Word16
+  | Ind Word16
   | IndX Word8
   | IndY Word8
   | Addr Word16
