@@ -29,7 +29,7 @@ spec = describe "jsr" $ do
     pc'     <- forAll $ word16 (linear 260 maxBound)
     let cpu' = cpu
              & field @"pc" .~ pc'
-             & jsr (fromIntegral addr)
+             & jsrAbs (fromIntegral addr)
     (cpu' & s) === 0xfd
     (cpu' & mem) ! (fromIntegral (cpu' & s) + fromIntegral stack + 1) === fromIntegral ((pc' + 2) ^. byteAt 0)
     (cpu' & mem) ! (fromIntegral (cpu' & s) + fromIntegral stack + 2) === fromIntegral ((pc' + 2) ^. byteAt 1)

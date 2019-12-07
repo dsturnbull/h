@@ -89,7 +89,7 @@ instance Show CPU where
           showPc v          = printf "%sPC: %04x" (setSGRCode [Reset]) v
           showReg (r, v)    = printf "%s%s: %02x" (setSGRCode [Reset]) r v
           mem'              = header ++ foldMap (++ "\n") (showRow <$> rows)
-          header            = printf "    : 00 01 02 03 04 05 06 07 08 09 0a 0b 0c 0d 0e 0f\n"
+          header            = "    : " ++ foldMap (++ " ") (printf "%02x" <$> [0 .. rowLength - 1]) ++ "\n"
           showRow (o, row)  = printf "%04x: %s |%s|" o (elements o row) (ascii row)
           elements o eles   = foldMap (++ " ") ((\(i, v) -> if i == fromIntegral (cpu & pc) then printf "%s%02x" here v else printf "%s%02x" normal v) <$> zip [o..] (V.toList eles))
           here              = setSGRCode [SetColor Foreground Vivid Red]

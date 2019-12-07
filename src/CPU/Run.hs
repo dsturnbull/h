@@ -42,13 +42,13 @@ run cpu =
     then cpu
     else run $ step cpu
 
-runShow :: CPU -> IO CPU
-runShow cpu = do
+runShow :: Int -> CPU -> IO CPU
+runShow delay cpu = do
   print cpu
-  threadDelay 400000
+  threadDelay delay
   if cpu & p & break
     then return cpu
-    else runShow $ step cpu
+    else runShow delay $ step cpu
 
 step :: CPU -> CPU
 step cpu = do
@@ -147,6 +147,8 @@ instance Decodes Instruction where
       0x4C -> JMP (Abs addr)
       0x6C -> JMP (Ind addr)
 
+      0x20 -> JSR (Abs addr)
+
       0xA9 -> LDA (Imm  imm)
       0xAD -> LDA (Abs  addr)
       0xBD -> LDA (AbsX addr)
@@ -194,6 +196,40 @@ instance Decodes Instruction where
       0x36 -> ROL (ZpgX imm)
       0x2E -> ROL (Abs  addr)
       0x3E -> ROL (AbsX addr)
+
+      0x6A -> ROR Acc
+      0x66 -> ROR (Zpg  imm)
+      0x76 -> ROR (ZpgX imm)
+      0x6E -> ROR (Abs  addr)
+      0x7E -> ROR (AbsX addr)
+
+      0x40 -> RTI
+      0x60 -> RTS
+
+      0xE9 -> SBC (Imm  imm)
+      0xE5 -> SBC (Zpg  imm)
+      0xF5 -> SBC (ZpgX imm)
+      0xED -> SBC (Abs  addr)
+      0xFD -> SBC (AbsX addr)
+      0xF9 -> SBC (AbsY addr)
+      0xE1 -> SBC (IndX imm)
+      0xF1 -> SBC (IndY imm)
+
+      0x85 -> STA (Zpg imm)
+      0x95 -> STA (ZpgX imm)
+      0x8D -> STA (Abs addr)
+      0x9D -> STA (AbsX addr)
+      0x99 -> STA (AbsY addr)
+      0x81 -> STA (IndY imm)
+      0x91 -> STA (IndX imm)
+
+      0x86 -> STX (Zpg imm)
+      0x96 -> STX (ZpgY imm)
+      0x8E -> STX (Abs addr)
+
+      0x84 -> STY (Zpg imm)
+      0x94 -> STY (ZpgX imm)
+      0x8C -> STY (Abs addr)
 
       0xAA -> TAX
       0x8A -> TXA
@@ -314,6 +350,9 @@ execute i =
       JMP (Ind w)  -> jmpInd w
       JMP _        -> undefined
 
+      JSR (Abs w)  -> jsrAbs w
+      JSR _        -> undefined
+
       LDA (Imm w)  -> ldaImm w
       LDA (Zpg w)  -> ldaZpg w
       LDA (ZpgX w) -> ldaZpgX w
@@ -357,6 +396,38 @@ execute i =
       ORA (IndY w) -> oraIndY w
       ORA _        -> undefined
 
+      RTI          -> rti
+      RTS          -> rts
+
+      SBC (Imm w)  -> sbcImm w
+      SBC (Zpg w)  -> sbcZpg w
+      SBC (ZpgX w) -> sbcZpgX w
+      SBC (Abs w)  -> sbcAbs w
+      SBC (AbsX w) -> sbcAbsX w
+      SBC (AbsY w) -> sbcAbsY w
+      SBC (IndX w) -> sbcIndX w
+      SBC (IndY w) -> sbcIndY w
+      SBC _        -> undefined
+
+      STA (Zpg  w) -> staZpg w
+      STA (ZpgX w) -> staZpgX w
+      STA (Abs  w) -> staAbs w
+      STA (AbsX w) -> staAbsX w
+      STA (AbsY w) -> staAbsY w
+      STA (IndX w) -> staIndX w
+      STA (IndY w) -> staIndY w
+      STA _        -> undefined
+
+      STX (Zpg  w) -> stxZpg w
+      STX (ZpgY w) -> stxZpgY w
+      STX (Abs  w) -> stxAbs w
+      STX _        -> undefined
+
+      STY (Zpg  w) -> styZpg w
+      STY (ZpgX w) -> styZpgX w
+      STY (Abs  w) -> styAbs w
+      STY _        -> undefined
+
       TAX          -> tax
       TXA          -> txa
       TAY          -> tay
@@ -370,6 +441,13 @@ execute i =
       ROL (Abs w)  -> rolAbs w
       ROL (AbsX w) -> rolAbsX w
       ROL _        -> undefined
+
+      ROR Acc      -> rorAcc
+      ROR (Zpg w)  -> rorZpg w
+      ROR (ZpgX w) -> rorZpgX w
+      ROR (Abs w)  -> rorAbs w
+      ROR (AbsX w) -> rorAbsX w
+      ROR _        -> undefined
 
       SEC          -> sec
       SEI          -> sei

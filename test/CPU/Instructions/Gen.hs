@@ -24,6 +24,7 @@ genInstruction = do
                   , genEOR
                   , genIN
                   -- , genJMP
+                  -- , genJSR
                   , genLDA
                   , genLDX
                   , genLDY
@@ -33,6 +34,12 @@ genInstruction = do
                   , genCL
                   , genSE
                   , genROL
+                  , genROR
+                  -- , genRTI
+                  , genSBC
+                  , genSTA
+                  , genSTX
+                  , genSTY
                   , genT
                   ]
   return ins
@@ -92,6 +99,9 @@ genIN = G.choice [ INC <$> G.choice [genZpg, genZpgX, genAbs, genAbsX]
 genJMP :: MonadGen m => m Instruction
 genJMP = JMP <$> G.choice [genAbs, genInd]
 
+genJSR :: MonadGen m => m Instruction
+genJSR = JSR <$> G.choice [genAbs]
+
 genLDA :: MonadGen m => m Instruction
 genLDA = LDA <$> G.choice [genImm, genZpg, genZpgX, genAbs, genAbsX, genAbsY]
 
@@ -126,6 +136,12 @@ genCL = G.choice [ pure CLC
 genROL :: MonadGen m => m Instruction
 genROL = ROL <$> G.choice [genAcc, genZpg, genZpgX, genAbs, genAbsX]
 
+genROR :: MonadGen m => m Instruction
+genROR = ROR <$> G.choice [genAcc, genZpg, genZpgX, genAbs, genAbsX]
+
+genRTI :: MonadGen m => m Instruction
+genRTI = pure RTI
+
 genT :: MonadGen m => m Instruction
 genT = G.choice [ pure TAX
                 , pure TXA
@@ -134,6 +150,18 @@ genT = G.choice [ pure TAX
                 , pure TSX
                 , pure TXS
                 ]
+
+genSBC :: MonadGen m => m Instruction
+genSBC = SBC <$> G.choice [genImm, genZpg, genZpgX, genAbs, genAbsX, genAbsY, genIndX, genIndY]
+
+genSTA :: MonadGen m => m Instruction
+genSTA = STA <$> G.choice [genZpg, genZpgX, genAbs, genAbsX, genAbsY, genIndX, genIndY]
+
+genSTX :: MonadGen m => m Instruction
+genSTX = STX <$> G.choice [genZpg, genZpgY, genAbs]
+
+genSTY :: MonadGen m => m Instruction
+genSTY = STY <$> G.choice [genZpg, genZpgX, genAbs]
 
 genAcc :: MonadGen m => m Oper
 genAcc = return Acc
@@ -178,10 +206,10 @@ genBRK :: MonadGen m => m Instruction
 genBRK = return BRK
 
 w8 :: MonadGen m => m Word8
-w8 = word8 R.linearBounded
+w8 = word8 (R.linear 20 40)
 
 w16 :: MonadGen m => m Word16
-w16 = fromIntegral <$> word8 R.linearBounded
+w16 = fromIntegral <$> w8
 
 i8 :: MonadGen m => m Int8
 i8 = fromIntegral <$> int8 R.linearBounded

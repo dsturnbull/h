@@ -6,12 +6,11 @@ module ASM.Lexer (
   scanTokens
 ) where
 
-import Control.Monad.Except
 import Data.Word
-
+import Control.Monad.Except
 }
 
-%wrapper "basic"
+%wrapper "posn"
 
 $digit = 0-9
 $alpha = [a-zA-Z]
@@ -28,127 +27,212 @@ tokens :-
   ";".*                         ;
 
   -- Syntax
-  $hex{2}                       { \s -> TokenWord8  (read ("0x" <> s)) }
-  $hex{4}                       { \s -> TokenWord16 (read ("0x" <> s)) }
+  $hex{2}                       { tok (\p s -> TokenWord8  p (read ("0x" <> s))) }
+  $hex{4}                       { tok (\p s -> TokenWord16 p (read ("0x" <> s))) }
+  "_" $alpha+                   { tok (\p s -> TokenLabel  p s) }
   
   -- Instructions
-  adc                           { const TokenADC }
-  and                           { const TokenAND }
-  asl                           { const TokenASL }
-  bcc                           { const TokenBCC }
-  bcs                           { const TokenBCS }
-  beq                           { const TokenBEQ }
-  bmi                           { const TokenBMI }
-  bne                           { const TokenBNE }
-  bpl                           { const TokenBPL }
-  bvc                           { const TokenBVC }
-  bvs                           { const TokenBVS }
-  clc                           { const TokenCLC }
-  cli                           { const TokenCLI }
-  clv                           { const TokenCLV }
-  cld                           { const TokenCLD }
-  cmp                           { const TokenCMP }
-  cpx                           { const TokenCPX }
-  cpy                           { const TokenCPY }
-  dec                           { const TokenDEC }
-  dex                           { const TokenDEX }
-  dey                           { const TokenDEY }
-  eor                           { const TokenEOR }
-  inc                           { const TokenINC }
-  inx                           { const TokenINX }
-  iny                           { const TokenINY }
-  jmp                           { const TokenJMP }
-  lda                           { const TokenLDA }
-  ldx                           { const TokenLDX }
-  ldy                           { const TokenLDY }
-  lsr                           { const TokenLSR }
-  nop                           { const TokenNOP }
-  ora                           { const TokenORA }
-  sec                           { const TokenSEC }
-  sei                           { const TokenSEI }
-  sed                           { const TokenSED }
-  rol                           { const TokenROL }
-  tax                           { const TokenTAX }
-  txa                           { const TokenTXA }
-  tay                           { const TokenTAY }
-  tya                           { const TokenTYA }
-  tsx                           { const TokenTSX }
-  txs                           { const TokenTXS }
+  adc                           { tok (\p _ -> TokenADC p) }
+  and                           { tok (\p _ -> TokenAND p) }
+  asl                           { tok (\p _ -> TokenASL p) }
+  bcc                           { tok (\p _ -> TokenBCC p) }
+  bcs                           { tok (\p _ -> TokenBCS p) }
+  beq                           { tok (\p _ -> TokenBEQ p) }
+  bmi                           { tok (\p _ -> TokenBMI p) }
+  bne                           { tok (\p _ -> TokenBNE p) }
+  bpl                           { tok (\p _ -> TokenBPL p) }
+  bvc                           { tok (\p _ -> TokenBVC p) }
+  bvs                           { tok (\p _ -> TokenBVS p) }
+  clc                           { tok (\p _ -> TokenCLC p) }
+  cli                           { tok (\p _ -> TokenCLI p) }
+  clv                           { tok (\p _ -> TokenCLV p) }
+  cld                           { tok (\p _ -> TokenCLD p) }
+  cmp                           { tok (\p _ -> TokenCMP p) }
+  cpx                           { tok (\p _ -> TokenCPX p) }
+  cpy                           { tok (\p _ -> TokenCPY p) }
+  dec                           { tok (\p _ -> TokenDEC p) }
+  dex                           { tok (\p _ -> TokenDEX p) }
+  dey                           { tok (\p _ -> TokenDEY p) }
+  eor                           { tok (\p _ -> TokenEOR p) }
+  inc                           { tok (\p _ -> TokenINC p) }
+  inx                           { tok (\p _ -> TokenINX p) }
+  iny                           { tok (\p _ -> TokenINY p) }
+  jmp                           { tok (\p _ -> TokenJMP p) }
+  jsr                           { tok (\p _ -> TokenJSR p) }
+  lda                           { tok (\p _ -> TokenLDA p) }
+  ldx                           { tok (\p _ -> TokenLDX p) }
+  ldy                           { tok (\p _ -> TokenLDY p) }
+  lsr                           { tok (\p _ -> TokenLSR p) }
+  nop                           { tok (\p _ -> TokenNOP p) }
+  ora                           { tok (\p _ -> TokenORA p) }
+  sec                           { tok (\p _ -> TokenSEC p) }
+  sei                           { tok (\p _ -> TokenSEI p) }
+  sed                           { tok (\p _ -> TokenSED p) }
+  rol                           { tok (\p _ -> TokenROL p) }
+  ror                           { tok (\p _ -> TokenROR p) }
+  rti                           { tok (\p _ -> TokenRTI p) }
+  rts                           { tok (\p _ -> TokenRTS p) }
+  sbc                           { tok (\p _ -> TokenSBC p) }
+  sta                           { tok (\p _ -> TokenSTA p) }
+  stx                           { tok (\p _ -> TokenSTX p) }
+  sty                           { tok (\p _ -> TokenSTY p) }
+  tax                           { tok (\p _ -> TokenTAX p) }
+  txa                           { tok (\p _ -> TokenTXA p) }
+  tay                           { tok (\p _ -> TokenTAY p) }
+  tya                           { tok (\p _ -> TokenTYA p) }
+  tsx                           { tok (\p _ -> TokenTSX p) }
+  txs                           { tok (\p _ -> TokenTXS p) }
 
   -- Syntax
-  "$"                           { const TokenDollar }
-  "#"                           { const TokenHash }
-  ","                           { const TokenComma }
-  "X"                           { const TokenX }
-  "Y"                           { const TokenY }
-  "("                           { const TokenOpenParen }
-  ")"                           { const TokenCloseParen }
+  "$"                           { tok (\p _ -> TokenDollar p) }
+  "#"                           { tok (\p _ -> TokenHash p) }
+  ","                           { tok (\p _ -> TokenComma p) }
+  "X"                           { tok (\p _ -> TokenX p) }
+  "Y"                           { tok (\p _ -> TokenY p) }
+  "("                           { tok (\p _ -> TokenOpenParen p) }
+  ")"                           { tok (\p _ -> TokenCloseParen p) }
+  ":"                           { tok (\p _ -> TokenColon p) }
 
 {
+tok f p s = f p s
+
 data Token 
-  = TokenADC
-  | TokenAND
-  | TokenASL
-  | TokenBCC
-  | TokenBCS
-  | TokenBEQ
-  | TokenBMI
-  | TokenBNE
-  | TokenBPL
-  | TokenBVC
-  | TokenBVS
-  | TokenCLC
-  | TokenCLI
-  | TokenCLV
-  | TokenCLD
-  | TokenCMP
-  | TokenCPX
-  | TokenCPY
-  | TokenDEC
-  | TokenDEX
-  | TokenDEY
-  | TokenEOR
-  | TokenINC
-  | TokenINX
-  | TokenINY
-  | TokenJMP
-  | TokenLDA
-  | TokenLDX
-  | TokenLDY
-  | TokenLSR
-  | TokenNOP
-  | TokenORA
-  | TokenSEC
-  | TokenSEI
-  | TokenSED
-  | TokenROL
-  | TokenTAX
-  | TokenTXA
-  | TokenTAY
-  | TokenTYA
-  | TokenTSX
-  | TokenTXS
-  | TokenWord8  Word8
-  | TokenWord16 Word16
-  | TokenDollar
-  | TokenHash
-  | TokenComma
-  | TokenX
-  | TokenY
-  | TokenOpenParen
-  | TokenCloseParen
-  | TokenEOF
+  = TokenADC AlexPosn
+  | TokenAND AlexPosn
+  | TokenASL AlexPosn
+  | TokenBCC AlexPosn
+  | TokenBCS AlexPosn
+  | TokenBEQ AlexPosn
+  | TokenBMI AlexPosn
+  | TokenBNE AlexPosn
+  | TokenBPL AlexPosn
+  | TokenBVC AlexPosn
+  | TokenBVS AlexPosn
+  | TokenCLC AlexPosn
+  | TokenCLI AlexPosn
+  | TokenCLV AlexPosn
+  | TokenCLD AlexPosn
+  | TokenCMP AlexPosn
+  | TokenCPX AlexPosn
+  | TokenCPY AlexPosn
+  | TokenDEC AlexPosn
+  | TokenDEX AlexPosn
+  | TokenDEY AlexPosn
+  | TokenEOR AlexPosn
+  | TokenINC AlexPosn
+  | TokenINX AlexPosn
+  | TokenINY AlexPosn
+  | TokenJMP AlexPosn
+  | TokenJSR AlexPosn
+  | TokenLDA AlexPosn
+  | TokenLDX AlexPosn
+  | TokenLDY AlexPosn
+  | TokenLSR AlexPosn
+  | TokenNOP AlexPosn
+  | TokenORA AlexPosn
+  | TokenSEC AlexPosn
+  | TokenSEI AlexPosn
+  | TokenSED AlexPosn
+  | TokenROL AlexPosn
+  | TokenROR AlexPosn
+  | TokenRTI AlexPosn
+  | TokenRTS AlexPosn
+  | TokenSBC AlexPosn
+  | TokenSTA AlexPosn
+  | TokenSTX AlexPosn
+  | TokenSTY AlexPosn
+  | TokenTAX AlexPosn
+  | TokenTXA AlexPosn
+  | TokenTAY AlexPosn
+  | TokenTYA AlexPosn
+  | TokenTSX AlexPosn
+  | TokenTXS AlexPosn
+  | TokenWord8  AlexPosn Word8
+  | TokenWord16 AlexPosn Word16
+  | TokenDollar AlexPosn
+  | TokenHash AlexPosn
+  | TokenComma AlexPosn
+  | TokenX AlexPosn
+  | TokenY AlexPosn
+  | TokenOpenParen AlexPosn
+  | TokenCloseParen AlexPosn
+  | TokenEOF AlexPosn
+  | TokenLabel AlexPosn String
+  | TokenColon AlexPosn
   deriving (Eq,Show)
 
+token_pos (TokenADC p) = p
+token_pos (TokenAND p) = p
+token_pos (TokenASL p) = p
+token_pos (TokenBCC p) = p
+token_pos (TokenBCS p) = p
+token_pos (TokenBEQ p) = p
+token_pos (TokenBMI p) = p
+token_pos (TokenBNE p) = p
+token_pos (TokenBPL p) = p
+token_pos (TokenBVC p) = p
+token_pos (TokenBVS p) = p
+token_pos (TokenCLC p) = p
+token_pos (TokenCLI p) = p
+token_pos (TokenCLV p) = p
+token_pos (TokenCLD p) = p
+token_pos (TokenCMP p) = p
+token_pos (TokenCPX p) = p
+token_pos (TokenCPY p) = p
+token_pos (TokenDEC p) = p
+token_pos (TokenDEX p) = p
+token_pos (TokenDEY p) = p
+token_pos (TokenEOR p) = p
+token_pos (TokenINC p) = p
+token_pos (TokenINX p) = p
+token_pos (TokenINY p) = p
+token_pos (TokenJMP p) = p
+token_pos (TokenJSR p) = p
+token_pos (TokenLDA p) = p
+token_pos (TokenLDX p) = p
+token_pos (TokenLDY p) = p
+token_pos (TokenLSR p) = p
+token_pos (TokenNOP p) = p
+token_pos (TokenORA p) = p
+token_pos (TokenSEC p) = p
+token_pos (TokenSEI p) = p
+token_pos (TokenSED p) = p
+token_pos (TokenROL p) = p
+token_pos (TokenROR p) = p
+token_pos (TokenRTI p) = p
+token_pos (TokenRTS p) = p
+token_pos (TokenSBC p) = p
+token_pos (TokenSTA p) = p
+token_pos (TokenSTX p) = p
+token_pos (TokenSTY p) = p
+token_pos (TokenTAX p) = p
+token_pos (TokenTXA p) = p
+token_pos (TokenTAY p) = p
+token_pos (TokenTYA p) = p
+token_pos (TokenTSX p) = p
+token_pos (TokenTXS p) = p
+token_pos (TokenWord8 p _) = p
+token_pos (TokenWord16 p _) = p
+token_pos (TokenDollar p) = p
+token_pos (TokenHash p) = p
+token_pos (TokenComma p) = p
+token_pos (TokenX p) = p
+token_pos (TokenY p) = p
+token_pos (TokenOpenParen p) = p
+token_pos (TokenCloseParen p) = p
+token_pos (TokenEOF p) = p
+token_pos (TokenLabel p _) = p
+token_pos (TokenColon p) = p
+
 scanTokens :: String -> Except String [Token]
-scanTokens str = go ('\n',[],str) where 
-  go inp@(_,_bs,str') =
-    case alexScan inp 0 of
-     AlexEOF -> return []
-     AlexError _ -> throwError "Invalid lexeme."
-     AlexSkip  inp' _       -> go inp'
-     AlexToken inp' len act -> do
-      res <- go inp'
-      let rest = act (take len str')
-      return (rest : res)
+scanTokens str = go (alexStartPos,'\n',[],str)
+  where go inp@(pos,_,_,str') =
+          case alexScan inp 0 of
+                AlexEOF -> return []
+                AlexError ((AlexPn _ line column),_,_,_) -> throwError $ "lexical error at line " ++ (show line) ++ ", column " ++ (show column)
+                AlexSkip  inp' _       -> go inp'
+                AlexToken inp' len act -> do
+                  res <- go inp'
+                  let rest = act pos (take len str')
+                  return (rest : res)
 }

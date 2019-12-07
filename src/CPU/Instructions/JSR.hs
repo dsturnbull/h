@@ -2,7 +2,7 @@
 {-# LANGUAGE TypeApplications #-}
 
 module CPU.Instructions.JSR
-  ( jsr
+  ( jsrAbs
   ) where
 
 import CPU
@@ -12,8 +12,8 @@ import Data.Bits.Lens
 import Data.Generics.Product.Fields
 import Data.Word
 
-jsr :: Word16 -> CPU -> CPU
-jsr addr cpu =
+jsrAbs :: Word16 -> CPU -> CPU
+jsrAbs addr cpu =
   cpu & st s1 r1
       & st s2 r2
       & field @"s" %~ (flip (-) 2)

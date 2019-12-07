@@ -2,6 +2,7 @@
 
 module ASM.Parser (
   asm,
+  assembly,
   parseAssembly,
   parseTokens,
 ) where
@@ -18,58 +19,68 @@ import Control.Monad.Except
 
 -- Token Names
 %token
-    adc   { TokenADC }
-    and   { TokenAND }
-    asl   { TokenASL }
-    bcc   { TokenBCC }
-    bcs   { TokenBCS }
-    beq   { TokenBEQ }
-    bmi   { TokenBMI }
-    bne   { TokenBNE }
-    bpl   { TokenBPL }
-    bvc   { TokenBVC }
-    bvs   { TokenBVS }
-    clc   { TokenCLC }
-    cld   { TokenCLD }
-    cli   { TokenCLI }
-    clv   { TokenCLV }
-    cmp   { TokenCMP }
-    cpx   { TokenCPX }
-    cpy   { TokenCPY }
-    dec   { TokenDEC }
-    dex   { TokenDEX }
-    dey   { TokenDEY }
-    eor   { TokenEOR }
-    inc   { TokenINC }
-    inx   { TokenINX }
-    iny   { TokenINY }
-    jmp   { TokenJMP }
-    lda   { TokenLDA }
-    ldx   { TokenLDX }
-    ldy   { TokenLDY }
-    lsr   { TokenLSR }
-    nop   { TokenNOP }
-    ora   { TokenORA }
-    sec   { TokenSEC }
-    sed   { TokenSED }
-    sei   { TokenSEI }
-    rol   { TokenROL }
-    tax   { TokenTAX }
-    txa   { TokenTXA }
-    tay   { TokenTAY }
-    tya   { TokenTYA }
-    tsx   { TokenTSX }
-    txs   { TokenTXS }
+    adc   { TokenADC _ }
+    and   { TokenAND _ }
+    asl   { TokenASL _ }
+    bcc   { TokenBCC _ }
+    bcs   { TokenBCS _ }
+    beq   { TokenBEQ _ }
+    bmi   { TokenBMI _ }
+    bne   { TokenBNE _ }
+    bpl   { TokenBPL _ }
+    bvc   { TokenBVC _ }
+    bvs   { TokenBVS _ }
+    clc   { TokenCLC _ }
+    cld   { TokenCLD _ }
+    cli   { TokenCLI _ }
+    clv   { TokenCLV _ }
+    cmp   { TokenCMP _ }
+    cpx   { TokenCPX _ }
+    cpy   { TokenCPY _ }
+    dec   { TokenDEC _ }
+    dex   { TokenDEX _ }
+    dey   { TokenDEY _ }
+    eor   { TokenEOR _ }
+    inc   { TokenINC _ }
+    inx   { TokenINX _ }
+    iny   { TokenINY _ }
+    jmp   { TokenJMP _ }
+    jsr   { TokenJSR _ }
+    lda   { TokenLDA _ }
+    ldx   { TokenLDX _ }
+    ldy   { TokenLDY _ }
+    lsr   { TokenLSR _ }
+    nop   { TokenNOP _ }
+    ora   { TokenORA _ }
+    sec   { TokenSEC _ }
+    sed   { TokenSED _ }
+    sei   { TokenSEI _ }
+    rol   { TokenROL _ }
+    ror   { TokenROR _ }
+    rti   { TokenRTI _ }
+    rts   { TokenRTS _ }
+    sbc   { TokenSBC _ }
+    sta   { TokenSTA _ }
+    stx   { TokenSTX _ }
+    syy   { TokenSTY _ }
+    tax   { TokenTAX _ }
+    txa   { TokenTXA _ }
+    tay   { TokenTAY _ }
+    tya   { TokenTYA _ }
+    tsx   { TokenTSX _ }
+    txs   { TokenTXS _ }
 
-    w8    { TokenWord8  $$ }
-    w16   { TokenWord16 $$ }
-    '$'   { TokenDollar }
-    '#'   { TokenHash }
-    ','   { TokenComma }
-    'X'   { TokenX }
-    'Y'   { TokenY }
-    '('   { TokenOpenParen }
-    ')'   { TokenCloseParen }
+    w8    { TokenWord8  _ $$ }
+    w16   { TokenWord16 _ $$ }
+    '$'   { TokenDollar _ }
+    '#'   { TokenHash _ }
+    ','   { TokenComma _ }
+    'X'   { TokenX _ }
+    'Y'   { TokenY _ }
+    '('   { TokenOpenParen _ }
+    ')'   { TokenCloseParen _ }
+    ':'   { TokenColon _ }
+    lbl   { TokenLabel _ $$ }
 
 -- Parser monad
 %monad { Except String } { (>>=) } { return }
@@ -83,8 +94,8 @@ import Control.Monad.Except
 %left '*'
 %%
 
-instructions : instruction                 { [$1] }
-             | instruction instructions    { $1 : $2 }
+ assembly    : instruction                 { [$1] }
+             | instruction assembly        { $1 : $2 }
 
 instruction  : adc oper { ADC $2 }
              | and oper { AND $2 }
@@ -114,6 +125,7 @@ instruction  : adc oper { ADC $2 }
              | inx      { INX    }
              | iny      { INY    }
              | jmp oper { JMP $2 }
+             | jsr oper { JSR $2 }
              | lda oper { LDA $2 }
              | ldx oper { LDX $2 }
              | ldy oper { LDY $2 }
@@ -124,12 +136,17 @@ instruction  : adc oper { ADC $2 }
              | sei      { SEI    }
              | sed      { SED    }
              | rol oper { ROL $2 }
+             | ror oper { ROR $2 }
+             | rti      { RTI    }
+             | rts      { RTS    }
+             | sbc oper { SBC $2 }
              | tax      { TAX    }
              | txa      { TXA    }
              | tay      { TAY    }
              | tya      { TYA    }
              | tsx      { TXS    }
              | txs      { TSX    }
+             | labeldef { $1     }
 
 oper         : '#' '$' w8              { Imm  $3 }
 oper         :     '$' w16             { Abs  $2 }
@@ -138,13 +155,16 @@ oper         :     '$' w16 ',' 'Y'     { AbsY $2 }
 oper         :     '$' w8              { Zpg  $2 }
 oper         :     '$' w8  ',' 'X'     { ZpgX $2 }
 oper         :     '$' w8  ',' 'Y'     { ZpgY $2 }
-oper         : '(' '$' w16 ',' 'X' ')' { Ind $3 }
+oper         : '(' '$' w16 ',' 'X' ')' { Ind $3  }
 oper         : '(' '$' w8  ',' 'X' ')' { IndX $3 }
 oper         : '(' '$' w8  ')' ',' 'Y' { IndY $3 }
+oper         : lbl                     { Label $1 }
 
-rel          :     '$' w16            { Addr $2 }
+rel          :     '$' w16             { Imm 0 }
+
+labeldef     : lbl ':'                 { LabelDef $1 }
+
 {
-
 parseError :: [Token] -> Except String a
 parseError (l:ls) = throwError (show l)
 parseError [] = throwError "Unexpected end of Input"
@@ -156,5 +176,4 @@ parseAssembly input = runExcept $ do
 
 parseTokens :: String -> Either String [Token]
 parseTokens = runExcept . scanTokens
-
 }

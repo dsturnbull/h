@@ -22,6 +22,7 @@ module CPU.Instruction
   , module CPU.Instructions.PH
   , module CPU.Instructions.PL
   , module CPU.Instructions.ROL
+  , module CPU.Instructions.ROR
   , module CPU.Instructions.RT
   , module CPU.Instructions.SE
   , module CPU.Instructions.SBC
@@ -55,6 +56,7 @@ import CPU.Instructions.ORA
 import CPU.Instructions.PH
 import CPU.Instructions.PL
 import CPU.Instructions.ROL
+import CPU.Instructions.ROR
 import CPU.Instructions.RT
 import CPU.Instructions.SBC
 import CPU.Instructions.SE

@@ -23,7 +23,6 @@ common common-deps
     , lens                       ^>= 4.18.1
     , megaparsec                 ^>= 8.0.0
     , mtl                        ^>= 2.2.2
-    , qm-interpolated-string     ^>= 0.3.0.0
     , text                       ^>= 1.2.4.0
     , vector                     ^>= 0.12.0.3
 
@@ -59,6 +58,7 @@ library
                         CPU.Instructions.PH
                         CPU.Instructions.PL
                         CPU.Instructions.ROL
+                        CPU.Instructions.ROR
                         CPU.Instructions.RT
                         CPU.Instructions.SE
                         CPU.Instructions.SBC
@@ -71,6 +71,8 @@ library
     build-depends:      hedgehog
                       , hspec
                       , hw-hspec-hedgehog
+                      , bytestring-to-vector ^>= 0.3.0.1
+                      , optparse-applicative ^>= 0.15.1.0
   build-tool-depends:   alex:alex, happy:happy
 
 -- library sasm-lib
@@ -87,6 +89,8 @@ executable sasm
   hs-source-dirs:       sasm
   ghc-options:          -threaded -rtsopts
   build-depends:        h
+                      , bytestring-to-vector ^>= 0.3.0.1
+                      , optparse-applicative ^>= 0.15.1.0
   --, sasm-lib
 
 -- library cpu-lib
@@ -95,12 +99,14 @@ executable sasm
 --   exposed-modules:      Run
 --   hs-source-dirs:       cpu
 
-executable cpu
+executable run
   import:               common-deps, config
   main-is:              Main.hs
-  hs-source-dirs:       cpu
+  hs-source-dirs:       run
   ghc-options:          -threaded -rtsopts
   build-depends:        h
+                      , bytestring-to-vector ^>= 0.3.0.1
+                      , optparse-applicative ^>= 0.15.1.0
   --, sasm-lib, cpu-lib
 
 test-suite h-test
@@ -134,6 +140,7 @@ test-suite h-test
                         CPU.Instructions.PHSpec
                         CPU.Instructions.PLSpec
                         CPU.Instructions.ROLSpec
+                        CPU.Instructions.RORSpec
                         CPU.Instructions.RTSpec
                         CPU.Instructions.SESpec
                         CPU.Instructions.SBCSpec
@@ -149,5 +156,6 @@ test-suite h-test
                       , hspec
                       , hw-hspec-hedgehog
                       , hspec-megaparsec           ^>= 2.1.0
+                      , qm-interpolated-string     ^>= 0.3.0.0
                       -- , sasm-lib
                       -- , cpu-lib

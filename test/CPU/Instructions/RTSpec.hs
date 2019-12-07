@@ -34,7 +34,7 @@ spec = describe "returning" $ do
     w       <- forAll $ word8 (linear minBound maxBound)
     let cpu' = cpu
              & field @"pc" .~ pc'
-             & jsr (fromIntegral addr)
+             & jsrAbs (fromIntegral addr)
              & ldaImm w
     (cpu' & rts & s)  === 0xff
     (cpu' & rts & pc) === pc' + 3
