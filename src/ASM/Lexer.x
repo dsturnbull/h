@@ -82,6 +82,7 @@ tokens :-
   tya                           { tok (\p _ -> TokenTYA p) }
   tsx                           { tok (\p _ -> TokenTSX p) }
   txs                           { tok (\p _ -> TokenTXS p) }
+  brk                           { tok (\p _ -> TokenBRK p) }
 
   -- Syntax
   "$"                           { tok (\p _ -> TokenDollar p) }
@@ -147,6 +148,7 @@ data Token
   | TokenTYA AlexPosn
   | TokenTSX AlexPosn
   | TokenTXS AlexPosn
+  | TokenBRK AlexPosn
   | TokenWord8  AlexPosn Word8
   | TokenWord16 AlexPosn Word16
   | TokenDollar AlexPosn
@@ -161,6 +163,7 @@ data Token
   | TokenColon AlexPosn
   deriving (Eq,Show)
 
+{-
 token_pos (TokenADC p) = p
 token_pos (TokenAND p) = p
 token_pos (TokenASL p) = p
@@ -211,6 +214,8 @@ token_pos (TokenTAY p) = p
 token_pos (TokenTYA p) = p
 token_pos (TokenTSX p) = p
 token_pos (TokenTXS p) = p
+token_pos (TokenBRK p) = p
+
 token_pos (TokenWord8 p _) = p
 token_pos (TokenWord16 p _) = p
 token_pos (TokenDollar p) = p
@@ -223,6 +228,7 @@ token_pos (TokenCloseParen p) = p
 token_pos (TokenEOF p) = p
 token_pos (TokenLabel p _) = p
 token_pos (TokenColon p) = p
+-}
 
 scanTokens :: String -> Except String [Token]
 scanTokens str = go (alexStartPos,'\n',[],str)

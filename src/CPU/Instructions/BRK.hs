@@ -15,7 +15,7 @@ brk :: CPU -> CPU
 brk cpu =
   cpu & field @"p" . field @"break"     .~ True
       & field @"p" . field @"interrupt" .~ True
-      & field @"pc" %~ (+1)
+      -- & field @"pc" %~ (+1)
       & field @"s" %~ (flip (-) 3)
       & st s0 addrH
       & st s1 addrL

@@ -10,7 +10,6 @@ import Control.Lens
 import Control.Monad
 import Data.Either
 import Data.Generics.Product.Any
-import Data.Word
 import GHC.Generics
 import Options.Applicative
 import System.IO
@@ -34,7 +33,8 @@ main = do
   t <- readFile (opts ^. the @"inputFile")
   let instructions = parseAssembly t
 
-  let ws :: [Word8] = join $ asm <$> fromRight [] instructions
+  let ins  = fromRight [] instructions
+  let ws   = join $ asm ins <$> ins
   let prog = Program (DVS.fromList ws)
 
   h <- openBinaryFile out WriteMode

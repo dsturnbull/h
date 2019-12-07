@@ -1,8 +1,18 @@
 _main:
-  lda #$08
+  lda #$03
   tax
 
+  jsr _loop
+  lda #$10
+
+  brk
+  nop
+
 _loop:
+  iny
   dex
-  bne $0200
+  beq _done
   jmp _loop
+
+_done:
+  rts

@@ -69,6 +69,7 @@ import Control.Monad.Except
     tya   { TokenTYA _ }
     tsx   { TokenTSX _ }
     txs   { TokenTXS _ }
+    brk   { TokenBRK _ }
 
     w8    { TokenWord8  _ $$ }
     w16   { TokenWord16 _ $$ }
@@ -147,6 +148,7 @@ instruction  : adc oper { ADC $2 }
              | tsx      { TXS    }
              | txs      { TSX    }
              | labeldef { $1     }
+             | brk      { BRK    }
 
 oper         : '#' '$' w8              { Imm  $3 }
 oper         :     '$' w16             { Abs  $2 }
@@ -160,9 +162,10 @@ oper         : '(' '$' w8  ',' 'X' ')' { IndX $3 }
 oper         : '(' '$' w8  ')' ',' 'Y' { IndY $3 }
 oper         : lbl                     { Label $1 }
 
-rel          :     '$' w16             { Imm 0 }
+rel          : '$' w8                  { Rel (fromIntegral $2) }
+rel          : lbl                     { Label $1 }
 
-labeldef     : lbl ':'                 { LabelDef $1 }
+labeldef     : lbl ':'                 { LabelDef $1 0 }
 
 {
 parseError :: [Token] -> Except String a
@@ -173,6 +176,9 @@ parseAssembly :: String -> Either String [Instruction]
 parseAssembly input = runExcept $ do
   tokenStream <- scanTokens input
   assembly tokenStream
+
+-- resolveLabels :: Either String [Instruction]
+-- resolveLabels ins = 
 
 parseTokens :: String -> Either String [Token]
 parseTokens = runExcept . scanTokens

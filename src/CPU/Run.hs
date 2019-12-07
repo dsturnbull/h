@@ -455,6 +455,8 @@ execute i =
 
       BRK          -> brk
 
+      LabelDef _ _ -> undefined
+
 w16 :: DVS.Vector Word8 -> Word16
 w16 v = (addrH `shiftL` 8) .|. addrL
   where addrL = fromIntegral (v ! 0)
