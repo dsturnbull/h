@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE DeriveGeneric       #-}
+{-# LANGUAGE MultiWayIf          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications    #-}
 
@@ -14,6 +15,11 @@ module CPU
   , indirect
   , msb
   , stack
+  , kbd
+  , irqV
+  , brkV
+  , nmiV
+  , timerA
   , page
   , flagsToWord
   , wordToFlags
@@ -25,6 +31,7 @@ import Data.Bits
 import Data.Bits.Lens
 import Data.Char
 import Data.Generics.Product.Fields
+import Data.Maybe
 import Data.Vector.Storable         as V hiding (break, (++))
 import Data.Vector.Storable.Mutable (write)
 import Data.Word
@@ -57,17 +64,19 @@ data Flags = Flags
   } deriving (Show, Generic, Eq)
 
 data CPU = CPU
-  { mem :: Vector Word8
-  , rA  :: Word8
-  , rX  :: Word8
-  , rY  :: Word8
-  , pc  :: Word16
-  , s   :: Word8
-  , p   :: Flags
+  { mem     :: Vector Word8
+  , rA      :: Word8
+  , rX      :: Word8
+  , rY      :: Word8
+  , pc      :: Word16
+  , s       :: Word8
+  , p       :: Flags
+  , tim     :: Int
+  , ttyName :: Maybe String
   } deriving (Generic, Eq)
 
 instance Show CPU where
-  show cpu = printf "%s%s\n%s\n%s\n%s" regs pc' stb status mem'
+  show cpu = printf "%s\n%s%s\n%s\n%s\n%s" ttyName' regs pc' sleep status mem'
     where regs   = foldMap (++ " ")
                      (showReg <$> [ ("A", cpu & rA)
                                   , ("X", cpu & rX)
@@ -81,9 +90,10 @@ instance Show CPU where
                                      , ("I", cpu & p & interrupt)
                                      , ("Z", cpu & p & zero)
                                      , ("C", cpu & p & carry) ])
-          stb :: String     = printf "%sp: %s" (setSGRCode [Reset]) (bitShow (cpu & p & flagsToWord))
+          ttyName'          = fromMaybe "" (cpu & ttyName)
+          sleep :: String   = printf "%ss: %i" (setSGRCode [Reset]) (cpu & tim)
           showStatus (n, f) = if f then on n else off n
-          on n              = printf "%s%s%s" here n normal
+          on n              = printf "%s%s%s" onc n normal
           off n             = printf "%s%s" (setSGRCode [Reset]) n
           pc' :: String     = showPc (cpu & pc)
           showPc v          = printf "%sPC: %04x" (setSGRCode [Reset]) v
@@ -91,8 +101,15 @@ instance Show CPU where
           mem'              = header ++ foldMap (++ "\n") (showRow <$> rows)
           header            = "    : " ++ foldMap (++ " ") (printf "%02x" <$> [0 .. rowLength - 1]) ++ "\n"
           showRow (o, row)  = printf "%04x: %s |%s|" o (elements o row) (ascii row)
-          elements o eles   = foldMap (++ " ") ((\(i, v) -> if i == fromIntegral (cpu & pc) then printf "%s%02x" here v else printf "%s%02x" normal v) <$> zip [o..] (V.toList eles))
-          here              = setSGRCode [SetColor Foreground Vivid Red]
+          elements o eles   = foldMap (++ " ") (
+                                (\(i, v) ->
+                                   if | i == fromIntegral (cpu & pc)                       -> printf "%s%02x%s" pcHere v normal
+                                      | i == fromIntegral (fromIntegral (cpu & s) + stack) -> printf "%s%02x%s" spHere v normal
+                                      | otherwise                                          -> printf "%s%02x" normal v
+                                ) <$> zip [o..] (V.toList eles))
+          onc               = setSGRCode [SetColor Foreground Vivid Red]
+          pcHere            = setSGRCode [SetColor Foreground Vivid Red]
+          spHere            = setSGRCode [SetColor Foreground Vivid Blue]
           normal            = setSGRCode [Reset]
           ascii eles        = foldMap (++ "") (printf "%c" . toPrintable . chr . fromIntegral <$> V.toList eles)
           toPrintable c     = if isPrint c then c else '.'
@@ -104,7 +121,7 @@ mkFlags :: Flags
 mkFlags = Flags False False False False False False False False
 
 mkCPU :: DVS.Vector Word8 -> CPU
-mkCPU m = CPU m 0 0 0 0 0xff mkFlags
+mkCPU m = CPU m 0 0 0 0 0xff mkFlags 0 Nothing
 
 st :: Word16 -> Word8 -> CPU -> CPU
 st addr v cpu = cpu & field @"mem" %~ modify (\vec -> write vec (fromIntegral addr) v)
@@ -132,6 +149,21 @@ msb w = w .&. 0x80 == 0x80
 
 stack :: Word16
 stack = 0x0100
+
+kbd :: Word16
+kbd = 0x300
+
+irqV :: Word16
+irqV = 0x0314
+
+brkV :: Word16
+brkV = 0x0316
+
+nmiV :: Word16
+nmiV = 0x0318
+
+timerA :: Word16
+timerA = 0x0380
 
 page :: Word8
 page = maxBound

@@ -1,4 +1,5 @@
 {
+{-# LANGUAGE BinaryLiterals   #-}
 {-# LANGUAGE FlexibleContexts #-}
 
 module ASM.Lexer (
@@ -6,6 +7,8 @@ module ASM.Lexer (
   scanTokens
 ) where
 
+import Data.Char (digitToInt)
+import Data.List (foldl')
 import Data.Word
 import Control.Monad.Except
 }
@@ -16,6 +19,8 @@ $digit = 0-9
 $alpha = [a-zA-Z]
 $hex   = [0-9a-fA-F]
 $eol   = [\n]
+$label = [a-zA-Z0-9_]
+$bits  = [01]
 
 tokens :-
 
@@ -26,11 +31,6 @@ tokens :-
   -- Comments
   ";".*                         ;
 
-  -- Syntax
-  $hex{2}                       { tok (\p s -> TokenWord8  p (read ("0x" <> s))) }
-  $hex{4}                       { tok (\p s -> TokenWord16 p (read ("0x" <> s))) }
-  "_" $alpha+                   { tok (\p s -> TokenLabel  p s) }
-  
   -- Instructions
   adc                           { tok (\p _ -> TokenADC p) }
   and                           { tok (\p _ -> TokenAND p) }
@@ -65,14 +65,18 @@ tokens :-
   lsr                           { tok (\p _ -> TokenLSR p) }
   nop                           { tok (\p _ -> TokenNOP p) }
   ora                           { tok (\p _ -> TokenORA p) }
-  sec                           { tok (\p _ -> TokenSEC p) }
-  sei                           { tok (\p _ -> TokenSEI p) }
-  sed                           { tok (\p _ -> TokenSED p) }
+  pha                           { tok (\p _ -> TokenPHA p) }
+  php                           { tok (\p _ -> TokenPHP p) }
+  pla                           { tok (\p _ -> TokenPLA p) }
+  plp                           { tok (\p _ -> TokenPLP p) }
   rol                           { tok (\p _ -> TokenROL p) }
   ror                           { tok (\p _ -> TokenROR p) }
   rti                           { tok (\p _ -> TokenRTI p) }
   rts                           { tok (\p _ -> TokenRTS p) }
   sbc                           { tok (\p _ -> TokenSBC p) }
+  sec                           { tok (\p _ -> TokenSEC p) }
+  sei                           { tok (\p _ -> TokenSEI p) }
+  sed                           { tok (\p _ -> TokenSED p) }
   sta                           { tok (\p _ -> TokenSTA p) }
   stx                           { tok (\p _ -> TokenSTX p) }
   sty                           { tok (\p _ -> TokenSTY p) }
@@ -85,6 +89,9 @@ tokens :-
   brk                           { tok (\p _ -> TokenBRK p) }
 
   -- Syntax
+  $hex{2}                       { tok (\p s -> TokenWord8  p (read ("0x" <> s))) }
+  $hex{4}                       { tok (\p s -> TokenWord16 p (read ("0x" <> s))) }
+  "_" $label+                   { tok (\p s -> TokenLabel  p s) }
   "$"                           { tok (\p _ -> TokenDollar p) }
   "#"                           { tok (\p _ -> TokenHash p) }
   ","                           { tok (\p _ -> TokenComma p) }
@@ -93,9 +100,16 @@ tokens :-
   "("                           { tok (\p _ -> TokenOpenParen p) }
   ")"                           { tok (\p _ -> TokenCloseParen p) }
   ":"                           { tok (\p _ -> TokenColon p) }
+  "<"                           { tok (\p _ -> TokenLowByte p) }
+  ">"                           { tok (\p _ -> TokenHighByte p) }
+  "%"                           { tok (\p _ -> TokenPercent p) }
+  $bits{8}                      { tok (\p s -> TokenWord8 p (fromIntegral $ toDec s)) }
 
 {
 tok f p s = f p s
+
+toDec :: String -> Int
+toDec = foldl' (\acc x -> acc * 2 + digitToInt x) 0
 
 data Token 
   = TokenADC AlexPosn
@@ -131,14 +145,18 @@ data Token
   | TokenLSR AlexPosn
   | TokenNOP AlexPosn
   | TokenORA AlexPosn
-  | TokenSEC AlexPosn
-  | TokenSEI AlexPosn
-  | TokenSED AlexPosn
+  | TokenPHA AlexPosn
+  | TokenPHP AlexPosn
+  | TokenPLA AlexPosn
+  | TokenPLP AlexPosn
   | TokenROL AlexPosn
   | TokenROR AlexPosn
   | TokenRTI AlexPosn
   | TokenRTS AlexPosn
   | TokenSBC AlexPosn
+  | TokenSEC AlexPosn
+  | TokenSEI AlexPosn
+  | TokenSED AlexPosn
   | TokenSTA AlexPosn
   | TokenSTX AlexPosn
   | TokenSTY AlexPosn
@@ -161,6 +179,9 @@ data Token
   | TokenEOF AlexPosn
   | TokenLabel AlexPosn String
   | TokenColon AlexPosn
+  | TokenHighByte AlexPosn
+  | TokenLowByte AlexPosn
+  | TokenPercent AlexPosn
   deriving (Eq,Show)
 
 {-

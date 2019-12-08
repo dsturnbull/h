@@ -1,13 +1,14 @@
 {
 
 module ASM.Parser (
-  asm,
   assembly,
   parseAssembly,
   parseTokens,
 ) where
 
 import ASM.Lexer
+import CPU.Instructions.Opcode
+import CPU.Operand
 import CPU.Program
 
 import Control.Monad.Except
@@ -52,17 +53,21 @@ import Control.Monad.Except
     lsr   { TokenLSR _ }
     nop   { TokenNOP _ }
     ora   { TokenORA _ }
-    sec   { TokenSEC _ }
-    sed   { TokenSED _ }
-    sei   { TokenSEI _ }
+    pha   { TokenPHA _ }
+    php   { TokenPHP _ }
+    pla   { TokenPLA _ }
+    plp   { TokenPLP _ }
     rol   { TokenROL _ }
     ror   { TokenROR _ }
     rti   { TokenRTI _ }
     rts   { TokenRTS _ }
     sbc   { TokenSBC _ }
+    sec   { TokenSEC _ }
+    sed   { TokenSED _ }
+    sei   { TokenSEI _ }
     sta   { TokenSTA _ }
     stx   { TokenSTX _ }
-    syy   { TokenSTY _ }
+    sty   { TokenSTY _ }
     tax   { TokenTAX _ }
     txa   { TokenTXA _ }
     tay   { TokenTAY _ }
@@ -78,10 +83,13 @@ import Control.Monad.Except
     ','   { TokenComma _ }
     'X'   { TokenX _ }
     'Y'   { TokenY _ }
+    lbl   { TokenLabel _ $$ }
     '('   { TokenOpenParen _ }
     ')'   { TokenCloseParen _ }
     ':'   { TokenColon _ }
-    lbl   { TokenLabel _ $$ }
+    '<'   { TokenLowByte _ }
+    '>'   { TokenHighByte _ }
+    '%'   { TokenPercent _ }
 
 -- Parser monad
 %monad { Except String } { (>>=) } { return }
@@ -133,14 +141,21 @@ instruction  : adc oper { ADC $2 }
              | lsr oper { LSR $2 }
              | nop      { NOP    }
              | ora oper { ORA $2 }
-             | sec      { SEC    }
-             | sei      { SEI    }
-             | sed      { SED    }
+             | pha      { PHA    }
+             | php      { PHP    }
+             | pla      { PLA    }
+             | plp      { PLP    }
              | rol oper { ROL $2 }
              | ror oper { ROR $2 }
              | rti      { RTI    }
              | rts      { RTS    }
              | sbc oper { SBC $2 }
+             | sec      { SEC    }
+             | sei      { SEI    }
+             | sed      { SED    }
+             | sta oper { STA $2 }
+             | stx oper { STX $2 }
+             | sty oper { STY $2 }
              | tax      { TAX    }
              | txa      { TXA    }
              | tay      { TAY    }
@@ -150,20 +165,25 @@ instruction  : adc oper { ADC $2 }
              | labeldef { $1     }
              | brk      { BRK    }
 
-oper         : '#' '$' w8              { Imm  $3 }
+oper         : '#'  nm                 { Imm  $2 }
 oper         :     '$' w16             { Abs  $2 }
 oper         :     '$' w16 ',' 'X'     { AbsX $2 }
 oper         :     '$' w16 ',' 'Y'     { AbsY $2 }
-oper         :     '$' w8              { Zpg  $2 }
-oper         :     '$' w8  ',' 'X'     { ZpgX $2 }
-oper         :     '$' w8  ',' 'Y'     { ZpgY $2 }
+oper         :      nm                 { Zpg  $1 }
+oper         :      nm     ',' 'X'     { ZpgX $1 }
+oper         :      nm     ',' 'Y'     { ZpgY $1 }
 oper         : '(' '$' w16 ',' 'X' ')' { Ind $3  }
-oper         : '(' '$' w8  ',' 'X' ')' { IndX $3 }
-oper         : '(' '$' w8  ')' ',' 'Y' { IndY $3 }
+oper         : '('  nm     ',' 'X' ')' { IndX $2 }
+oper         : '('  nm     ')' ',' 'Y' { IndY $2 }
 oper         : lbl                     { Label $1 }
+oper         : '<' lbl                 { LabelLowByte $2 }
+oper         : '>' lbl                 { LabelHighByte $2 }
 
-rel          : '$' w8                  { Rel (fromIntegral $2) }
+rel          : '$'  w8                 { Rel (fromIntegral $2) }
 rel          : lbl                     { Label $1 }
+
+nm           : '$'  w8                 { $2 }
+nm           : '%'  w8                 { $2 }
 
 labeldef     : lbl ':'                 { LabelDef $1 0 }
 
@@ -172,13 +192,10 @@ parseError :: [Token] -> Except String a
 parseError (l:ls) = throwError (show l)
 parseError [] = throwError "Unexpected end of Input"
 
-parseAssembly :: String -> Either String [Instruction]
+parseAssembly :: String -> Either String [Opcode]
 parseAssembly input = runExcept $ do
   tokenStream <- scanTokens input
   assembly tokenStream
-
--- resolveLabels :: Either String [Instruction]
--- resolveLabels ins = 
 
 parseTokens :: String -> Either String [Token]
 parseTokens = runExcept . scanTokens

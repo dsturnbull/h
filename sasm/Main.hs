@@ -5,6 +5,8 @@
 
 import ASM.Assembler
 import ASM.Parser
+import CPU.Instructions.Assembles
+import CPU.Program
 
 import Control.Lens
 import Control.Monad
@@ -34,16 +36,17 @@ main = do
   let instructions = parseAssembly t
 
   let ins  = fromRight [] instructions
-  let ws   = join $ asm ins <$> ins
+  let ws   = join $ (\(o, i) -> asm o ins i) <$> insPositions 0 ins
   let prog = Program (DVS.fromList ws)
 
-  h <- openBinaryFile out WriteMode
+  handle <- openBinaryFile out WriteMode
   let bs = DVSB.vectorToByteString (prog ^. the @"program")
-  BS.hPut h bs
-  hClose h
+  BS.hPut handle bs
+  hClose handle
 
   when verbose $ print instructions
   when verbose $ print prog
+  when verbose $ putStrLn $ disasm prog
   putStrLn $ "wrote " <> show (BS.length bs) <> " bytes to " <> out
 
   return ()

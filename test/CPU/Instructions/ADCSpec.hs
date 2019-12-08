@@ -1,6 +1,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module CPU.Instructions.ADCSpec
+module CPU.Instructions.IS.ADCSpec
   ( spec
   ) where
 

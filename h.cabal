@@ -10,6 +10,7 @@ flag dev
 
 common config
   ghc-options:          -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wredundant-constraints -msse4.2
+  -- -g -debug
   default-language:     Haskell2010
 
 common common-deps
@@ -24,6 +25,7 @@ common common-deps
     , megaparsec                 ^>= 8.0.0
     , mtl                        ^>= 2.2.2
     , text                       ^>= 1.2.4.0
+    , unix                       ^>= 2.7.2.2
     , vector                     ^>= 0.12.0.3
 
 library
@@ -32,40 +34,52 @@ library
                         ASM.Lexer
                         ASM.Parser
                         CPU
+                        CPU.Graphics
+                        CPU.Hardware.Interrupt
+                        CPU.Hardware.Terminal
+                        CPU.Hardware.Timer
+                        CPU.Operand
                         CPU.Program
                         CPU.Run
-                        CPU.Instruction
-                        CPU.Instructions.ADC
-                        CPU.Instructions.AND
-                        CPU.Instructions.ASL
-                        CPU.Instructions.B
-                        CPU.Instructions.BRK
-                        CPU.Instructions.CL
-                        CPU.Instructions.CMP
-                        CPU.Instructions.CPX
-                        CPU.Instructions.CPY
-                        CPU.Instructions.DE
-                        CPU.Instructions.EOR
-                        CPU.Instructions.IN
-                        CPU.Instructions.JMP
-                        CPU.Instructions.JSR
-                        CPU.Instructions.LDA
-                        CPU.Instructions.LDX
-                        CPU.Instructions.LDY
-                        CPU.Instructions.LSR
-                        CPU.Instructions.NOP
-                        CPU.Instructions.ORA
-                        CPU.Instructions.PH
-                        CPU.Instructions.PL
-                        CPU.Instructions.ROL
-                        CPU.Instructions.ROR
-                        CPU.Instructions.RT
-                        CPU.Instructions.SE
-                        CPU.Instructions.SBC
-                        CPU.Instructions.STA
-                        CPU.Instructions.STX
-                        CPU.Instructions.STY
-                        CPU.Instructions.T
+                        CPU.Instructions.Assembles
+                        CPU.Instructions.Decodes
+                        CPU.Instructions.Execute
+                        CPU.Instructions.Opcode
+                        CPU.Instructions.Impl
+                        CPU.Instructions.Jumps
+                        CPU.Instructions.Length
+                        CPU.Instructions.Timing
+                        CPU.Instructions.IS.ADC
+                        CPU.Instructions.IS.AND
+                        CPU.Instructions.IS.ASL
+                        CPU.Instructions.IS.B
+                        CPU.Instructions.IS.BRK
+                        CPU.Instructions.IS.CL
+                        CPU.Instructions.IS.CMP
+                        CPU.Instructions.IS.CPX
+                        CPU.Instructions.IS.CPY
+                        CPU.Instructions.IS.DE
+                        CPU.Instructions.IS.EOR
+                        CPU.Instructions.IS.IN
+                        CPU.Instructions.IS.JMP
+                        CPU.Instructions.IS.JSR
+                        CPU.Instructions.IS.LDA
+                        CPU.Instructions.IS.LDX
+                        CPU.Instructions.IS.LDY
+                        CPU.Instructions.IS.LSR
+                        CPU.Instructions.IS.NOP
+                        CPU.Instructions.IS.ORA
+                        CPU.Instructions.IS.PH
+                        CPU.Instructions.IS.PL
+                        CPU.Instructions.IS.ROL
+                        CPU.Instructions.IS.ROR
+                        CPU.Instructions.IS.RT
+                        CPU.Instructions.IS.SBC
+                        CPU.Instructions.IS.SE
+                        CPU.Instructions.IS.STA
+                        CPU.Instructions.IS.STX
+                        CPU.Instructions.IS.STY
+                        CPU.Instructions.IS.T
   hs-source-dirs:       src
   if flag(dev)
     build-depends:      hedgehog
@@ -73,6 +87,7 @@ library
                       , hw-hspec-hedgehog
                       , bytestring-to-vector ^>= 0.3.0.1
                       , optparse-applicative ^>= 0.15.1.0
+                      , processing-for-haskell ^>= 0.1.0.1
   build-tool-depends:   alex:alex, happy:happy
 
 -- library sasm-lib
@@ -107,6 +122,7 @@ executable run
   build-depends:        h
                       , bytestring-to-vector ^>= 0.3.0.1
                       , optparse-applicative ^>= 0.15.1.0
+                      , processing-for-haskell ^>= 0.1.0.1
   --, sasm-lib, cpu-lib
 
 test-suite h-test
