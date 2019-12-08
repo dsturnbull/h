@@ -15,18 +15,25 @@ common config
 
 common common-deps
   build-depends:
-      base                        >= 4.7          && < 5
-    , ansi-terminal              ^>= 0.10.2
-    , array                      ^>= 0.5.3.0
-    , bytestring                 ^>= 0.10.10.0
-    , generic-lens               ^>= 1.1.0.0
-    , hw-bits                    ^>= 0.7.0.9
-    , lens                       ^>= 4.18.1
-    , megaparsec                 ^>= 8.0.0
-    , mtl                        ^>= 2.2.2
-    , text                       ^>= 1.2.4.0
-    , unix                       ^>= 2.7.2.2
-    , vector                     ^>= 0.12.0.3
+      base                >= 4.7          && < 5
+    , ansi-terminal      ^>= 0.10.2
+    , array              ^>= 0.5.3.0
+    , bytestring         ^>= 0.10.10.0
+    , generic-lens       ^>= 1.1.0.0
+    , hw-bits            ^>= 0.7.0.9
+    , lens               ^>= 4.18.1
+    , megaparsec         ^>= 8.0.0
+    , mtl                ^>= 2.2.2
+    , text               ^>= 1.2.4.0
+    , unix               ^>= 2.7.2.2
+    , vector             ^>= 0.12.0.3
+    , stm                ^>= 2.5.0.0
+    , jack               ^>= 0.7.1.4
+    , midi               ^>= 0.2.2.2
+    , explicit-exception ^>= 0.1.10
+    , non-negative       ^>= 0.1.2
+    , event-list         ^>= 0.1.2
+    , transformers       ^>= 0.5.6.2
 
 library
   import:               common-deps, config
@@ -36,6 +43,7 @@ library
                         CPU
                         CPU.Graphics
                         CPU.Hardware.Interrupt
+                        CPU.Hardware.MIDI
                         CPU.Hardware.Terminal
                         CPU.Hardware.Timer
                         CPU.Operand

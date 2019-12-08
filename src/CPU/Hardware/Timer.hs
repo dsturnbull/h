@@ -17,8 +17,6 @@ import Control.Lens
 import Data.Bits.Lens
 import Data.Vector.Storable (slice, (!))
 
-import qualified Data.Vector.Storable.Mutable as DVSM
-
 {-
                    control
                   00000011
@@ -43,10 +41,3 @@ updateTimers cpu = do
         setEnabled   c = c & bitAt 1 .~ True
         timer          = w16 $ slice (fromIntegral (timerA + 1)) 2 (cpu & mem)
         timer'         = timer - 1
-  -- allocaBytes 1 $ \ptr -> do
-  --   when (c > 0) $ do
-  --     poke ptr c
-  --     -- void $ fdWriteBuf tty ptr 1
-  --   return $ cpu
-  --          & field @"mem" %~ DVS.modify (\vec -> DVSM.write vec (fromIntegral (kbd + 1)) (0 :: Word8))
-  --   where c = (cpu & mem) ! fromIntegral (kbd + 1)

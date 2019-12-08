@@ -11,13 +11,14 @@ import CPU.Program
 import CPU.Run
 
 import Control.Concurrent
+import Control.Concurrent.STM
 import Control.Lens
 import Control.Monad
 import Data.Generics.Product.Fields
 import GHC.Generics
 import Graphics.Proc
 import Options.Applicative
-import Prelude                      hiding (break)
+import Prelude                      hiding (break, init)
 import System.Posix.IO
 import System.Posix.Terminal
 import System.Posix.Types           (Fd)
@@ -56,37 +57,44 @@ main = do
   --  $0300 - 0x11a0 bitmap
   --  ????? - colour
 
-  let cpu = load 0 prog $ mkCPU (DVS.replicate (opt ^. field @"memory") 0)
-
   (mfd, _) <- liftIO openPseudoTerminal
   liftIO $ setFdOption mfd NonBlockingRead True
 
   tty <- getSlaveTerminalName mfd
   putStrLn tty
 
-  return (cpu & field @"ttyName" ?~ tty) >>= \cpu' -> do
-    if opt ^. field @"graphics"
-      then
-        runProc $ def
-          { procSetup      = setup cpu'
-          , procDraw       = draw
-          , procUpdateTime = update verbose
-          , procKeyPressed = keyPressed
-          }
-      else
-          void $ runShow verbose (opt ^. field @"hz") mfd cpu'
+  let init = load 0 prog $ mkCPU (DVS.replicate (opt ^. field @"memory") 0)
+                         & field @"ttyName" ?~ tty
+  cpuSTM <- newTVarIO init
 
-runShow :: Bool -> Int -> Fd -> CPU -> IO CPU
-runShow verbose h tty cpu =
+  -- _ <- forkIO $ jackMain cpuSTM
+
+  runShow verbose (opt ^. field @"hz") mfd cpuSTM
+
+  -- if opt ^. field @"graphics"
+  --   then
+  --     runProc $ def
+  --       { procSetup      = setup cpu'
+  --       , procDraw       = draw
+  --       , procUpdateTime = update verbose
+  --       , procKeyPressed = keyPressed
+  --       }
+  --   else
+
+runShow :: Bool -> Int -> Fd -> TVar CPU -> IO ()
+runShow verbose h tty cpuSTM = do
+  cpu <- atomically $ readTVar cpuSTM
+
   if cpu & p & break
-    then return cpu
+    then return ()
     else do
       simulateTime h (step cpu)
         >>= (\cpu' -> when verbose (print cpu') >> return cpu')
         >>= readKbd tty
         >>= writeOutput tty
         >>= updateTimers
-        >>= runShow verbose h tty
+        >>= \cpu' -> atomically (writeTVar cpuSTM cpu')
+        >>  runShow verbose h tty cpuSTM
 
 simulateTime :: Int -> CPU -> IO CPU
 simulateTime h cpu = do
@@ -97,51 +105,51 @@ cyf :: Int -> Double
 cyf h = 1e6 / fromIntegral h
 
 width :: Int
-width = virtWidth * fst virtScale
+width = _virtWidth * fst _virtScale
 
 height :: Int
-height = virtHeight * snd virtScale
+height = _virtHeight * snd _virtScale
 
-virtWidth :: Int
-virtWidth  = 200
+_virtWidth :: Int
+_virtWidth  = 200
 
-virtHeight :: Int
-virtHeight = 160
+_virtHeight :: Int
+_virtHeight = 160
 
-virtScale :: (Int, Int)
-virtScale = (4, 4)
+_virtScale :: (Int, Int)
+_virtScale = (4, 4)
 
-setup :: CPU -> Pio CPU
-setup cpu = do
+_setup :: CPU -> Pio CPU
+_setup cpu = do
               size (fromIntegral width, fromIntegral height)
               return cpu
 
-draw :: CPU -> Pio ()
-draw cpu = do
+_draw :: CPU -> Pio ()
+_draw cpu = do
   -- scale virtScale
   background (grey 0)
   let c = orange
   stroke c
-  let pixels = pixelData virtHeight 0x200 0xfa0 cpu
+  let pixels = pixelData _virtHeight 0x200 0xfa0 cpu
   -- n <- millis
   -- let pixels = [(x, y) | x <- [n `mod` virtHeight .. ], y <- [0..]]
   void $
     traverse ((\(x,y) ->
-                rect (fromIntegral x * fromIntegral (fst virtScale), fromIntegral y * fromIntegral (snd virtScale))
-                (fromIntegral (fst virtScale), fromIntegral (snd virtScale)) >> fill c))
+                rect (fromIntegral x * fromIntegral (fst _virtScale), fromIntegral y * fromIntegral (snd _virtScale))
+                (fromIntegral (fst _virtScale), fromIntegral (snd _virtScale)) >> fill c))
       -- (take virtWidth pixels)
       pixels
 
-update :: Bool -> TimeInterval -> CPU -> Pio CPU
-update verbose t cpu = do
+_update :: Bool -> TimeInterval -> CPU -> Pio CPU
+_update verbose t cpu = do
   liftIO $ print t
   let cpu' = step cpu
   when verbose $
     liftIO $ print cpu'
   return $ cpu'
 
-keyPressed :: CPU -> Pio CPU
-keyPressed cpu = do
+_keyPressed :: CPU -> Pio CPU
+_keyPressed cpu = do
   k <- key
   liftIO . print $ k
   return cpu

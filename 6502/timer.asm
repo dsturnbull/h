@@ -5,7 +5,7 @@ _install_isr:
   sta $0315
 
 _start_timer:
-  lda #$ff
+  lda #$70
   sta $0382
   lda #$ff
   sta $0381
@@ -14,10 +14,10 @@ _start_timer:
   sta $0380
 
   lda #$00 ; exit condition
-  sta $30
+  sta $40
 
 _main:
-  lda $30
+  lda $40
   beq _main
   jmp _start_timer
 
@@ -25,7 +25,7 @@ _isr:
   pha
   pla
   lda #$01
-  sta $30
+  sta $40
   lda #$2e
   sta $0301
   rti
