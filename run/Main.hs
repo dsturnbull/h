@@ -5,6 +5,7 @@
 
 import CPU
 import CPU.Graphics
+import CPU.Hardware.Sound
 import CPU.Hardware.Terminal
 import CPU.Hardware.Timer
 import CPU.Program
@@ -65,7 +66,7 @@ main = do
 
   let init = load 0 prog $ mkCPU (DVS.replicate (opt ^. field @"memory") 0)
                          & field @"ttyName" ?~ tty
-  cpuSTM <- newTVarIO init
+  cpuSTM <- initSound init >>= newTVarIO
 
   -- _ <- forkIO $ jackMain cpuSTM
 
@@ -85,16 +86,15 @@ runShow :: Bool -> Int -> Fd -> TVar CPU -> IO ()
 runShow verbose h tty cpuSTM = do
   cpu <- atomically $ readTVar cpuSTM
 
-  if cpu & p & break
-    then return ()
-    else do
-      simulateTime h (step cpu)
-        >>= (\cpu' -> when verbose (print cpu') >> return cpu')
-        >>= readKbd tty
-        >>= writeOutput tty
-        >>= updateTimers
-        >>= \cpu' -> atomically (writeTVar cpuSTM cpu')
-        >>  runShow verbose h tty cpuSTM
+  unless (cpu & p & break) $
+    simulateTime h (step cpu)
+      >>= (\cpu' -> when verbose (print cpu') >> return cpu')
+      >>= readKbd tty
+      >>= writeOutput tty
+      >>= updateTimers
+      >>= updateSound
+      >>= \cpu' -> atomically (writeTVar cpuSTM cpu')
+      >>  runShow verbose h tty cpuSTM
 
 simulateTime :: Int -> CPU -> IO CPU
 simulateTime h cpu = do

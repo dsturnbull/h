@@ -1,0 +1,6 @@
+packages: .
+
+source-repository-package
+  type: git
+  location: git@github.com:fumieval/bindings-portaudio.git
+  tag: 1e4baec420cf4dcadd3d1fd8ef0c6e144fa523d9

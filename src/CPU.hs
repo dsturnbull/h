@@ -20,12 +20,14 @@ module CPU
   , brkV
   , nmiV
   , timerA
+  , soundA
   , page
   , flagsToWord
   , wordToFlags
   , bitShow
   ) where
 
+import Bindings.PortAudio
 import Control.Lens                 hiding (elements, ignored)
 import Data.Bits
 import Data.Bits.Lens
@@ -35,6 +37,7 @@ import Data.Maybe
 import Data.Vector.Storable         as V hiding (break, (++))
 import Data.Vector.Storable.Mutable (write)
 import Data.Word
+import Foreign                      hiding (void)
 import Foreign.Marshal.Utils        (fromBool)
 import GHC.Generics
 import Prelude                      hiding (break, replicate)
@@ -73,6 +76,7 @@ data CPU = CPU
   , p       :: Flags
   , tim     :: Int
   , ttyName :: Maybe String
+  , audio   :: Maybe (Ptr C'PaStream)
   } deriving (Generic, Eq)
 
 instance Show CPU where
@@ -121,7 +125,7 @@ mkFlags :: Flags
 mkFlags = Flags False False False False False False False False
 
 mkCPU :: DVS.Vector Word8 -> CPU
-mkCPU m = CPU m 0 0 0 0 0xff mkFlags 0 Nothing
+mkCPU m = CPU m 0 0 0 0 0xff mkFlags 0 Nothing Nothing
 
 st :: Word16 -> Word8 -> CPU -> CPU
 st addr v cpu = cpu & field @"mem" %~ modify (\vec -> write vec (fromIntegral addr) v)
@@ -163,7 +167,10 @@ nmiV :: Word16
 nmiV = 0x0318
 
 timerA :: Word16
-timerA = 0x0380
+timerA = 0x0320
+
+soundA :: Word16
+soundA = 0x0340
 
 page :: Word8
 page = maxBound
