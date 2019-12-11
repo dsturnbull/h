@@ -20,12 +20,14 @@ module CPU
   , brkV
   , nmiV
   , timerA
-  , soundA
+  , sound
   , page
   , flagsToWord
   , wordToFlags
   , bitShow
   ) where
+
+import CPU.Hardware.Sound.SID
 
 import Bindings.PortAudio
 import Control.Lens                 hiding (elements, ignored)
@@ -34,6 +36,7 @@ import Data.Bits.Lens
 import Data.Char
 import Data.Generics.Product.Fields
 import Data.Maybe
+import Data.Time.Clock
 import Data.Vector.Storable         as V hiding (break, (++))
 import Data.Vector.Storable.Mutable (write)
 import Data.Word
@@ -75,12 +78,15 @@ data CPU = CPU
   , s       :: Word8
   , p       :: Flags
   , tim     :: Int
+  , clock   :: UTCTime
+  , dt      :: Double
   , ttyName :: Maybe String
   , audio   :: Maybe (Ptr C'PaStream)
+  , sid     :: SID
   } deriving (Generic, Eq)
 
 instance Show CPU where
-  show cpu = printf "%s\n%s%s\n%s\n%s\n%s" ttyName' regs pc' sleep status mem'
+  show cpu = printf "%s\n%s%s\n%s\n%s\n%s\n%s" top regs pc' sleep (show $ cpu & sid) status mem'
     where regs   = foldMap (++ " ")
                      (showReg <$> [ ("A", cpu & rA)
                                   , ("X", cpu & rX)
@@ -94,7 +100,7 @@ instance Show CPU where
                                      , ("I", cpu & p & interrupt)
                                      , ("Z", cpu & p & zero)
                                      , ("C", cpu & p & carry) ])
-          ttyName'          = fromMaybe "" (cpu & ttyName)
+          top               = fromMaybe "" (cpu & ttyName) ++ " dt: " <> show (cpu & dt)
           sleep :: String   = printf "%ss: %i" (setSGRCode [Reset]) (cpu & tim)
           showStatus (n, f) = if f then on n else off n
           on n              = printf "%s%s%s" onc n normal
@@ -124,8 +130,8 @@ instance Show CPU where
 mkFlags :: Flags
 mkFlags = Flags False False False False False False False False
 
-mkCPU :: DVS.Vector Word8 -> CPU
-mkCPU m = CPU m 0 0 0 0 0xff mkFlags 0 Nothing Nothing
+mkCPU :: UTCTime -> DVS.Vector Word8 -> CPU
+mkCPU t0 m = CPU m 0 0 0 0 0xff mkFlags 0 t0 0 Nothing Nothing mkSID
 
 st :: Word16 -> Word8 -> CPU -> CPU
 st addr v cpu = cpu & field @"mem" %~ modify (\vec -> write vec (fromIntegral addr) v)
@@ -169,8 +175,8 @@ nmiV = 0x0318
 timerA :: Word16
 timerA = 0x0320
 
-soundA :: Word16
-soundA = 0x0340
+sound :: Word16
+sound = 0x0400
 
 page :: Word8
 page = maxBound

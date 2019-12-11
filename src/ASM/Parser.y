@@ -7,6 +7,7 @@ module ASM.Parser (
 ) where
 
 import ASM.Lexer
+import CPU.Instructions.Assembles
 import CPU.Instructions.Opcode
 import CPU.Operand
 import CPU.Program
@@ -166,6 +167,8 @@ instruction  : adc oper { ADC $2 }
              | brk      { BRK    }
 
 oper         : '#'  nm                 { Imm  $2 }
+oper         : '<' '#' '$' w16         { Imm (l $4) }
+oper         : '>' '#' '$' w16         { Imm (h $4) }
 oper         :     '$' w16             { Abs  $2 }
 oper         :     '$' w16 ',' 'X'     { AbsX $2 }
 oper         :     '$' w16 ',' 'Y'     { AbsY $2 }

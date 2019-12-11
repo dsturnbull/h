@@ -29,6 +29,7 @@ common common-deps
     , stm                ^>= 2.5.0.0
     , bindings-portaudio ^>= 0.2
     , linear             ^>= 1.20.9
+    , time               ^>= 1.9.3
 
 library
   import:               common-deps, config
@@ -41,6 +42,8 @@ library
                         CPU.Hardware.Terminal
                         CPU.Hardware.Timer
                         CPU.Hardware.Sound
+                        CPU.Hardware.Sound.SID
+                        CPU.Hardware.Sound.Voice
                         CPU.Operand
                         CPU.Program
                         CPU.Run

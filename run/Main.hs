@@ -15,7 +15,9 @@ import Control.Concurrent
 import Control.Concurrent.STM
 import Control.Lens
 import Control.Monad
+import Data.Fixed
 import Data.Generics.Product.Fields
+import Data.Time.Clock
 import GHC.Generics
 import Graphics.Proc
 import Options.Applicative
@@ -53,8 +55,10 @@ main = do
   --  $0314-$0315 irq vector    -- XXX $FFFE-$FFFF irq+brk (https://www.c64-wiki.com/wiki/Interrupt#Interrupt_Request_.28IRQ.29)
   --  $0316-$0317 break vector
   --  $0318-$0319 nmi vector
-  -- *$0380 -- timer a control
-  -- *$0381-$0382 -- timer a
+  -- *$0380 timer a control
+  -- *$0381-$0382 timer a
+  --  $0400 - $0500 audio
+
   --  $0300 - 0x11a0 bitmap
   --  ????? - colour
 
@@ -64,7 +68,8 @@ main = do
   tty <- getSlaveTerminalName mfd
   putStrLn tty
 
-  let init = load 0 prog $ mkCPU (DVS.replicate (opt ^. field @"memory") 0)
+  now <- getCurrentTime
+  let init = load 0 prog $ mkCPU now (DVS.replicate (opt ^. field @"memory") 0)
                          & field @"ttyName" ?~ tty
   cpuSTM <- initSound init >>= newTVarIO
 
@@ -91,10 +96,22 @@ runShow verbose h tty cpuSTM = do
       >>= (\cpu' -> when verbose (print cpu') >> return cpu')
       >>= readKbd tty
       >>= writeOutput tty
+      >>= updateClock
       >>= updateTimers
       >>= updateSound
       >>= \cpu' -> atomically (writeTVar cpuSTM cpu')
       >>  runShow verbose h tty cpuSTM
+
+updateClock :: CPU -> IO CPU
+updateClock cpu = do
+  now <- getCurrentTime
+  let diff :: Double = fromInteger . fromPico . nominalDiffTimeToSeconds $ diffUTCTime now before
+  return $ cpu & field @"clock" .~ now
+               & field @"dt" .~ diff
+
+  where fromPico :: Pico -> Integer
+        fromPico (MkFixed i) = i
+        before = cpu & clock
 
 simulateTime :: Int -> CPU -> IO CPU
 simulateTime h cpu = do
