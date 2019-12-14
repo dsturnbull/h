@@ -91,6 +91,7 @@ import Control.Monad.Except
     '<'   { TokenLowByte _ }
     '>'   { TokenHighByte _ }
     '%'   { TokenPercent _ }
+    '\''  { TokenQuote _ }
 
 -- Parser monad
 %monad { Except String } { (>>=) } { return }
@@ -187,6 +188,7 @@ rel          : lbl                     { Label $1 }
 
 nm           : '$'  w8                 { $2 }
 nm           : '%'  w8                 { $2 }
+nm           : w8                      { $1 } -- single-quoted
 
 labeldef     : lbl ':'                 { LabelDef $1 0 }
 

@@ -21,6 +21,7 @@ $hex   = [0-9a-fA-F]
 $eol   = [\n]
 $label = [a-zA-Z0-9_]
 $bits  = [01]
+$chr   = .
 
 tokens :-
 
@@ -103,7 +104,9 @@ tokens :-
   "<"                           { tok (\p _ -> TokenLowByte p) }
   ">"                           { tok (\p _ -> TokenHighByte p) }
   "%"                           { tok (\p _ -> TokenPercent p) }
+  "'"                           { tok (\p _ -> TokenQuote p) }
   $bits{8}                      { tok (\p s -> TokenWord8 p (fromIntegral $ toDec s)) }
+  '$chr{1}'                       { tok (\p s -> TokenWord8 p (fromIntegral $ ord (s !! 1))) }
 
 {
 tok f p s = f p s
@@ -182,6 +185,7 @@ data Token
   | TokenHighByte AlexPosn
   | TokenLowByte AlexPosn
   | TokenPercent AlexPosn
+  | TokenQuote AlexPosn
   deriving (Eq,Show)
 
 {-

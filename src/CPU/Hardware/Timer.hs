@@ -39,6 +39,7 @@ updateTimer v set get cpu = do
   (now, dt') <- timeDelta $ cpu ^. get & clock
   if | ctrl & enable  ->                    return $ cpu & st v (ctrl & clearEnable & setEnabled) & updateClock now set
      | ctrl & enabled -> if | timer == 0 -> return $ cpu & st v (ctrl & clearEnabled)
+                                                         & st (fromIntegral (v + 3)) 1
                                                          & intr
                             | otherwise  -> return $ cpu & st (v + 1) (l $ timer' dt')
                                                          & st (v + 2) (h $ timer' dt')

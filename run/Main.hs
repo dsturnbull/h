@@ -23,7 +23,7 @@ import Data.Generics.Product.Fields
 import Data.Int
 import Data.Time.Clock
 import GHC.Generics
-import Options.Applicative
+import Options.Applicative          hiding (str)
 import Prelude                      hiding (break, cycle, init)
 import System.Posix.IO
 import System.Posix.Terminal
@@ -49,18 +49,19 @@ main = do
 
   b <- BS.readFile (opt ^. field @"inputFile")
   let prog = Program (DVSB.byteStringToVector b)
-  when verbose $ print prog
 
   --  $0000 zpg
   --  $0100 stack
   --  $0200 unused
   -- *$0300 kbd in
   -- *$0301 kbd out
+  -- *$0302 kbd irq
   --  $0314-$0315 irq vector    -- XXX $FFFE-$FFFF irq+brk (https://www.c64-wiki.com/wiki/Interrupt#Interrupt_Request_.28IRQ.29)
   --  $0316-$0317 break vector
   --  $0318-$0319 nmi vector
-  -- *$0380 timer a control
-  -- *$0381-$0382 timer a
+  -- *$0320 timer a control
+  -- *$0321-$0382 timer a
+  -- *$0323 timer irq
   --  $0400 - $0500 audio
 
   --  $0300 - 0x11a0 bitmap
@@ -77,17 +78,19 @@ main = do
                          & field @"ttyName" ?~ tty
   cpuSTM <- initSound init >>= newTVarIO
 
+  initTTY mfd
   stopping <- newEmptyTMVarIO
   _ <- forkIO $ runCPU stopping (opt ^. field @"hz") mfd cpuSTM
   _ <- forkIO $ runSound cpuSTM
-  when verbose $ void . forkIO $ runShowCPU stopping (opt ^. field @"interval") cpuSTM
+  when verbose $ void . forkIO $ runShowCPU mfd stopping (opt ^. field @"interval") cpuSTM
 
   forever $ threadDelay 10000000
 
-runShowCPU :: TMVar Bool -> Integer -> TVar CPU -> IO ()
-runShowCPU stop d cpuSTM = void $ flip repeatedTimer (msDelay $ ceiling (((1 :: Double) / fromInteger d) * 1000)) $ do
+runShowCPU :: Fd -> TMVar Bool -> Integer -> TVar CPU -> IO ()
+runShowCPU tty stop d cpuSTM = void $ flip repeatedTimer (msDelay $ ceiling (((1 :: Double) / fromInteger d) * 1000)) $ do
   cpu <- readTVarIO cpuSTM
   print cpu
+  updateTTY cpu tty
   -- print one last time, while broken
   when (cpu & p & break) $ atomically $ void $ putTMVar stop True
 

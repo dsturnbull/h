@@ -40,7 +40,7 @@ sbc o2 cpu =
     c' = cpu & p & carry & not & fromBool
 
 sbcImm :: Word8 -> CPU -> CPU
-sbcImm =sbc
+sbcImm = sbc
 
 sbcZpg :: Word8 -> CPU -> CPU
 sbcZpg = sbcAbs . fromIntegral
