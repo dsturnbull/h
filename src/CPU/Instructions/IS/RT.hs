@@ -15,7 +15,7 @@ import Data.Vector.Storable
 
 rts :: CPU -> CPU
 rts cpu =
-  cpu & field @"s" %~ (flip (+) 2)
+  cpu & field @"s" %~ (+ 2)
       & field @"pc" .~ addr + 1
   where addrL = (cpu & mem) ! fromIntegral s1
         addrH = (cpu & mem) ! fromIntegral s2

@@ -6,6 +6,7 @@ module CPU.Hardware.Sound.Voice
   , mkVoice
   , attackTable
   , drTable
+  , sidFreq
   , voiceFreqH
   , voiceFreqL
   , voicePWDCH
@@ -39,17 +40,18 @@ data Voice = Voice
   , decay    :: Double
   , releaseW :: Word8
   , release  :: Double
+  , freqW    :: Word16
   , freq     :: Double
   , wave     :: Waveform
   } deriving (Generic, Eq)
 
 instance Show Voice where
-  show v = printf "w:%s a:%02x(%7.4f) s:%02x(%7.4f) d:%02x(%7.4f) r:%02x(%7.4f) f:%7.4f (%s)"
+  show v = printf "w:%s a:%02x(%7.4f) d:%02x(%7.4f) r:%02x(%7.4f) s:%02x(%7.4f) f:%11.4f (%s)"
             (show $ wave v)
             (attackW v) (attack v)
-            (sustainW v) (sustain v)
             (decayW v) (decay v)
             (releaseW v) (release v)
+            (sustainW v) (sustain v)
             (freq v)
             (if gate v then "on" else "off")
 
@@ -91,6 +93,9 @@ drTable 0xe =  15   / s
 drTable 0xf =  24   / s
 drTable _   = undefined
 
+sidFreq :: Double
+sidFreq = 16.94
+
 ms :: Double
 ms = 1000
 
@@ -98,7 +103,19 @@ s :: Double
 s = 1
 
 mkVoice :: Voice
-mkVoice = Voice False 0 0.0 0 0.0 0 0.0 0 0.0 0.0 Noise
+mkVoice = Voice { gate     = False
+                , attackW  = 0
+                , attack   = 0.0
+                , sustainW = 0
+                , sustain  = 0.0
+                , decayW   = 0
+                , decay    = 0.0
+                , releaseW = 0
+                , release  = 0.0
+                , freqW    = 0
+                , freq     = 0.0
+                , wave     = Noise
+                }
 
 voiceFreqH :: Word16 -> Word16
 voiceFreqH = id

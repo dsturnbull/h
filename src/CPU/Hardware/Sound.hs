@@ -10,19 +10,24 @@
 
 module CPU.Hardware.Sound
   ( initSound
-  , updateSound
+  , tickSound
   )
   where
 
-import CPU
+import CPU                      (CPU (audio, mem, sid), sound)
 import CPU.Hardware.Sound.SID
 import CPU.Hardware.Sound.Voice
+import CPU.Instructions.Decodes
 import CPU.Instructions.Impl
 
 import Bindings.PortAudio
+import Control.Concurrent.STM
+import Control.Concurrent.Suspend
+import Control.Concurrent.Timer
 import Control.Exception
 import Control.Lens                 hiding (set)
 import Control.Monad
+import Control.Timer.Tick
 import Data.Bits.Lens
 import Data.Generics.Product.Fields
 import Data.Vector.Storable         ((!))
@@ -33,6 +38,14 @@ import System.PortAudio
 
 import qualified Data.Vector.Storable          as DVS
 import qualified Data.Vector.Storable.Internal as DVSI
+
+import qualified Synthesizer.Storable.Oscillator as Osci
+import qualified Synthesizer.Storable.Signal     as SigSt
+
+import qualified Algebra.Additive       as Additive
+import qualified Algebra.RealRing       as RealRing
+import qualified Algebra.Transcendental as Trans
+
 
 {-
 $0400 frequency voice 1 low byte
@@ -77,21 +90,6 @@ $041c envelope voice 3 (read only)
 $0500..$07ff sid registers mirrored
 -}
 
-  -- if | ctrl & enable  ->                    return $ cpu & st timerA (ctrl & clearEnable & setEnabled)
-  --    | ctrl & enabled -> if | timer == 0 -> return $ cpu & st timerA (ctrl & clearEnabled)
-  --                                                        & intr
-  --                           | otherwise  -> return $ cpu & st (timerA + 1) (l timer')
-  --                                                        & st (timerA + 2) (h timer')
-  --    | otherwise      -> return cpu
-  -- where ctrl           = (cpu & mem) ! fromIntegral timerA
-  --       enable       c = c ^. bitAt 0
-  --       enabled      c = c ^. bitAt 1
-  --       clearEnable  c = c & bitAt 0 .~ False
-  --       clearEnabled c = c & bitAt 1 .~ False
-  --       setEnabled   c = c & bitAt 1 .~ True
-  --       timer          = w16 $ slice (fromIntegral (timerA + 1)) 2 (cpu & mem)
-  --       timer'         = timer - 1
-
 initSound :: CPU -> IO CPU
 initSound cpu = do
   ps <- malloc
@@ -100,31 +98,88 @@ initSound cpu = do
 
   let output :: Maybe (StreamParameters Output (V2 Float)) = streamParameters dev 0
 
-  withMaybe noConnection $ \pin -> withMaybe output $ \pout -> do
+  withMaybe noConnection $ \pin -> withMaybe output $ \pout ->
     we $ c'Pa_OpenStream ps
-        (castPtr pin)
-        (castPtr pout)
-        (CDouble rate)
-        framesPerBuffer
-        0
-        nullFunPtr
-        nullPtr
+      (castPtr pin)
+      (castPtr pout)
+      (CDouble (fromInteger . fromIntegral $ rate))
+      framesPerBuffer
+      0
+      nullFunPtr
+      nullPtr
 
   stream <- peek ps
   return $ cpu & field @"audio" ?~ stream
 
-updateSound :: CPU -> IO CPU
-updateSound cpu =
+tickSound :: CPU -> IO CPU
+tickSound cpu =
   case cpu & audio of
     Just str -> do
-      return $ cpu & field @"sid" . field @"volume" .~ vol
-                   & updateVoice v1 (field @"voice1") (field @"voice1")
-                   & updateVoice v2 (field @"voice2") (field @"voice2")
-                   & updateVoice v3 (field @"voice3") (field @"voice3")
+      let cpu' = cpu & field @"sid" . field @"volume" .~ vol
+      cpu' &   updateVoice v1 (field @"voice1") (field @"voice1")
+           >>= updateVoice v2 (field @"voice2") (field @"voice2")
+           >>= updateVoice v3 (field @"voice3") (field @"voice3")
+
+      -- let sid' = cpu' & sid
+      -- let voice = sid' & voice1
+      -- let attackMultiplier = 1 - ((voice & attack) / (voice & attackW & attackTable))
+      -- let freq' = sid' & voice1 & freq
+      -- -- let dur = toInteger $ (voice & attack) * (fromInteger . fromIntegral $ sid' & rate)
+      -- let dur = 1
+      -- let w = SigSt.take dur
+      --           (Osci.staticSine (SigSt.chunkSize dur) Additive.zero freq')
 
     Nothing -> return cpu
 
   where vol = (cpu & mem) ! fromIntegral (sound & volumeControl) .&. 0b00000111
+
+-- gate on -> start attack
+-- gate on -> attack finished -> decay
+-- gate on -> decay finished -> sustain
+-- gate off -> start release
+-- gate off -> release finished
+
+updateVoice :: (Word16 -> Word16) -> ASetter' SID Voice -> Getting Voice SID Voice -> CPU -> IO CPU
+updateVoice v set get cpu = do
+  let voice   = cpu ^. field @"sid" . get -- previous state
+  let rising  = not (gate voice) && gate' vctrl -- gate off -> gate on
+  let high    = gate' vctrl
+  let falling = not $ gate' vctrl -- newly off
+
+  let attacking = high
+  let decaying  = high && voice ^. field @"attack" == 0
+  let releasing = not high
+
+  return $ cpu & field @"sid" . set %~ \vc ->
+   vc & field @"gate"      .~ gate'    vctrl
+      & field @"wave"      .~ wave'    vctrl
+      & field @"freqW"     .~ freqW'
+      & field @"freq"      .~ freq'
+      & field @"attackW"   .~ attack'  vad
+      & field @"decayW"    .~ decay'   vad
+      & field @"sustainW"  .~ sustain' vsr
+      & field @"releaseW"  .~ release' vsr
+      & field @"attack"    %~ (\a -> if rising then attackTable  (attack'  vad) else if attacking then max 0 (a - dt') else a)
+      & field @"decay"     %~ (\a -> if rising then drTable      (decay'   vad) else if decaying  then max 0 (a - dt') else a)
+      & field @"release"   %~ (\a -> if rising then drTable      (release' vsr) else if releasing then max 0 (a - dt') else a)
+      & field @"sustain"   %~ (\a -> fromIntegral (sustain' vsr)) -- can it be changed?
+
+  where dt'     = (cpu & sid & dt) / 1000 / 1000 / 1000 / 1000
+        vctrl   = (cpu & mem) ! fromIntegral (sound & v & voiceControl)
+        vad     = (cpu & mem) ! fromIntegral (sound & v & voiceAD)
+        vsr     = (cpu & mem) ! fromIntegral (sound & v & voiceSR)
+        freqW'  = w16 $ DVS.slice (fromIntegral (sound & v & voiceFreqH)) 2 (cpu & mem)
+        freq'   = (fromInteger . fromIntegral $ freqW') / sidFreq
+        gate' b = b ^. bitAt 0
+        wave' b = if | b ^. bitAt 7 -> Noise
+                     | b ^. bitAt 6 -> Pulse
+                     | b ^. bitAt 5 -> Sawtooth
+                     | b ^. bitAt 4 -> Triangle
+                     | otherwise    -> (cpu ^. field @"sid" . get) & wave
+        attack'  w = (w .&. 0b11110000) `shiftR` 4
+        decay'   w =  w .&. 0b00001111
+        sustain' w = (w .&. 0b11110000) `shiftR` 4
+        release' w =  w .&. 0b00001111
 
       -- we $ c'Pa_StartStream str
       -- let per = 128
@@ -141,52 +196,6 @@ updateSound cpu =
       -- we $ c'Pa_StopStream str
 
       -- return $ cpu & field @"audio" .~ Nothing & brk
-
--- gate on -> start attack
--- gate on -> attack finished -> decay
--- gate on -> decay finished -> sustain
--- gate off -> start release
--- gate off -> release finished
-
-updateVoice :: (Word16 -> Word16) -> ASetter' SID Voice -> Getting Voice SID Voice -> CPU -> CPU
-updateVoice v set get cpu = do
-  let voice = cpu ^. field @"sid" . get -- previous state
-  let rising = not (gate voice) && gate' vctrl -- gate off -> gate on
-  let high = gate' vctrl
-  let falling = not $ gate' vctrl -- newly off
-
--- $040c attack duration (7..4) decay duration voice 2 (3..0)
--- $040d sustain level (7..4) release duration voice 2 (3..0)
-
-  cpu & field @"sid" . set %~ \vc ->
-    vc & field @"gate"     .~ gate'    vctrl
-       & field @"wave"     .~ wave'    vctrl
-       & field @"attackW"  .~ attack'  vad
-       & field @"decayW"   .~ decay'   vad
-       & field @"sustainW" .~ sustain' vsr
-       & field @"releaseW" .~ release' vsr
-       & field @"attack"   %~ (\a -> if rising then attackTable  (attack'  vad) else if high then (max 0 (a - dt')) else a)
-       & field @"decay"    %~ (\a -> if rising then drTable      (decay'   vad) else if high && (vc ^. field @"attack") == 0 then (max 0 (a - dt')) else a)
-       & field @"release"  %~ (\a -> if rising then drTable      (release' vsr) else if falling then (max 0 (a - dt')) else a)
-       & field @"sustain"  %~ (\a -> if rising then fromIntegral (sustain' vsr) else a) -- can it be changed?
-
-  where dt'   = (cpu & dt) / 1000 / 1000 / 1000 / 1000
-        vctrl = (cpu & mem) ! fromIntegral (sound & v & voiceControl)
-        vad   = (cpu & mem) ! fromIntegral (sound & v & voiceAD)
-        vsr   = (cpu & mem) ! fromIntegral (sound & v & voiceSR)
-        gate' b = b ^. bitAt 0
-        wave' b = if | b ^. bitAt 7 -> Noise
-                     | b ^. bitAt 6 -> Pulse
-                     | b ^. bitAt 5 -> Sawtooth
-                     | b ^. bitAt 4 -> Triangle
-                     | otherwise    -> (cpu ^. field @"sid" . get) & wave
-        attack'  w = (w .&. 0b11110000) `shiftR` 4
-        decay'   w =  w .&. 0b00001111
-        sustain' w = (w .&. 0b11110000) `shiftR` 4
-        release' w =  w .&. 0b00001111
-
-rate :: Double
-rate = 48000
 
 framesPerBuffer :: CULong
 framesPerBuffer = 128

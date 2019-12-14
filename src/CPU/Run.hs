@@ -1,5 +1,4 @@
 {-# LANGUAGE DataKinds             #-}
-{-# LANGUAGE DeriveGeneric         #-}
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -10,7 +9,6 @@
 
 module CPU.Run
   ( load
-  , run
   , step
   ) where
 
@@ -33,20 +31,14 @@ import qualified Data.Vector.Storable as DVS
 load :: Int -> Program -> CPU -> CPU
 load o (Program bin) cpu = do
   let w = zip [o..] (DVS.toList bin)
-  cpu & field @"mem" %~ (\m -> m // w)
-
-run :: CPU -> CPU
-run cpu =
-  if cpu & p & break
-    then cpu
-    else run $ step cpu
+  cpu & field @"mem" %~ (// w)
 
 step :: CPU -> CPU
-step cpu = do
+step cpu =
   cpu & execute ins & updatePC & setTim
   where ins      = decode @Opcode mem'
         mem'     = DVS.drop (fromIntegral (pc cpu)) (mem cpu)
         len      = fromIntegral $ insLength ins
-        updatePC = if jumps ins then id else field @"pc" %~ (flip (+) len)
+        updatePC = if jumps ins then id else field @"pc" %~ (+ len)
         setTim   = field @"tim" .~ t
         t        = cycles ins

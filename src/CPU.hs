@@ -19,15 +19,17 @@ module CPU
   , irqV
   , brkV
   , nmiV
-  , timerA
+  , timerAV
   , sound
   , page
   , flagsToWord
   , wordToFlags
   , bitShow
+  , µs
   ) where
 
-import CPU.Hardware.Sound.SID
+import CPU.Hardware.Sound.SID        (SID, mkSID)
+import CPU.Hardware.Timer.JiffyTimer (JiffyTimer, mkJiffyTimer)
 
 import Bindings.PortAudio
 import Control.Lens                 hiding (elements, ignored)
@@ -83,6 +85,7 @@ data CPU = CPU
   , ttyName :: Maybe String
   , audio   :: Maybe (Ptr C'PaStream)
   , sid     :: SID
+  , timerA  :: JiffyTimer
   } deriving (Generic, Eq)
 
 instance Show CPU where
@@ -100,13 +103,13 @@ instance Show CPU where
                                      , ("I", cpu & p & interrupt)
                                      , ("Z", cpu & p & zero)
                                      , ("C", cpu & p & carry) ])
-          top               = fromMaybe "" (cpu & ttyName) ++ " dt: " <> show (cpu & dt)
+          top               = fromMaybe "" (cpu & ttyName) ++ printf " dt: %9.4e" (cpu & dt)
           sleep :: String   = printf "%ss: %i" (setSGRCode [Reset]) (cpu & tim)
           showStatus (n, f) = if f then on n else off n
           on n              = printf "%s%s%s" onc n normal
-          off n             = printf "%s%s" (setSGRCode [Reset]) n
+          off               = printf "%s%s" (setSGRCode [Reset])
           pc' :: String     = showPc (cpu & pc)
-          showPc v          = printf "%sPC: %04x" (setSGRCode [Reset]) v
+          showPc            = printf "%sPC: %04x" (setSGRCode [Reset])
           showReg (r, v)    = printf "%s%s: %02x" (setSGRCode [Reset]) r v
           mem'              = header ++ foldMap (++ "\n") (showRow <$> rows)
           header            = "    : " ++ foldMap (++ " ") (printf "%02x" <$> [0 .. rowLength - 1]) ++ "\n"
@@ -131,7 +134,11 @@ mkFlags :: Flags
 mkFlags = Flags False False False False False False False False
 
 mkCPU :: UTCTime -> DVS.Vector Word8 -> CPU
-mkCPU t0 m = CPU m 0 0 0 0 0xff mkFlags 0 t0 0 Nothing Nothing mkSID
+mkCPU t0 m = CPU m 0 0 0 0 0xff mkFlags 0 t0 0 Nothing Nothing (mkSID t0) (mkJiffyTimer t0)
+
+µs :: Integer -> Double
+µs rate = secs * 1000 * 1000
+  where secs = (1 :: Double) / fromInteger rate
 
 st :: Word16 -> Word8 -> CPU -> CPU
 st addr v cpu = cpu & field @"mem" %~ modify (\vec -> write vec (fromIntegral addr) v)
@@ -172,8 +179,8 @@ brkV = 0x0316
 nmiV :: Word16
 nmiV = 0x0318
 
-timerA :: Word16
-timerA = 0x0320
+timerAV :: Word16
+timerAV = 0x0320
 
 sound :: Word16
 sound = 0x0400

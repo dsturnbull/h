@@ -4,8 +4,8 @@
 {-# LANGUAGE TypeApplications    #-}
 
 import CPU
-import CPU.Graphics
 import CPU.Hardware.Sound
+import CPU.Hardware.Sound.SID
 import CPU.Hardware.Terminal
 import CPU.Hardware.Timer
 import CPU.Program
@@ -13,15 +13,18 @@ import CPU.Run
 
 import Control.Concurrent
 import Control.Concurrent.STM
+import Control.Concurrent.Suspend
+import Control.Concurrent.Timer
 import Control.Lens
 import Control.Monad
+import Control.Monad.IO.Class
 import Data.Fixed
 import Data.Generics.Product.Fields
+import Data.Int
 import Data.Time.Clock
 import GHC.Generics
-import Graphics.Proc
 import Options.Applicative
-import Prelude                      hiding (break, init)
+import Prelude                      hiding (break, cycle, init)
 import System.Posix.IO
 import System.Posix.Terminal
 import System.Posix.Types           (Fd)
@@ -33,7 +36,8 @@ import qualified Data.Vector.Storable.ByteString as DVSB
 data Run = Run
   { inputFile :: FilePath
   , memory    :: Int
-  , hz        :: Int
+  , hz        :: Integer
+  , interval  :: Integer
   , debug     :: Bool
   , graphics  :: Bool
   } deriving Generic
@@ -73,103 +77,62 @@ main = do
                          & field @"ttyName" ?~ tty
   cpuSTM <- initSound init >>= newTVarIO
 
-  -- _ <- forkIO $ jackMain cpuSTM
+  stopping <- newEmptyTMVarIO
+  _ <- forkIO $ runCPU stopping (opt ^. field @"hz") mfd cpuSTM
+  _ <- forkIO $ runSound cpuSTM
+  when verbose $ void . forkIO $ runShowCPU stopping (opt ^. field @"interval") cpuSTM
 
-  runShow verbose (opt ^. field @"hz") mfd cpuSTM
+  forever $ threadDelay 10000000
 
-  -- if opt ^. field @"graphics"
-  --   then
-  --     runProc $ def
-  --       { procSetup      = setup cpu'
-  --       , procDraw       = draw
-  --       , procUpdateTime = update verbose
-  --       , procKeyPressed = keyPressed
-  --       }
-  --   else
+runShowCPU :: TMVar Bool -> Integer -> TVar CPU -> IO ()
+runShowCPU stop d cpuSTM = void $ flip repeatedTimer (msDelay $ ceiling (((1 :: Double) / fromInteger d) * 1000)) $ do
+  cpu <- readTVarIO cpuSTM
+  print cpu
+  -- print one last time, while broken
+  when (cpu & p & break) $ atomically $ void $ putTMVar stop True
 
-runShow :: Bool -> Int -> Fd -> TVar CPU -> IO ()
-runShow verbose h tty cpuSTM = do
-  cpu <- atomically $ readTVar cpuSTM
+runCPU :: TMVar Bool -> Integer -> Fd -> TVar CPU -> IO ()
+runCPU stop h tty cpuSTM =
+  void $ flip repeatedTimer (usDelay (ceiling (CPU.µs h))) $ do
+    cpu' <- readTVarIO cpuSTM >>= \cpu ->
+      step cpu & readKbd tty
+             >>= writeOutput tty
+             >>= updateClock
+             >>= updateTimers
+    atomically $ writeTVar cpuSTM cpu'
+    threadDelay (cpu' & tim)
+    when (cpu' & p & break) $ atomically $ putTMVar stop True
 
-  unless (cpu & p & break) $
-    simulateTime h (step cpu)
-      >>= (\cpu' -> when verbose (print cpu') >> return cpu')
-      >>= readKbd tty
-      >>= writeOutput tty
-      >>= updateClock
-      >>= updateTimers
-      >>= updateSound
-      >>= \cpu' -> atomically (writeTVar cpuSTM cpu')
-      >>  runShow verbose h tty cpuSTM
+runSound :: TVar CPU -> IO ()
+runSound cpuSTM =
+  void $ flip repeatedTimer (usDelay (fromInteger (ceiling CPU.Hardware.Sound.SID.µs))) $ do
+    cpu <- readTVarIO cpuSTM
+    unless (cpu & p & break) $ do
+      cpu' <- cpu & updateSIDClock >>= tickSound
+      atomically $ writeTVar cpuSTM cpu'
+    -- (atomically $ modifyTVar cpuSTM tickSound)
 
 updateClock :: CPU -> IO CPU
 updateClock cpu = do
+  (now, diff) <- timeDelta (cpu  ^. field @"clock")
+  return $ cpu & field @"clock" .~ now
+               & field @"dt"    .~ diff
+
+updateSIDClock :: CPU -> IO CPU
+updateSIDClock cpu = do
+  (now, diff) <- timeDelta (sid' ^. field @"clock")
+  return $ cpu & field @"sid" . field @"clock" .~ now
+               & field @"sid" . field @"dt"    .~ diff
+  where sid' = cpu ^. field @"sid"
+
+timeDelta :: UTCTime -> IO (UTCTime, Double)
+timeDelta before = do
   now <- getCurrentTime
   let diff :: Double = fromInteger . fromPico . nominalDiffTimeToSeconds $ diffUTCTime now before
-  return $ cpu & field @"clock" .~ now
-               & field @"dt" .~ diff
+  return (now, diff)
 
   where fromPico :: Pico -> Integer
         fromPico (MkFixed i) = i
-        before = cpu & clock
-
-simulateTime :: Int -> CPU -> IO CPU
-simulateTime h cpu = do
-  threadDelay (ceiling (fromIntegral (cpu & tim) * cyf h))
-  return cpu
-
-cyf :: Int -> Double
-cyf h = 1e6 / fromIntegral h
-
-width :: Int
-width = _virtWidth * fst _virtScale
-
-height :: Int
-height = _virtHeight * snd _virtScale
-
-_virtWidth :: Int
-_virtWidth  = 200
-
-_virtHeight :: Int
-_virtHeight = 160
-
-_virtScale :: (Int, Int)
-_virtScale = (4, 4)
-
-_setup :: CPU -> Pio CPU
-_setup cpu = do
-              size (fromIntegral width, fromIntegral height)
-              return cpu
-
-_draw :: CPU -> Pio ()
-_draw cpu = do
-  -- scale virtScale
-  background (grey 0)
-  let c = orange
-  stroke c
-  let pixels = pixelData _virtHeight 0x200 0xfa0 cpu
-  -- n <- millis
-  -- let pixels = [(x, y) | x <- [n `mod` virtHeight .. ], y <- [0..]]
-  void $
-    traverse ((\(x,y) ->
-                rect (fromIntegral x * fromIntegral (fst _virtScale), fromIntegral y * fromIntegral (snd _virtScale))
-                (fromIntegral (fst _virtScale), fromIntegral (snd _virtScale)) >> fill c))
-      -- (take virtWidth pixels)
-      pixels
-
-_update :: Bool -> TimeInterval -> CPU -> Pio CPU
-_update verbose t cpu = do
-  liftIO $ print t
-  let cpu' = step cpu
-  when verbose $
-    liftIO $ print cpu'
-  return $ cpu'
-
-_keyPressed :: CPU -> Pio CPU
-_keyPressed cpu = do
-  k <- key
-  liftIO . print $ k
-  return cpu
 
 sasmInfo :: ParserInfo Run
 sasmInfo = info (sasmOpts <**> helper) (fullDesc <> progDesc "compile 6502 program" <> header "sasm")
@@ -179,5 +142,6 @@ sasmOpts = Run
   <$> strOption   (long "input-file"                  <> short 'f'       <> metavar "FILE"  <> help "file to assemble")
   <*> option auto (long "memory-size"                 <> short 'm'       <> metavar "BYTES" <> help "mem size")
   <*> option auto (long "hz"          <> value 985248 <> short 'h'       <> metavar "Hz"    <> help "Hz")
+  <*> option auto (long "interval"                    <> short 'i'       <> metavar "Hz"    <> help "Hz (show)")
   <*> switch      (long "debug"                       <> short 'd'                          <> help "debug")
   <*> switch      (long "graphics"                    <> short 'g'                          <> help "graphics")

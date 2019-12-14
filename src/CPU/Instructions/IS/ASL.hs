@@ -56,8 +56,8 @@ aslZpgX :: Word8 -> CPU -> CPU
 aslZpgX = aslAbsX . fromIntegral
 
 aslAbs :: Word16 -> CPU -> CPU
-aslAbs addr = aslM (st addr) (flip (!) (fromIntegral addr))
+aslAbs addr = aslM (st addr) (! fromIntegral addr)
 
 aslAbsX :: Word16 -> CPU -> CPU
-aslAbsX addr cpu = cpu & aslM (st addr) (flip (!) (fromIntegral (addr + fromIntegral x)))
+aslAbsX addr cpu = cpu & aslM (st addr) (! fromIntegral (addr + fromIntegral x))
   where x = cpu & rX

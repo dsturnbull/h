@@ -1,4 +1,4 @@
-cabal-version:          3.0
+cabal-version:          2.4
 name:                   h
 version:                0.0.1
 build-type:             Simple
@@ -10,7 +10,6 @@ flag dev
 
 common config
   ghc-options:          -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wredundant-constraints -msse4.2
-  -- -g -debug
   default-language:     Haskell2010
 
 common common-deps
@@ -30,6 +29,13 @@ common common-deps
     , bindings-portaudio ^>= 0.2
     , linear             ^>= 1.20.9
     , time               ^>= 1.9.3
+    , synthesizer-core   ^>= 0.8.2.1
+    , storablevector     ^>= 0.2.13
+    , linear             ^>= 1.20.9
+    , numeric-prelude    ^>= 0.4.3.1
+    , timers-tick        ^>= 0.4.2.0
+    , timers             ^>= 0.2.0.3
+    , suspend            ^>= 0.2.0.0
 
 library
   import:               common-deps, config
@@ -37,10 +43,10 @@ library
                         ASM.Lexer
                         ASM.Parser
                         CPU
-                        CPU.Graphics
                         CPU.Hardware.Interrupt
                         CPU.Hardware.Terminal
                         CPU.Hardware.Timer
+                        CPU.Hardware.Timer.JiffyTimer
                         CPU.Hardware.Sound
                         CPU.Hardware.Sound.SID
                         CPU.Hardware.Sound.Voice
@@ -93,7 +99,6 @@ library
                       , hw-hspec-hedgehog
                       , bytestring-to-vector ^>= 0.3.0.1
                       , optparse-applicative ^>= 0.15.1.0
-                      , processing-for-haskell ^>= 0.1.0.1
   build-tool-depends:   alex:alex, happy:happy
 
 -- library sasm-lib
@@ -128,7 +133,6 @@ executable run
   build-depends:        h
                       , bytestring-to-vector ^>= 0.3.0.1
                       , optparse-applicative ^>= 0.15.1.0
-                      , processing-for-haskell ^>= 0.1.0.1
   --, sasm-lib, cpu-lib
 
 test-suite h-test
