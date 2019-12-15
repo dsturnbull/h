@@ -74,7 +74,7 @@ _isr_kbd_inc:
   bne _isr_kbd_dec
   lda $0400
   clc
-  adc #$f0          ; some note-like amount up
+  adc #$10          ; some note-like amount up
   sta $0400
   lda $0401
   adc #$00
@@ -86,7 +86,7 @@ _isr_kbd_dec:
   bne _isr_kbd_ret
   lda $0400
   sec               ; no borrow
-  sbc #$f0          ; some note-like amount down
+  sbc #$10          ; some note-like amount down
   sta $0400
   lda $0401
   sbc #$00

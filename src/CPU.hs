@@ -27,6 +27,7 @@ module CPU
   , µs
   ) where
 
+import CPU.Debugger.Mode             (DebugMode (..))
 import CPU.Hardware.Sound.SID        (SID, mkSID)
 import CPU.Hardware.Timer.JiffyTimer (JiffyTimer, mkJiffyTimer)
 
@@ -68,28 +69,29 @@ data Flags = Flags
   } deriving (Show, Generic, Eq)
 
 data CPU = CPU
-  { mem     :: Vector Word8
-  , rA      :: Word8
-  , rX      :: Word8
-  , rY      :: Word8
-  , pc      :: Word16
-  , s       :: Word8
-  , p       :: Flags
-  , tim     :: Int
-  , clock   :: UTCTime
-  , dt      :: Double
-  , ttyName :: Maybe String
-  , audio   :: Maybe (Ptr C'PaStream)
-  , sid     :: SID
-  , timerA  :: JiffyTimer
-  , hz      :: Integer
+  { mem       :: Vector Word8
+  , rA        :: Word8
+  , rX        :: Word8
+  , rY        :: Word8
+  , pc        :: Word16
+  , s         :: Word8
+  , p         :: Flags
+  , tim       :: Int
+  , clock     :: UTCTime
+  , dt        :: Double
+  , ttyName   :: Maybe String
+  , audio     :: Maybe (Ptr C'PaStream)
+  , sid       :: SID
+  , timerA    :: JiffyTimer
+  , hz        :: Integer
+  , debugMode :: DebugMode
   } deriving (Generic, Eq)
 
 mkFlags :: Flags
 mkFlags = Flags False False False False False False False False
 
 mkCPU :: UTCTime -> Integer -> DVS.Vector Word8 -> CPU
-mkCPU t0 h m = CPU m 0 0 0 0 0xff mkFlags 0 t0 0 Nothing Nothing (mkSID t0) (mkJiffyTimer t0) h
+mkCPU t0 h m = CPU m 0 0 0 0 0xff mkFlags 0 t0 0 Nothing Nothing (mkSID t0) (mkJiffyTimer t0) h Debug
 
 µs :: Integer -> Double
 µs rate = secs * 1000 * 1000

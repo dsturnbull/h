@@ -15,6 +15,7 @@ import Data.Generics.Product.Any
 import GHC.Generics
 import Options.Applicative
 import System.IO
+import Text.Printf
 
 import qualified Data.ByteString                 as BS
 import qualified Data.Vector.Storable            as DVS
@@ -46,7 +47,7 @@ main = do
 
   when verbose $ print instructions
   when verbose $ print prog
-  when verbose $ putStrLn $ disasm prog
+  when verbose $ putStrLn $ foldMap (++ "\n") ((\(o, s) -> printf "%04x: " o <> s) <$> disasm prog)
   putStrLn $ "wrote " <> show (BS.length bs) <> " bytes to " <> out
 
   return ()

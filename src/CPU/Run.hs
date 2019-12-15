@@ -58,7 +58,7 @@ step cpu =
         setTim   = field @"tim" .~ t
         t        = cycles ins
 
-stepCPU :: TMVar Word8 -> Fd -> TVar CPU -> IO ()
+stepCPU :: TMVar Word8 -> Fd -> TVar CPU -> IO Int
 stepCPU wS tty cpuSTM = do
   cpu' <- readTVarIO cpuSTM >>= \cpu ->
     if cpu & p & break
@@ -73,7 +73,7 @@ stepCPU wS tty cpuSTM = do
                   >>= updateClock
                   >>= updateTimers
   atomically $ writeTVar cpuSTM cpu'
-  threadDelay (cpu' & tim)
+  return $ cpu' & tim
 
 debugged :: (CPU -> IO CPU) -> DebugState CPU -> IO (DebugState CPU)
 debugged f (Step cpu)     = Step <$> f cpu

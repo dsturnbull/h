@@ -3,9 +3,18 @@
 {-# LANGUAGE MultiWayIf          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module CPU.Debugger.Display
-  ( initDebugger
-  , updateDebugger
+module CPU.Debugger.Status
+  ( drawScreen
+  , drawScreen'
+  , updateScreen
+  , updateScreen'
+  , screen
+  , screenMap
+  , screenMap'
+  , Line
+  , Row
+  , Screen
+  , ScreenMap
   ) where
 
 import CPU
@@ -13,24 +22,17 @@ import CPU.Hardware.Sound.SID   as SID (SID (..))
 import CPU.Hardware.Sound.Voice (Voice (..))
 
 import Control.Applicative
-import Control.Lens            hiding (elements)
-import Control.Monad
+import Control.Lens        hiding (elements)
 import Data.Foldable
 import Data.Maybe
 import Data.Word
-import Foreign                 hiding (void)
+import Foreign             hiding (void)
 import GHC.Generics
-import Prelude                 hiding (break)
+import Prelude             hiding (break)
 import System.Console.ANSI
-import System.IO
-import System.IO.Echo.Internal
 import Text.Printf
 
 import qualified Data.Vector.Storable as DVS
-
--- import Foreign.C.Types
--- import Foreign.Marshal.Alloc
--- import Foreign.Storable
 
 data DebugState a = Broken a | Step a | Continue a
   deriving Generic
@@ -49,6 +51,7 @@ screen :: CPU -> Screen
 screen cpu = [ [ ("tty: ", \cpu' -> fromMaybe "/dev/ttysXXX" (cpu' & ttyName))
                , ("hz: ",  \cpu' -> printf "%.3f MHz" ((fromInteger (CPU.hz cpu') :: Double) / 1e6))
             -- , ("dt: ",  \cpu' -> printf "%9.4e" (cpu' & CPU.dt))
+               , ("m: ",   \cpu' -> show $ cpu' & debugMode)
                , ("s:",    \cpu' -> printf "%2i"   (cpu' & tim)) ]
              , [ ("A: ",   \cpu' -> printf "%02x"  (cpu' & rA))
                , ("X: ",   \cpu' -> printf "%02x"  (cpu' & rX))
@@ -135,8 +138,11 @@ screenMapLine row col cpu ((lbl, f) : es) = (row, col, lcol, lbl, f) : screenMap
         vcol = col + length lbl + length val' + 1
 screenMapLine _ _ _ [] = []
 
-drawScreen :: ScreenMap -> CPU -> IO ()
-drawScreen m cpu = traverse_ draw m
+drawScreen :: CPU -> IO ()
+drawScreen cpu = drawScreen' (screenMap cpu 0) cpu
+
+drawScreen' :: ScreenMap -> CPU -> IO ()
+drawScreen' m cpu = traverse_ draw m
   where draw (row, lcol, vcol, lbl, val) =
           let val' = val cpu in do
             setCursorPosition row lcol
@@ -144,23 +150,12 @@ drawScreen m cpu = traverse_ draw m
             setCursorPosition row vcol
             putStr val'
 
-updateScreen :: ScreenMap -> CPU -> IO ()
-updateScreen m cpu = traverse_ draw m
+updateScreen :: CPU -> IO ()
+updateScreen cpu = updateScreen' (screenMap cpu 0) cpu
+
+updateScreen' :: ScreenMap -> CPU -> IO ()
+updateScreen' m cpu = traverse_ draw m
   where draw (row, _, vcol, _, val) =
           let val' = val cpu in do
             setCursorPosition row vcol
             putStr val'
-
-initDebugger :: CPU -> IO ()
-initDebugger cpu = do
-  hSetBuffering stdin NoBuffering
-  hSetEcho stdin False
-  void $ sttyRaw "-ixon"
-  clearScreen
-  cpu & drawScreen (screenMap cpu 0)
-  hFlush stdout
-
-updateDebugger :: CPU -> IO ()
-updateDebugger cpu = do
-  cpu & updateScreen (screenMap cpu 0)
-  hFlush stdout

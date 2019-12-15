@@ -4,8 +4,9 @@
    * wire up synthesizer library
 
 2. Debugging
-   * transition to tty-only
-   * update screen, don't redraw entire thing
+   o transition to tty-only
+   o update screen, don't redraw entire thing
+   * disasm mode
 
 3. Refactor
    * minimalise modules

@@ -26,12 +26,12 @@ import qualified Data.Vector.Storable as DVS
 assemble :: T.Text -> Program
 assemble prog = Program (DVS.fromList ws)
   where inss = parseAssembly (T.unpack prog)
-        ws :: [Word8] = (\(o, i) -> asm o (fmap snd ins) i) =<< ins
-        ins = insPositions 0 (fromRight [] inss)
+        ws   = (\(o, i) -> asm o (fmap snd ins) i) =<< ins
+        ins  = insPositions 0 (fromRight [] inss)
 
-disasm :: Program -> String
-disasm (Program prog) = foldMap (++ "\n") (showIns <$> instructions 0 prog)
-  where showIns (o, w, i) = printf "%04x: %-9s %20s %s" o (showWords w) ";" (show i)
+disasm :: Program -> [(Word16, String)]
+disasm (Program prog) = showIns <$> instructions 0 prog
+  where showIns (o, w, i) = (fromIntegral o, printf "%-9s %20s %s" (showWords w) ";" (show i))
         showWords ws = foldMap (++ " ") (printf "%02x" <$> ws)
 
 instructions :: Int -> DVS.Vector Word8 -> [(Int, [Word8], Opcode)]

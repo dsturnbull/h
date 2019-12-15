@@ -4,7 +4,7 @@
 {-# LANGUAGE TypeApplications    #-}
 
 import CPU
-import CPU.Debugger.Display
+import CPU.Debugger
 import CPU.Hardware.Sound
 import CPU.Hardware.Sound.SID
 import CPU.Hardware.Terminal
@@ -91,8 +91,11 @@ runShowCPU d cpuSTM = void $ flip repeatedTimer (msDelay $ ceiling (((1 :: Doubl
 
 runCPU :: TMVar Word8 -> Integer -> Fd -> TVar CPU -> IO ()
 runCPU wS h tty cpuSTM =
-  void $ flip repeatedTimer (usDelay (ceiling (CPU.µs h))) $
-    stepCPU wS tty cpuSTM
+  forever $ do
+  -- void $ flip repeatedTimer (usDelay (ceiling (CPU.µs h))) $
+    sl <- stepCPU wS tty cpuSTM
+    let delay = ceiling $ CPU.µs h
+    threadDelay (sl * delay)
 
 runSound :: TVar CPU -> IO ()
 runSound cpuSTM =

@@ -25,9 +25,9 @@ import Control.Concurrent.STM
 import Control.Concurrent.Suspend
 import Control.Concurrent.Timer
 import Control.Exception
-import Control.Lens                 hiding (set)
+import Control.Lens               hiding (set)
 import Control.Monad
-import Control.Timer.Tick
+-- import Control.Timer.Tick
 import Data.Bits.Lens
 import Data.Generics.Product.Fields
 import Data.Vector.Storable         ((!))
