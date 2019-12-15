@@ -6,7 +6,8 @@
 2. Debugging
    o transition to tty-only
    o update screen, don't redraw entire thing
-   * disasm mode
+   o disasm mode
+   * fix flickering disasm
 
 3. Refactor
    * minimalise modules

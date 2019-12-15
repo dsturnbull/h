@@ -9,14 +9,15 @@
 
 module CPU.Run
   ( load
-  , step
-  , stepCPU
-  , stepSound
+  , runShowCPU
+  , runCPU
+  , runSound
   ) where
 
 import CPU
 import CPU.Debugger
 import CPU.Hardware.Sound
+import CPU.Hardware.Sound.SID
 import CPU.Hardware.Terminal
 import CPU.Hardware.Timer
 import CPU.Instructions.Decodes
@@ -29,6 +30,8 @@ import CPU.Program
 
 import Control.Concurrent
 import Control.Concurrent.STM
+import Control.Concurrent.Suspend
+import Control.Concurrent.Timer
 import Control.Lens
 import Control.Monad
 import Data.Fixed
@@ -37,26 +40,35 @@ import Data.Generics.Product.Fields
 import Data.Time.Clock
 import Data.Vector.Storable         ((//))
 import Data.Word
+import GHC.Generics
 import GHC.IO                       (evaluate)
+import Options.Applicative
 import Prelude                      hiding (break)
 import System.Posix.Types           (Fd)
 
 import qualified Data.Vector.Storable as DVS
 
+runCPU :: TMVar Word8 -> Integer -> Fd -> TVar CPU -> IO ()
+runCPU wS h tty cpuSTM =
+  forever $ do
+  -- void $ flip repeatedTimer (usDelay (ceiling (CPU.µs h))) $
+    sl <- stepCPU wS tty cpuSTM
+    let delay = ceiling $ CPU.µs h
+    threadDelay (sl * delay)
+
+runShowCPU :: Integer -> TVar CPU -> IO ()
+runShowCPU d cpuSTM = void $ flip repeatedTimer (msDelay $ ceiling (((1 :: Double) / fromInteger d) * 1000)) $
+  readTVarIO cpuSTM >>= updateDebugger
+
+runSound :: TVar CPU -> IO ()
+runSound cpuSTM =
+  void $ flip repeatedTimer (usDelay (fromInteger (ceiling CPU.Hardware.Sound.SID.µs))) $
+    stepSound cpuSTM
+
 load :: Int -> Program -> CPU -> CPU
 load o (Program bin) cpu = do
   let w = zip [o..] (DVS.toList bin)
   cpu & field @"mem" %~ (// w)
-
-step :: CPU -> CPU
-step cpu =
-  cpu & execute ins & updatePC & setTim
-  where ins      = decode @Opcode mem'
-        mem'     = DVS.drop (fromIntegral (pc cpu)) (mem cpu)
-        len      = fromIntegral $ insLength ins
-        updatePC = if jumps ins then id else field @"pc" %~ flip (+) len
-        setTim   = field @"tim" .~ t
-        t        = cycles ins
 
 stepCPU :: TMVar Word8 -> Fd -> TVar CPU -> IO Int
 stepCPU wS tty cpuSTM = do
@@ -74,6 +86,16 @@ stepCPU wS tty cpuSTM = do
                   >>= updateTimers
   atomically $ writeTVar cpuSTM cpu'
   return $ cpu' & tim
+
+step :: CPU -> CPU
+step cpu =
+  cpu & execute ins & updatePC & setTim
+  where ins      = decode @Opcode mem'
+        mem'     = DVS.drop (fromIntegral (pc cpu)) (mem cpu)
+        len      = fromIntegral $ insLength ins
+        updatePC = if jumps ins then id else field @"pc" %~ flip (+) len
+        setTim   = field @"tim" .~ t
+        t        = cycles ins
 
 debugged :: (CPU -> IO CPU) -> DebugState CPU -> IO (DebugState CPU)
 debugged f (Step cpu)     = Step <$> f cpu

@@ -37,7 +37,7 @@ main = do
   let instructions = parseAssembly t
 
   let ins  = fromRight [] instructions
-  let ws   = join $ (\(o, i) -> asm o ins i) <$> insPositions 0 ins
+  let ws   = (\(o, i) -> asm o ins i) =<< insPositions 0 ins
   let prog = Program (DVS.fromList ws)
 
   handle <- openBinaryFile out WriteMode

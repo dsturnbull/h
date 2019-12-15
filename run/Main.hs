@@ -6,26 +6,21 @@
 import CPU
 import CPU.Debugger
 import CPU.Hardware.Sound
-import CPU.Hardware.Sound.SID
 import CPU.Hardware.Terminal
 import CPU.Program
 import CPU.Run
 
 import Control.Concurrent
 import Control.Concurrent.STM
-import Control.Concurrent.Suspend
-import Control.Concurrent.Timer
 import Control.Lens
 import Control.Monad
 import Control.Monad.IO.Class
 import Data.Generics.Product.Fields
 import Data.Time.Clock
-import Data.Word
 import GHC.Generics
 import Options.Applicative
 import System.Posix.IO
 import System.Posix.Terminal
-import System.Posix.Types           (Fd)
 
 import qualified Data.ByteString                 as BS
 import qualified Data.Vector.Storable            as DVS
@@ -82,25 +77,6 @@ main = do
   _ <- forkIO $ runShowCPU (opt ^. field @"interval") cpuSTM
 
   forever $ threadDelay 10000000
-
-runShowCPU :: Integer -> TVar CPU -> IO ()
-runShowCPU d cpuSTM = void $ flip repeatedTimer (msDelay $ ceiling (((1 :: Double) / fromInteger d) * 1000)) $ do
-  cpu <- readTVarIO cpuSTM
-  -- print cpu
-  cpu & updateDebugger
-
-runCPU :: TMVar Word8 -> Integer -> Fd -> TVar CPU -> IO ()
-runCPU wS h tty cpuSTM =
-  forever $ do
-  -- void $ flip repeatedTimer (usDelay (ceiling (CPU.µs h))) $
-    sl <- stepCPU wS tty cpuSTM
-    let delay = ceiling $ CPU.µs h
-    threadDelay (sl * delay)
-
-runSound :: TVar CPU -> IO ()
-runSound cpuSTM =
-  void $ flip repeatedTimer (usDelay (fromInteger (ceiling CPU.Hardware.Sound.SID.µs))) $
-    stepSound cpuSTM
 
 sasmInfo :: ParserInfo Run
 sasmInfo = info (sasmOpts <**> helper) (fullDesc <> progDesc "compile 6502 program" <> header "sasm")
