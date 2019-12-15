@@ -19,10 +19,10 @@ import Data.Generics.Product.Fields
 import Data.Int
 
 branch :: Int8 -> CPU -> CPU
-branch i = field @"pc" %~ (+ fromIntegral i)
+branch i = field @"pc" %~ flip (+) (fromIntegral i)
 
 step :: CPU -> CPU
-step = field @"pc" %~ (+ 2)
+step = field @"pc" %~ flip (+) 2
 
 carrying :: CPU -> Bool
 carrying cpu = cpu & p & carry

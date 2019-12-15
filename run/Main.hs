@@ -4,10 +4,9 @@
 {-# LANGUAGE TypeApplications    #-}
 
 import CPU
+import CPU.Debugger
 import CPU.Hardware.Sound
 import CPU.Hardware.Sound.SID
-import CPU.Hardware.Terminal
-import CPU.Hardware.Timer
 import CPU.Program
 import CPU.Run
 
@@ -18,13 +17,10 @@ import Control.Concurrent.Timer
 import Control.Lens
 import Control.Monad
 import Control.Monad.IO.Class
-import Data.Fixed
 import Data.Generics.Product.Fields
-import Data.Int
 import Data.Time.Clock
 import GHC.Generics
-import Options.Applicative          hiding (str)
-import Prelude                      hiding (break, cycle, init)
+import Options.Applicative
 import System.Posix.IO
 import System.Posix.Terminal
 import System.Posix.Types           (Fd)
@@ -74,68 +70,32 @@ main = do
   putStrLn tty
 
   now <- getCurrentTime
-  let init = load 0 prog $ mkCPU now (DVS.replicate (opt ^. field @"memory") 0)
-                         & field @"ttyName" ?~ tty
-  cpuSTM <- initSound init >>= newTVarIO
+  let initial = load 0 prog $ mkCPU now (DVS.replicate (opt ^. field @"memory") 0)
+                            & field @"ttyName" ?~ tty
+  cpuSTM <- initSound initial >>= newTVarIO
 
-  initTTY mfd
-  stopping <- newEmptyTMVarIO
-  _ <- forkIO $ runCPU stopping (opt ^. field @"hz") mfd cpuSTM
+  -- initTTY mfd
+  _ <- forkIO $ runCPU (opt ^. field @"hz") mfd cpuSTM
   _ <- forkIO $ runSound cpuSTM
-  when verbose $ void . forkIO $ runShowCPU mfd stopping (opt ^. field @"interval") cpuSTM
+  when verbose $ void . forkIO $ runShowCPU mfd (opt ^. field @"interval") cpuSTM
 
   forever $ threadDelay 10000000
 
-runShowCPU :: Fd -> TMVar Bool -> Integer -> TVar CPU -> IO ()
-runShowCPU tty stop d cpuSTM = void $ flip repeatedTimer (msDelay $ ceiling (((1 :: Double) / fromInteger d) * 1000)) $ do
+runShowCPU :: Fd -> Integer -> TVar CPU -> IO ()
+runShowCPU tty d cpuSTM = void $ flip repeatedTimer (msDelay $ ceiling (((1 :: Double) / fromInteger d) * 1000)) $ do
   cpu <- readTVarIO cpuSTM
   print cpu
-  updateTTY cpu tty
-  -- print one last time, while broken
-  when (cpu & p & break) $ atomically $ void $ putTMVar stop True
+  cpu & updateTTY tty
 
-runCPU :: TMVar Bool -> Integer -> Fd -> TVar CPU -> IO ()
-runCPU stop h tty cpuSTM =
-  void $ flip repeatedTimer (usDelay (ceiling (CPU.µs h))) $ do
-    cpu' <- readTVarIO cpuSTM >>= \cpu ->
-      step cpu & readKbd tty
-             >>= writeOutput tty
-             >>= updateClock
-             >>= updateTimers
-    atomically $ writeTVar cpuSTM cpu'
-    threadDelay (cpu' & tim)
-    when (cpu' & p & break) $ atomically $ putTMVar stop True
+runCPU :: Integer -> Fd -> TVar CPU -> IO ()
+runCPU h tty cpuSTM =
+  void $ flip repeatedTimer (usDelay (ceiling (CPU.µs h))) $
+    stepCPU tty cpuSTM
 
 runSound :: TVar CPU -> IO ()
 runSound cpuSTM =
-  void $ flip repeatedTimer (usDelay (fromInteger (ceiling CPU.Hardware.Sound.SID.µs))) $ do
-    cpu <- readTVarIO cpuSTM
-    unless (cpu & p & break) $ do
-      cpu' <- cpu & updateSIDClock >>= tickSound
-      atomically $ writeTVar cpuSTM cpu'
-    -- (atomically $ modifyTVar cpuSTM tickSound)
-
-updateClock :: CPU -> IO CPU
-updateClock cpu = do
-  (now, diff) <- timeDelta (cpu  ^. field @"clock")
-  return $ cpu & field @"clock" .~ now
-               & field @"dt"    .~ diff
-
-updateSIDClock :: CPU -> IO CPU
-updateSIDClock cpu = do
-  (now, diff) <- timeDelta (sid' ^. field @"clock")
-  return $ cpu & field @"sid" . field @"clock" .~ now
-               & field @"sid" . field @"dt"    .~ diff
-  where sid' = cpu ^. field @"sid"
-
-timeDelta :: UTCTime -> IO (UTCTime, Double)
-timeDelta before = do
-  now <- getCurrentTime
-  let diff :: Double = fromInteger . fromPico . nominalDiffTimeToSeconds $ diffUTCTime now before
-  return (now, diff)
-
-  where fromPico :: Pico -> Integer
-        fromPico (MkFixed i) = i
+  void $ flip repeatedTimer (usDelay (fromInteger (ceiling CPU.Hardware.Sound.SID.µs))) $
+    stepSound cpuSTM
 
 sasmInfo :: ParserInfo Run
 sasmInfo = info (sasmOpts <**> helper) (fullDesc <> progDesc "compile 6502 program" <> header "sasm")

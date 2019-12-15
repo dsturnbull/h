@@ -43,6 +43,7 @@ library
                         ASM.Lexer
                         ASM.Parser
                         CPU
+                        CPU.Debugger
                         CPU.Hardware.Interrupt
                         CPU.Hardware.Terminal
                         CPU.Hardware.Timer
@@ -53,6 +54,7 @@ library
                         CPU.Operand
                         CPU.Program
                         CPU.Run
+                        CPU.Terminal
                         CPU.Instructions.Assembles
                         CPU.Instructions.Decodes
                         CPU.Instructions.Execute
