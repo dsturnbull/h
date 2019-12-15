@@ -7,7 +7,8 @@
    o transition to tty-only
    o update screen, don't redraw entire thing
    o disasm mode
-   * fix flickering disasm
+   o fix flickering disasm
+   * fix keyboard spam problem
 
 3. Refactor
    * minimalise modules

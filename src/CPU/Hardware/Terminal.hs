@@ -35,12 +35,15 @@ getInput tty =
       else return Nothing
 
 readKbd :: Fd -> CPU -> IO CPU
-readKbd tty cpu = do
-  mc <- getInput tty
-  case mc of
-    Just 19 -> return $ cpu & brk
-    Just c  -> return $ cpu & processInput c
-    Nothing -> return cpu
+readKbd tty cpu =
+  if cpu & p & interrupt & not
+    then do
+      mc <- getInput tty
+      case mc of
+        Just 19 -> return $ cpu & brk
+        Just c  -> return $ cpu & processInput c
+        Nothing -> return cpu
+    else return cpu
 
 readTermKbd :: TMVar Word8 -> TVar CPU -> IO ()
 readTermKbd wS cpuSTM = do
@@ -52,11 +55,15 @@ readTermKbd wS cpuSTM = do
       then
         -- only put chars for debugger when broken, and not immediately.
         putTMVar wS c
-      else do
+      else
         -- otherwise, update as normal
-        let cpu' = if | c == 19   -> cpu & brk
-                      | otherwise -> cpu & processInput c
-        writeTVar cpuSTM cpu'
+        if cpu & p & interrupt & not
+          then do
+            let cpu' = if | c == 19   -> cpu & brk
+                          | otherwise -> cpu & processInput c
+            writeTVar cpuSTM cpu'
+          else
+            writeTVar cpuSTM cpu
 
   readTermKbd wS cpuSTM
 
@@ -66,6 +73,7 @@ processInput c cpu =
       & st (fromIntegral (kbd + 2)) 1
       & intr
 
+{-# WARNING writeOutput "If noone is connected to the pty, then output to it will loop for a long time." #-}
 writeOutput :: Fd -> CPU -> IO CPU
 writeOutput tty cpu =
   allocaBytes 1 $ \ptr -> do

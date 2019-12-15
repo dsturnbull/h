@@ -73,4 +73,3 @@ updateDebugger cpu = do
     Status -> cpu & Status.updateScreen
     Debug  -> cpu & Debug.updateScreen
   hFlush stdout
-  hFlush stdout

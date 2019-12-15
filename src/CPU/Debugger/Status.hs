@@ -24,6 +24,7 @@ import Control.Applicative
 import Control.Lens        hiding (elements)
 import Data.Coerce
 import Data.Foldable
+import Data.List           hiding (break)
 import Data.Maybe
 import Data.Word
 import Foreign             hiding (void)
@@ -129,7 +130,7 @@ screenMap cpu = ScreenMap $ mapLines (screen cpu) 0
  where
   -- render the elements in each line
   mapLines :: Screen -> Row -> [LineMap]
-  mapLines (Screen (l : ls)) row = (mapLine row 0 l ++ (mapLines (Screen ls) (row + 1)))
+  mapLines (Screen (l : ls)) row = mapLine row 0 l ++ mapLines (Screen ls) (row + 1)
   mapLines (Screen []) _         = []
 
   -- render a series of labels and values, remembering the offsets of both

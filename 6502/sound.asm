@@ -101,8 +101,12 @@ _isr_kbd_dec:
   ; sta $0401
 
 _isr_kbd_ret:
+  ; lda $0300
+  ; sta $0301
+
   clc
   ror $0302         ; clear kbd
+  cli
   rti
 
 _isr_timer:
