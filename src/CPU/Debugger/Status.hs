@@ -1,16 +1,15 @@
-{-# LANGUAGE DataKinds           #-}
-{-# LANGUAGE DeriveGeneric       #-}
-{-# LANGUAGE MultiWayIf          #-}
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE DataKinds                  #-}
+{-# LANGUAGE DeriveGeneric              #-}
+{-# LANGUAGE DeriveTraversable          #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE MultiWayIf                 #-}
+{-# LANGUAGE ScopedTypeVariables        #-}
 
 module CPU.Debugger.Status
   ( drawScreen
-  , drawScreen'
   , updateScreen
-  , updateScreen'
   , screen
   , screenMap
-  , screenMap'
   , Line
   , Row
   , Screen
@@ -23,6 +22,7 @@ import CPU.Hardware.Sound.Voice (Voice (..))
 
 import Control.Applicative
 import Control.Lens        hiding (elements)
+import Data.Coerce
 import Data.Foldable
 import Data.Maybe
 import Data.Word
@@ -37,39 +37,38 @@ import qualified Data.Vector.Storable as DVS
 data DebugState a = Broken a | Step a | Continue a
   deriving Generic
 
-type Row = Int
-type Col = Int
-type Label = String
-type Value = String
-type Element = (Label, CPU -> Value)
-type Line = [Element]
-type Screen = [Line]
-type LineMap = (Row, Col, Col, Label, CPU -> Value)
-type ScreenMap = [LineMap]
+newtype Row = Row Int deriving Num
+newtype Col = Col Int deriving Num
+newtype Label = Label String
+newtype Value = Value String
+newtype Element = Element (Label, CPU -> Value)
+newtype Line = Line [Element]
+newtype Screen = Screen [Line]
+newtype LineMap = LineMap (Row, Col, Col, Label, CPU -> Value)
+newtype ScreenMap a = ScreenMap [a] deriving (Functor, Traversable, Foldable)
 
 screen :: CPU -> Screen
-screen cpu = [ [ ("tty: ", \cpu' -> fromMaybe "/dev/ttysXXX" (cpu' & ttyName))
-               , ("hz: ",  \cpu' -> printf "%.3f MHz" ((fromInteger (CPU.hz cpu') :: Double) / 1e6))
-            -- , ("dt: ",  \cpu' -> printf "%9.4e" (cpu' & CPU.dt))
-               , ("m: ",   \cpu' -> show $ cpu' & debugMode)
-               , ("s:",    \cpu' -> printf "%2i"   (cpu' & tim)) ]
-             , [ ("A: ",   \cpu' -> printf "%02x"  (cpu' & rA))
-               , ("X: ",   \cpu' -> printf "%02x"  (cpu' & rX))
-               , ("Y: ",   \cpu' -> printf "%02x"  (cpu' & rY))
-               , ("S: ",   \cpu' -> printf "%02x"  (cpu' &  s))
-               , ("PC: ",  \cpu' -> printf "%04x"  (cpu' & pc)) ]
-             , [ ("vol: ", \cpu' -> printf "%01x"  (cpu' & sid & volume))
-            -- , ("dt: ",  \cpu' -> printf "%9.4e" (cpu' & sid & SID.dt))
-               ]
-             ] ++ [ showVoice 1 SID.voice1
-                  , showVoice 2 SID.voice2
-                  , showVoice 3 SID.voice3 ]
-               ++ [ showFlags ]
-               ++ [ showMemHeader ]
-               ++ showMemRows cpu
+screen cpu = Screen $ coerce
+  [ [ ("tty: ", \cpu' -> fromMaybe "/dev/ttysXXX" (cpu' & ttyName))
+    , ("hz: ",  \cpu' -> printf "%.3f MHz" ((fromInteger (CPU.hz cpu') :: Double) / 1e6))
+    , ("m: ",   \cpu' -> show $ cpu' & debugMode)
+    , ("s:",    \cpu' -> printf "%2i"   (cpu' & tim)) ]
+  , [ ("A: ",   \cpu' -> printf "%02x"  (cpu' & rA))
+    , ("X: ",   \cpu' -> printf "%02x"  (cpu' & rX))
+    , ("Y: ",   \cpu' -> printf "%02x"  (cpu' & rY))
+    , ("S: ",   \cpu' -> printf "%02x"  (cpu' &  s))
+    , ("PC: ",  \cpu' -> printf "%04x"  (cpu' & pc)) ]
+  , [ ("vol: ", \cpu' -> printf "%01x"  (cpu' & sid & volume)) ]
+  ]
+  ++ [ showVoice 1 SID.voice1
+     , showVoice 2 SID.voice2
+     , showVoice 3 SID.voice3 ]
+  ++ [ showFlags ]
+  ++ [ showMemHeader ]
+  ++ showMemRows cpu
 
 showMemHeader :: Line
-showMemHeader = [ (header, const "") ]
+showMemHeader = Line [ Element (Label header, const (Value "")) ]
   where header = "    : " ++ foldMap (++ " ") (printf "%02x" <$> [0 .. rowLength - 1]) ++ "\n"
 
 showMemRows :: CPU -> [Line]
@@ -79,9 +78,9 @@ showMemRows cpu = uncurry showMemRow <$> rows
     rowStarts = (* rowLength) <$> [0 .. (cpu & mem & DVS.length) `div` rowLength - 1]
 
 showMemRow :: Int -> DVS.Vector Word8 -> Line
-showMemRow o eles = [(printf "%04x: " o, elements)]
+showMemRow o eles = Line [Element (Label (printf "%04x: " o), elements)]
   where elements cpu =
-          foldMap (++ " ") (
+          Value $ foldMap (++ " ") (
             (\(i, v) ->
               if | i == fromIntegral (cpu & pc)                       -> printf "%s%02x%s" pcHere v normal
                  | i == fromIntegral (fromIntegral (cpu & s) + stack) -> printf "%s%02x%s" spHere v normal
@@ -95,67 +94,67 @@ rowLength :: Int
 rowLength = 32
 
 showVoice :: Int -> (SID -> Voice) -> Line
-showVoice n f =
-  [ ("v" <> show n <> ": ", const "")
-  , ("w: ",  \cpu -> show $ cpu & v & wave)
-  , ("a: ",  \cpu -> printf "%02x(%7.4f)" (cpu & v & attackW)  (cpu & v & attack))
-  , ("d: ",  \cpu -> printf "%02x(%7.4f)" (cpu & v & decayW)   (cpu & v & decay))
-  , ("r: ",  \cpu -> printf "%02x(%7.4f)" (cpu & v & releaseW) (cpu & v & release))
-  , ("s: ",  \cpu -> printf "%02x(%7.4f)" (cpu & v & sustainW) (cpu & v & sustain))
-  , ("f: ",  \cpu -> printf "%11.4f"      (cpu & v & freq))
-  , ("fW: ", \cpu -> printf "%04x"        (cpu & v & freqW))
-  , ("",     \cpu -> if cpu & v & gate then "on " else "off") -- 3 char wide for on is important
+showVoice n f = Line $ Element <$>
+  [ (Label ("v" <> show n <> ": "), const (Value ""))
+  , (Label "w: ",  \cpu -> Value $ show $ cpu & v & wave)
+  , (Label "a: ",  \cpu -> Value $ printf "%02x(%7.4f)" (cpu & v & attackW)  (cpu & v & attack))
+  , (Label "d: ",  \cpu -> Value $ printf "%02x(%7.4f)" (cpu & v & decayW)   (cpu & v & decay))
+  , (Label "r: ",  \cpu -> Value $ printf "%02x(%7.4f)" (cpu & v & releaseW) (cpu & v & release))
+  , (Label "s: ",  \cpu -> Value $ printf "%02x(%7.4f)" (cpu & v & sustainW) (cpu & v & sustain))
+  , (Label "f: ",  \cpu -> Value $ printf "%11.4f"      (cpu & v & freq))
+  , (Label "fW: ", \cpu -> Value $ printf "%04x"        (cpu & v & freqW))
+  , (Label "",     \cpu -> if cpu & v & gate then Value "on " else Value "off") -- 3 char wide for on is important
   ]
   where v cpu = cpu & sid & f
 
 showFlags :: Line
-showFlags = [ ("", status) ]
-  where status cpu = foldMap (++ " ")
-                      (showStatus <$> [ ("N", cpu & p & negative)
-                                      , ("V", cpu & p & overflow)
-                                      , ("B", cpu & p & break)
-                                      , ("D", cpu & p & decimal)
-                                      , ("I", cpu & p & interrupt)
-                                      , ("Z", cpu & p & zero)
-                                      , ("C", cpu & p & carry) ])
-        showStatus (n, f) = if f then on n else off n
-        on n              = printf "%s%s%s" onc n normal
-        off               = printf "%s%s" (setSGRCode [Reset])
-        onc               = setSGRCode [SetColor Foreground Vivid Red]
-        normal            = setSGRCode [Reset]
+showFlags = Line [ Element (Label "", status) ]
+  where status cpu = Value $ foldMap (++ " ") (flags cpu)
+        flags cpu = ss <$>
+          [ ("N", cpu & p & negative)
+          , ("V", cpu & p & overflow)
+          , ("B", cpu & p & break)
+          , ("D", cpu & p & decimal)
+          , ("I", cpu & p & interrupt)
+          , ("Z", cpu & p & zero)
+          , ("C", cpu & p & carry) ]
+        ss (n, f) = if f then on n else off n
+        on n      = printf "%s%s%s" onc n normal
+        off       = printf "%s%s" (setSGRCode [Reset])
+        onc       = setSGRCode [SetColor Foreground Vivid Red]
+        normal    = setSGRCode [Reset]
 
-screenMap :: CPU -> Row -> ScreenMap
-screenMap cpu = screenMap' cpu (screen cpu)
+screenMap :: CPU -> ScreenMap LineMap
+screenMap cpu = ScreenMap $ mapLines (screen cpu) 0
+ where
+  -- render the elements in each line
+  mapLines :: Screen -> Row -> [LineMap]
+  mapLines (Screen (l : ls)) row = (mapLine row 0 l ++ (mapLines (Screen ls) (row + 1)))
+  mapLines (Screen []) _         = []
 
-screenMap' :: CPU -> Screen -> Row -> ScreenMap
-screenMap' cpu (l : ls) row = screenMapLine row 0 cpu l ++ screenMap' cpu ls (row + 1)
-screenMap' _ [] _           = []
-
-screenMapLine :: Row -> Col -> CPU -> Line -> [LineMap]
-screenMapLine row col cpu ((lbl, f) : es) = (row, col, lcol, lbl, f) : screenMapLine row vcol cpu es
-  where val' = f cpu
-        lcol = col + length lbl
-        vcol = col + length lbl + length val' + 1
-screenMapLine _ _ _ [] = []
+  -- render a series of labels and values, remembering the offsets of both
+  mapLine :: Row -> Col -> Line -> [LineMap]
+  mapLine row col@(Col coli) (Line (Element (lbl@(Label lbli), f) : es)) = LineMap (row, col, lcol, lbl, f) : mapLine row vcol (Line es)
+    where
+      (Value val') = f cpu
+      lcol = Col $ coli + length lbli
+      vcol = Col $ coli + length lbli + length val' + 1
+  mapLine _ _ (Line []) = []
 
 drawScreen :: CPU -> IO ()
-drawScreen cpu = drawScreen' (screenMap cpu 0) cpu
-
-drawScreen' :: ScreenMap -> CPU -> IO ()
-drawScreen' m cpu = traverse_ draw m
-  where draw (row, lcol, vcol, lbl, val) =
-          let val' = val cpu in do
+drawScreen cpu = traverse_ draw (screenMap cpu)
+  where draw (LineMap ((Row row), (Col lcol), (Col vcol), (Label lbl), val)) = do
             setCursorPosition row lcol
             putStr lbl
             setCursorPosition row vcol
             putStr val'
+          where
+            (Value val') = val cpu
 
 updateScreen :: CPU -> IO ()
-updateScreen cpu = updateScreen' (screenMap cpu 0) cpu
-
-updateScreen' :: ScreenMap -> CPU -> IO ()
-updateScreen' m cpu = traverse_ draw m
-  where draw (row, _, vcol, _, val) =
-          let val' = val cpu in do
+updateScreen cpu = traverse_ draw (screenMap cpu)
+  where draw (LineMap ((Row row), _, (Col vcol), _, val)) = do
             setCursorPosition row vcol
             putStr val'
+          where
+            (Value val') = val cpu

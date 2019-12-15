@@ -33,7 +33,7 @@ disasm cpu = for_ relevant $ \(o, ins) -> putStrLn $ showMe o ins
 
 updateScreen :: CPU -> IO ()
 updateScreen cpu = do
-  DBG.updateScreen' (DBG.screenMap cpu 0) cpu
+  DBG.updateScreen cpu
   clearFromCursorToScreenEnd
   putStr "\n\n"
   cpu & disasm
