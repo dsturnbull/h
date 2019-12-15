@@ -36,6 +36,7 @@ import Data.Generics.Product.Any
 import Data.Generics.Product.Fields
 import Data.Time.Clock
 import Data.Vector.Storable         ((//))
+import Data.Word
 import GHC.IO                       (evaluate)
 import Prelude                      hiding (break)
 import System.Posix.Types           (Fd)
@@ -57,11 +58,11 @@ step cpu =
         setTim   = field @"tim" .~ t
         t        = cycles ins
 
-stepCPU :: Fd -> TVar CPU -> IO ()
-stepCPU tty cpuSTM = do
+stepCPU :: TMVar Word8 -> Fd -> TVar CPU -> IO ()
+stepCPU wS tty cpuSTM = do
   cpu' <- readTVarIO cpuSTM >>= \cpu ->
     if cpu & p & break
-      then cpu & debugger tty
+      then cpu & debuggerInput wS tty
                   >>= debugged (evaluate . step)
                   >>= debugged (writeOutput tty)
                   >>= debugged updateClock

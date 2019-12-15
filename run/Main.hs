@@ -7,6 +7,7 @@ import CPU
 import CPU.Debugger
 import CPU.Hardware.Sound
 import CPU.Hardware.Sound.SID
+import CPU.Hardware.Terminal
 import CPU.Program
 import CPU.Run
 
@@ -19,6 +20,7 @@ import Control.Monad
 import Control.Monad.IO.Class
 import Data.Generics.Product.Fields
 import Data.Time.Clock
+import Data.Word
 import GHC.Generics
 import Options.Applicative
 import System.Posix.IO
@@ -67,30 +69,31 @@ main = do
   liftIO $ setFdOption mfd NonBlockingRead True
 
   tty <- getSlaveTerminalName mfd
-  putStrLn tty
 
   now <- getCurrentTime
   let initial = load 0 prog $ mkCPU now (DVS.replicate (opt ^. field @"memory") 0)
                             & field @"ttyName" ?~ tty
-  cpuSTM <- initSound initial >>= newTVarIO
+  initial & initDebugger
 
-  -- initTTY mfd
-  _ <- forkIO $ runCPU (opt ^. field @"hz") mfd cpuSTM
+  cpuSTM <- initSound initial >>= newTVarIO
+  wS <- newEmptyTMVarIO
+  _ <- forkIO $ readTermKbd wS cpuSTM
+  _ <- forkIO $ runCPU wS (opt ^. field @"hz") mfd cpuSTM
   _ <- forkIO $ runSound cpuSTM
-  when verbose $ void . forkIO $ runShowCPU mfd (opt ^. field @"interval") cpuSTM
+  when verbose $ void . forkIO $ runShowCPU (opt ^. field @"interval") cpuSTM
 
   forever $ threadDelay 10000000
 
-runShowCPU :: Fd -> Integer -> TVar CPU -> IO ()
-runShowCPU tty d cpuSTM = void $ flip repeatedTimer (msDelay $ ceiling (((1 :: Double) / fromInteger d) * 1000)) $ do
+runShowCPU :: Integer -> TVar CPU -> IO ()
+runShowCPU d cpuSTM = void $ flip repeatedTimer (msDelay $ ceiling (((1 :: Double) / fromInteger d) * 1000)) $ do
   cpu <- readTVarIO cpuSTM
-  print cpu
-  cpu & updateTTY tty
+  -- print cpu
+  cpu & updateDebugger
 
-runCPU :: Integer -> Fd -> TVar CPU -> IO ()
-runCPU h tty cpuSTM =
+runCPU :: TMVar Word8 -> Integer -> Fd -> TVar CPU -> IO ()
+runCPU wS h tty cpuSTM =
   void $ flip repeatedTimer (usDelay (ceiling (CPU.µs h))) $
-    stepCPU tty cpuSTM
+    stepCPU wS tty cpuSTM
 
 runSound :: TVar CPU -> IO ()
 runSound cpuSTM =
