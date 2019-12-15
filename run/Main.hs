@@ -4,7 +4,7 @@
 {-# LANGUAGE TypeApplications    #-}
 
 import CPU
-import CPU.Debugger
+import CPU.Debugger.Display
 import CPU.Hardware.Sound
 import CPU.Hardware.Sound.SID
 import CPU.Hardware.Terminal
@@ -43,7 +43,6 @@ data Run = Run
 main :: IO ()
 main = do
   opt <- execParser sasmInfo
-  let verbose = opt ^. field @"debug"
 
   b <- BS.readFile (opt ^. field @"inputFile")
   let prog = Program (DVSB.byteStringToVector b)
@@ -71,7 +70,7 @@ main = do
   tty <- getSlaveTerminalName mfd
 
   now <- getCurrentTime
-  let initial = load 0 prog $ mkCPU now (DVS.replicate (opt ^. field @"memory") 0)
+  let initial = load 0 prog $ mkCPU now (opt ^. field @"hz") (DVS.replicate (opt ^. field @"memory") 0)
                             & field @"ttyName" ?~ tty
   initial & initDebugger
 
@@ -80,7 +79,7 @@ main = do
   _ <- forkIO $ readTermKbd wS cpuSTM
   _ <- forkIO $ runCPU wS (opt ^. field @"hz") mfd cpuSTM
   _ <- forkIO $ runSound cpuSTM
-  when verbose $ void . forkIO $ runShowCPU (opt ^. field @"interval") cpuSTM
+  _ <- forkIO $ runShowCPU (opt ^. field @"interval") cpuSTM
 
   forever $ threadDelay 10000000
 
@@ -106,8 +105,8 @@ sasmInfo = info (sasmOpts <**> helper) (fullDesc <> progDesc "compile 6502 progr
 sasmOpts :: Parser Run
 sasmOpts = Run
   <$> strOption   (long "input-file"                  <> short 'f'       <> metavar "FILE"  <> help "file to assemble")
-  <*> option auto (long "memory-size"                 <> short 'm'       <> metavar "BYTES" <> help "mem size")
+  <*> option auto (long "memory-size" <> value 0x500  <> short 'm'       <> metavar "BYTES" <> help "mem size")
   <*> option auto (long "hz"          <> value 985248 <> short 'h'       <> metavar "Hz"    <> help "Hz")
-  <*> option auto (long "interval"                    <> short 'i'       <> metavar "Hz"    <> help "Hz (show)")
+  <*> option auto (long "interval"    <> value 50     <> short 'i'       <> metavar "Hz"    <> help "Hz (show)")
   <*> switch      (long "debug"                       <> short 'd'                          <> help "debug")
   <*> switch      (long "graphics"                    <> short 'g'                          <> help "graphics")

@@ -19,7 +19,6 @@ import CPU.Hardware.Sound.Voice
 import Data.Time.Clock
 import Data.Word
 import GHC.Generics
-import Text.Printf
 
 data SID = SID
   { volume :: Word8
@@ -29,10 +28,6 @@ data SID = SID
   , clock  :: UTCTime
   , dt     :: Double
   } deriving (Generic, Eq)
-
-instance Show SID where
-  show sid = printf "vol: %01x dt: %9.4e%s" (volume sid) (dt sid) voices
-    where voices = foldMap ("\n" ++) $ (\(i :: Int,v) -> printf "v%i: " i ++ show (v sid)) <$> zip [0..] [voice1, voice2, voice3]
 
 mkSID :: UTCTime -> SID
 mkSID t0 = SID 0 mkVoice mkVoice mkVoice t0 0.0

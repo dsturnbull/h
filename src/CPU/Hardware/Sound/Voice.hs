@@ -19,7 +19,6 @@ module CPU.Hardware.Sound.Voice
 
 import Data.Word
 import GHC.Generics
-import Text.Printf
 
 data Waveform = Pulse | Sawtooth | Triangle | Noise
   deriving (Generic, Eq)
@@ -44,17 +43,6 @@ data Voice = Voice
   , freq     :: Double
   , wave     :: Waveform
   } deriving (Generic, Eq)
-
-instance Show Voice where
-  show v = printf "w:%s a:%02x(%7.4f) d:%02x(%7.4f) r:%02x(%7.4f) s:%02x(%7.4f) f:%11.4f fW:%04x (%s)"
-            (show $ wave v)
-            (attackW v) (attack v)
-            (decayW v) (decay v)
-            (releaseW v) (release v)
-            (sustainW v) (sustain v)
-            (freq v)
-            (freqW v)
-            (if gate v then "on" else "off")
 
 attackTable :: Word8 -> Double
 attackTable 0x0 =    2 / ms

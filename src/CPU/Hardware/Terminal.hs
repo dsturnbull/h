@@ -1,7 +1,9 @@
-{-# LANGUAGE MultiWayIf #-}
+{-# LANGUAGE MultiWayIf          #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module CPU.Hardware.Terminal
-  ( readKbd
+  ( getInput
+  , readKbd
   , readTermKbd
   , writeOutput
   , processInput
@@ -10,9 +12,9 @@ module CPU.Hardware.Terminal
 import CPU
 import CPU.Hardware.Interrupt
 import CPU.Instructions.Impl
-import CPU.Terminal
 
 import Control.Concurrent.STM
+import Control.Exception
 import Control.Lens
 import Control.Monad
 import Data.Char              (ord)
@@ -22,6 +24,15 @@ import Foreign                hiding (void)
 import Prelude                hiding (break)
 import System.Posix.IO
 import System.Posix.Types     (Fd)
+
+getInput :: Fd -> IO (Maybe Word8)
+getInput tty =
+  allocaBytes 1 $ \ptr -> do
+    nr <- fdReadBuf tty ptr 1 `catch` (\(_ :: IOException) -> pure 0)
+    if nr > 0
+      then do c <- peek ptr
+              return $ Just c
+      else return Nothing
 
 readKbd :: Fd -> CPU -> IO CPU
 readKbd tty cpu = do
@@ -37,13 +48,15 @@ readTermKbd wS cpuSTM = do
   atomically $ do
     cpu <- readTVar cpuSTM
 
-    -- only put chars for debugger when broken, and not immediately.
-    when (cpu & p & break) $ putTMVar wS c
-
-    -- otherwise, update as normal
-    let cpu' = if | c == 19   -> cpu & brk
-                  | otherwise -> cpu & processInput c
-    writeTVar cpuSTM cpu'
+    if cpu & p & break
+      then
+        -- only put chars for debugger when broken, and not immediately.
+        putTMVar wS c
+      else do
+        -- otherwise, update as normal
+        let cpu' = if | c == 19   -> cpu & brk
+                      | otherwise -> cpu & processInput c
+        writeTVar cpuSTM cpu'
 
   readTermKbd wS cpuSTM
 

@@ -1,6 +1,5 @@
 {-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE DeriveGeneric       #-}
-{-# LANGUAGE MultiWayIf          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications    #-}
 
@@ -35,19 +34,16 @@ import Bindings.PortAudio
 import Control.Lens                 hiding (elements, ignored)
 import Data.Bits
 import Data.Bits.Lens
-import Data.Char
 import Data.Generics.Product.Fields
 import Data.Maybe
 import Data.Time.Clock
-import Data.Vector.Storable         as V hiding (break, (++))
+import Data.Vector.Storable         as V hiding (break)
 import Data.Vector.Storable.Mutable (write)
 import Data.Word
-import Foreign                      hiding (void)
+import Foreign
 import Foreign.Marshal.Utils        (fromBool)
 import GHC.Generics
 import Prelude                      hiding (break, replicate)
-import System.Console.ANSI
-import Text.Printf
 
 import qualified Data.Vector.Storable as DVS
 
@@ -86,55 +82,14 @@ data CPU = CPU
   , audio   :: Maybe (Ptr C'PaStream)
   , sid     :: SID
   , timerA  :: JiffyTimer
+  , hz      :: Integer
   } deriving (Generic, Eq)
-
-instance Show CPU where
-  show cpu = printf "%s\n%s%s\n%s\n%s\n%s\n%s" top regs pc' sleep (show $ cpu & sid) status mem'
-    where regs   = foldMap (++ " ")
-                     (showReg <$> [ ("A", cpu & rA)
-                                  , ("X", cpu & rX)
-                                  , ("Y", cpu & rY)
-                                  , ("S", cpu &  s)])
-          status = foldMap (++ " ")
-                     (showStatus <$> [ ("N", cpu & p & negative)
-                                     , ("V", cpu & p & overflow)
-                                     , ("B", cpu & p & break)
-                                     , ("D", cpu & p & decimal)
-                                     , ("I", cpu & p & interrupt)
-                                     , ("Z", cpu & p & zero)
-                                     , ("C", cpu & p & carry) ])
-          top               = fromMaybe "" (cpu & ttyName) ++ printf " dt: %9.4e" (cpu & dt)
-          sleep :: String   = printf "%ss: %i" (setSGRCode [Reset]) (cpu & tim)
-          showStatus (n, f) = if f then on n else off n
-          on n              = printf "%s%s%s" onc n normal
-          off               = printf "%s%s" (setSGRCode [Reset])
-          pc' :: String     = showPc (cpu & pc)
-          showPc            = printf "%sPC: %04x" (setSGRCode [Reset])
-          showReg (r, v)    = printf "%s%s: %02x" (setSGRCode [Reset]) r v
-          mem'              = header ++ foldMap (++ "\n") (showRow <$> rows)
-          header            = "    : " ++ foldMap (++ " ") (printf "%02x" <$> [0 .. rowLength - 1]) ++ "\n"
-          showRow (o, row)  = printf "%04x: %s |%s|" o (elements o row) (ascii row)
-          elements o eles   = foldMap (++ " ") (
-                                (\(i, v) ->
-                                   if | i == fromIntegral (cpu & pc)                       -> printf "%s%02x%s" pcHere v normal
-                                      | i == fromIntegral (fromIntegral (cpu & s) + stack) -> printf "%s%02x%s" spHere v normal
-                                      | otherwise                                          -> printf "%s%02x" normal v
-                                ) <$> zip [o..] (V.toList eles))
-          onc               = setSGRCode [SetColor Foreground Vivid Red]
-          pcHere            = setSGRCode [SetColor Foreground Vivid Red]
-          spHere            = setSGRCode [SetColor Foreground Vivid Blue]
-          normal            = setSGRCode [Reset]
-          ascii eles        = foldMap (++ "") (printf "%c" . toPrintable . chr . fromIntegral <$> V.toList eles)
-          toPrintable c     = if isPrint c then c else '.'
-          rows              = (\i -> (i, (cpu & mem) & slice i rowLength)) <$> rowStarts
-          rowStarts         = (* rowLength) <$> [0 .. (cpu & mem & V.length) `div` rowLength - 1]
-          rowLength         = min 32 (cpu & mem & V.length)
 
 mkFlags :: Flags
 mkFlags = Flags False False False False False False False False
 
-mkCPU :: UTCTime -> DVS.Vector Word8 -> CPU
-mkCPU t0 m = CPU m 0 0 0 0 0xff mkFlags 0 t0 0 Nothing Nothing (mkSID t0) (mkJiffyTimer t0)
+mkCPU :: UTCTime -> Integer -> DVS.Vector Word8 -> CPU
+mkCPU t0 h m = CPU m 0 0 0 0 0xff mkFlags 0 t0 0 Nothing Nothing (mkSID t0) (mkJiffyTimer t0) h
 
 µs :: Integer -> Double
 µs rate = secs * 1000 * 1000
