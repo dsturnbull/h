@@ -84,7 +84,7 @@ showMemRow o eles = Line [Element (Label (printf "%04x: " o), \cpu -> (cpu & mem
   where memory cpu =
           Value $ foldMap (++ " ") (
             (\(i, v) ->
-              if | i == fromIntegral (cpu & pc)                       -> printf "%s%02x%s" pcHere v normal
+              if | i == fromIntegral (cpu & pc)                       -> printf "%s%02x" pcHere v
                  | i == fromIntegral (fromIntegral (cpu & s) + stack) -> printf "%s%02x%s" spHere v normal
                  | otherwise                                          -> printf "%s%02x" normal v
             ) <$> zip [o..] eles')
@@ -93,7 +93,7 @@ showMemRow o eles = Line [Element (Label (printf "%04x: " o), \cpu -> (cpu & mem
             (\(_, v) -> printf "%c" (pr (chr (fromIntegral v)))
             ) <$> zip [o..] eles')
         eles'  = DVS.toList eles
-        pcHere = setSGRCode [SetColor Foreground Vivid Red]
+        pcHere = saveCursorCode
         spHere = setSGRCode [SetColor Foreground Vivid Blue]
         normal = setSGRCode [Reset]
         pr c   = if isPrint c then c else '.'

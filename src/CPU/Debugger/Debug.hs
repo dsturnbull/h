@@ -42,3 +42,13 @@ updateScreen cpu = do
   clearFromCursorToScreenEnd
   putStr "\n\n"
   cpu & disasm
+
+  -- redraw PC specially
+  restoreCursor
+  setSGR [SetBlinkSpeed RapidBlink]
+  setSGR [SetUnderlining SingleUnderline]
+  setSGR [SetColor Foreground Vivid Red]
+  let m = (cpu & mem) DVS.! fromIntegral (cpu & pc)
+  putStr (printf "%02x" m)
+  setSGR [Reset]
+  cursorBackward 2

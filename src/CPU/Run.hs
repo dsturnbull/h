@@ -34,6 +34,7 @@ import Control.Concurrent.Suspend
 import Control.Concurrent.Timer
 import Control.Lens
 import Control.Monad
+import Data.Char
 import Data.Fixed
 import Data.Generics.Product.Any
 import Data.Generics.Product.Fields
@@ -74,11 +75,12 @@ stepCPU :: TMVar Word8 -> Fd -> TVar CPU -> IO Int
 stepCPU wS tty cpuSTM = do
   cpu' <- readTVarIO cpuSTM >>= \cpu ->
     if cpu & p & break
-      then cpu & debuggerInput wS tty
-                  >>= debugged (evaluate . step)
-                  >>= debugged (writeOutput tty)
-                  >>= debugged updateClock
-                  >>= debugged updateTimers
+      -- TODO: pass in a real ttyMode
+      then cpu & debuggerInput False wS tty
+                  >>= debugged wS (evaluate . step)
+                  >>= debugged wS (writeOutput tty)
+                  >>= debugged wS updateClock
+                  >>= debugged wS updateTimers
                   >>= (\d -> return $ d ^. the @1)
       else step cpu & readKbd tty
                   >>= writeOutput tty
@@ -97,10 +99,15 @@ step cpu =
         setTim   = field @"tim" .~ t
         t        = cycles ins
 
-debugged :: (CPU -> IO CPU) -> DebugState CPU -> IO (DebugState CPU)
-debugged f (Step cpu)     = Step <$> f cpu
-debugged _ (Broken cpu)   = Broken <$> return cpu
-debugged _ (Continue cpu) = Continue <$> return cpu
+debugged :: TMVar Word8 -> (CPU -> IO CPU) -> DebugState CPU -> IO (DebugState CPU)
+debugged _  f (Step cpu)      = Step <$> f cpu
+debugged _  _ (Broken cpu)    = Broken <$> return cpu
+debugged _  _ (Continue cpu)  = Continue <$> return cpu
+debugged wS _ (Overwrite cpu) = do
+  a <- atomically $ takeTMVar wS
+  b <- atomically $ takeTMVar wS
+  let val = read $ "0x" <> [chr (fromIntegral a), chr (fromIntegral b)]
+  return $ Broken (cpu & st (cpu & pc) val & field @"pc" %~ flip (+) 1)
 
 stepSound :: TVar CPU -> IO ()
 stepSound cpuSTM = do
