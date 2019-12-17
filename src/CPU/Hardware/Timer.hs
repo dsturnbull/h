@@ -8,10 +8,9 @@ module CPU.Hardware.Timer
   )
   where
 
-import CPU                           (CPU (mem), st, timerAV)
+import CPU                           (CPU (mem), h, l, st, timerAV)
 import CPU.Hardware.Interrupt
 import CPU.Hardware.Timer.JiffyTimer
-import CPU.Instructions.Assembles
 import CPU.Instructions.Decodes
 
 import Control.Lens                 hiding (set)

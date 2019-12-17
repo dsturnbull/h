@@ -32,7 +32,7 @@ spec = describe "eor" $ do
     let r = w .|. w'
     (cpu' & rA) === r
     (cpu' & p & zero)     === (r == 0)
-    (cpu' & p & negative) === (msb r)
+    (cpu' & p & negative) === msb r
 
   it "zpg" $ requireProperty $ do
     memSize <- forAll $ G.constant 256
@@ -47,7 +47,7 @@ spec = describe "eor" $ do
     let r = w .|. w'
     (cpu' & rA) === r
     (cpu' & p & zero)     === (r == 0)
-    (cpu' & p & negative) === (msb r)
+    (cpu' & p & negative) === msb r
 
   it "zpg, x" $ requireProperty $ do
     memSize <- forAll $ G.constant 256
@@ -64,7 +64,7 @@ spec = describe "eor" $ do
     let r = w .|. w'
     (cpu' & rA) === r
     (cpu' & p & zero)     === (r == 0)
-    (cpu' & p & negative) === (msb r)
+    (cpu' & p & negative) === msb r
 
   it "abs" $ requireProperty $ do
     memSize <- forAll $ G.constant (maxBound :: Word16)
@@ -79,7 +79,7 @@ spec = describe "eor" $ do
     let r = w .|. w'
     (cpu' & rA) === r
     (cpu' & p & zero)     === (r == 0)
-    (cpu' & p & negative) === (msb r)
+    (cpu' & p & negative) === msb r
 
   it "abs, x" $ requireProperty $ do
     memSize <- forAll $ G.constant (maxBound :: Word8)
@@ -96,7 +96,7 @@ spec = describe "eor" $ do
     let r = w .|. w'
     (cpu' & rA) === r
     (cpu' & p & zero)     === (r == 0)
-    (cpu' & p & negative) === (msb r)
+    (cpu' & p & negative) === msb r
 
   it "abs, y" $ requireProperty $ do
     memSize <- forAll $ G.constant (maxBound :: Word8)
@@ -113,7 +113,7 @@ spec = describe "eor" $ do
     let r = w .|. w'
     (cpu' & rA) === r
     (cpu' & p & zero)     === (r == 0)
-    (cpu' & p & negative) === (msb r)
+    (cpu' & p & negative) === msb r
 
   it "x, ind" $ requireProperty $ do
     memSize <- forAll $ G.constant 40
@@ -132,7 +132,7 @@ spec = describe "eor" $ do
     let r = w .|. w'
     (cpu' & rA) === r
     (cpu' & p & zero)     === (r == 0)
-    (cpu' & p & negative) === (msb r)
+    (cpu' & p & negative) === msb r
 
   it "ind, y" $ requireProperty $ do
     memSize <- forAll $ G.constant 40
@@ -150,4 +150,4 @@ spec = describe "eor" $ do
     let r = w .|. w'
     (cpu' & rA) === r
     (cpu' & p & zero)     === (r == 0)
-    (cpu' & p & negative) === (msb r)
+    (cpu' & p & negative) === msb r

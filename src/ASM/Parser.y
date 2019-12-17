@@ -6,8 +6,8 @@ module ASM.Parser (
   parseTokens,
 ) where
 
+import CPU (l, h)
 import ASM.Lexer
-import CPU.Instructions.Assembles
 import CPU.Instructions.Opcode
 import CPU.Operand
 import CPU.Program
@@ -93,6 +93,10 @@ import Control.Monad.Except
     '%'   { TokenPercent _ }
     '\''  { TokenQuote _ }
 
+    code  { TokenCode _ }
+    data  { TokenData _ }
+    byte  { TokenBytes _}
+
 -- Parser monad
 %monad { Except String } { (>>=) } { return }
 %error { parseError }
@@ -105,7 +109,7 @@ import Control.Monad.Except
 %left '*'
 %%
 
- assembly    : instruction                 { [$1] }
+assembly     : instruction                 { [$1] }
              | instruction assembly        { $1 : $2 }
 
 instruction  : adc oper { ADC $2 }
@@ -164,8 +168,11 @@ instruction  : adc oper { ADC $2 }
              | tya      { TYA    }
              | tsx      { TXS    }
              | txs      { TSX    }
-             | labeldef { $1     }
              | brk      { BRK    }
+             | labeldef { $1     }
+             | code     { Code   }
+             | data     { Data   }
+             | byte bytes { Bytes $2 }
 
 oper         : '#'  nm                 { Imm  $2 }
 oper         : '<' '#' '$' w16         { Imm (l $4) }
@@ -190,7 +197,11 @@ nm           : '$'  w8                 { $2 }
 nm           : '%'  w8                 { $2 }
 nm           : w8                      { $1 } -- single-quoted
 
-labeldef     : lbl ':'                 { LabelDef $1 0 }
+labeldef     : lbl ':'                 { LabelDef $1 }
+
+bytes        : byteval                 { [$1] }
+             | byteval ',' bytes       { $1 : $3 }
+byteval      : '$' w8                  { $2 }
 
 {
 parseError :: [Token] -> Except String a

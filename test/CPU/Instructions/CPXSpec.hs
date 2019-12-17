@@ -28,7 +28,7 @@ spec = describe "cpx" $ do
              & cpxImm w'
     (cpu' & p & carry)    === (w >= w')
     (cpu' & p & zero)     === (w == w')
-    (cpu' & p & negative) === (msb (w - w'))
+    (cpu' & p & negative) === msb (w - w')
 
   it "zpg" $ requireProperty $ do
     memSize <- forAll $ G.constant 256
@@ -43,7 +43,7 @@ spec = describe "cpx" $ do
     annotateShow cpu'
     (cpu' & p & carry)    === (w >= w')
     (cpu' & p & zero)     === (w == w')
-    (cpu' & p & negative) === (msb (w - w'))
+    (cpu' & p & negative) === msb (w - w')
 
   it "abs" $ requireProperty $ do
     memSize <- forAll $ G.constant 256
@@ -57,4 +57,4 @@ spec = describe "cpx" $ do
              & cpxAbs (fromIntegral addr)
     (cpu' & p & carry)    === (w >= w')
     (cpu' & p & zero)     === (w == w')
-    (cpu' & p & negative) === (msb (w - w'))
+    (cpu' & p & negative) === msb (w - w')

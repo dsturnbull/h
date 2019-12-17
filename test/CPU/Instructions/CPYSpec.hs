@@ -28,7 +28,7 @@ spec = describe "cpy" $ do
              & cpyImm w'
     (cpu' & p & carry)    === (w >= w')
     (cpu' & p & zero)     === (w == w')
-    (cpu' & p & negative) === (msb (w - w'))
+    (cpu' & p & negative) === msb (w - w')
 
   it "zpg" $ requireProperty $ do
     memSize <- forAll $ G.constant 256
@@ -43,7 +43,7 @@ spec = describe "cpy" $ do
     annotateShow cpu'
     (cpu' & p & carry)    === (w >= w')
     (cpu' & p & zero)     === (w == w')
-    (cpu' & p & negative) === (msb (w - w'))
+    (cpu' & p & negative) === msb (w - w')
 
   it "abs" $ requireProperty $ do
     memSize <- forAll $ G.constant 256
@@ -57,4 +57,4 @@ spec = describe "cpy" $ do
              & cpyAbs (fromIntegral addr)
     (cpu' & p & carry)    === (w >= w')
     (cpu' & p & zero)     === (w == w')
-    (cpu' & p & negative) === (msb (w - w'))
+    (cpu' & p & negative) === msb (w - w')

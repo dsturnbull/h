@@ -92,7 +92,7 @@ tokens :-
   -- Syntax
   $hex{2}                       { tok (\p s -> TokenWord8  p (read ("0x" <> s))) }
   $hex{4}                       { tok (\p s -> TokenWord16 p (read ("0x" <> s))) }
-  "_" $label+                   { tok (\p s -> TokenLabel  p s) }
+  "_" $label+                   { tok TokenLabel }
   "$"                           { tok (\p _ -> TokenDollar p) }
   "#"                           { tok (\p _ -> TokenHash p) }
   ","                           { tok (\p _ -> TokenComma p) }
@@ -106,10 +106,14 @@ tokens :-
   "%"                           { tok (\p _ -> TokenPercent p) }
   "'"                           { tok (\p _ -> TokenQuote p) }
   $bits{8}                      { tok (\p s -> TokenWord8 p (fromIntegral $ toDec s)) }
-  '$chr{1}'                       { tok (\p s -> TokenWord8 p (fromIntegral $ ord (s !! 1))) }
+  '$chr{1}'                     { tok (\p s -> TokenWord8 p (fromIntegral $ ord (s !! 1))) }
 
+  -- Control
+  .code                         { tok (\p _ -> TokenCode p) }
+  .data                         { tok (\p _ -> TokenData p) }
+  .byte                         { tok (\p _ -> TokenBytes p) }
 {
-tok f p s = f p s
+tok f = f
 
 toDec :: String -> Int
 toDec = foldl' (\acc x -> acc * 2 + digitToInt x) 0
@@ -186,6 +190,9 @@ data Token
   | TokenLowByte AlexPosn
   | TokenPercent AlexPosn
   | TokenQuote AlexPosn
+  | TokenCode AlexPosn
+  | TokenData AlexPosn
+  | TokenBytes AlexPosn
   deriving (Eq,Show)
 
 {-

@@ -126,7 +126,7 @@ spec = describe "adc" $ do
              & ldaImm w & staAbs (fromIntegral addr)
              & ldaImm w'
              & ldxImm x
-             & adcIndX (ind)
+             & adcIndX ind
     (cpu' & rA) === (w + w')
     (cpu' & p & carry) === shouldCarry w w'
     (cpu' & p & zero)  === (w + w' == 0)
@@ -145,7 +145,7 @@ spec = describe "adc" $ do
              & ldaImm w & staAbs (fromIntegral addr + fromIntegral y)
              & ldaImm w'
              & ldyImm y
-             & adcIndY (ind)
+             & adcIndY ind
     (cpu' & rA) === (w + w')
     (cpu' & p & carry) === shouldCarry w w'
     (cpu' & p & zero)  === (w + w' == 0)

@@ -43,7 +43,7 @@ aslM w m cpu =
       & setNegative r
       & setCarry v
       & w r
-  where v = (cpu & mem & m)
+  where v = cpu & mem & m
         r = (cpu & mem & m) `shiftL` 1
 
 aslAcc :: CPU -> CPU

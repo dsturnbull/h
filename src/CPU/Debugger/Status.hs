@@ -22,6 +22,7 @@ import CPU.Hardware.Sound.Voice (Voice (..))
 
 import Control.Applicative
 import Control.Lens        hiding (elements)
+import Data.Char
 import Data.Coerce
 import Data.Foldable
 import Data.List           hiding (break)
@@ -41,7 +42,7 @@ data DebugState a = Broken a | Step a | Continue a
 newtype Row = Row Int deriving Num
 newtype Col = Col Int deriving Num
 newtype Label = Label String
-newtype Value = Value String
+newtype Value = Value String deriving (Semigroup)
 newtype Element = Element (Label, CPU -> Value)
 newtype Line = Line [Element]
 newtype Screen = Screen [Line]
@@ -79,17 +80,23 @@ showMemRows cpu = uncurry showMemRow <$> rows
     rowStarts = (* rowLength) <$> [0 .. (cpu & mem & DVS.length) `div` rowLength - 1]
 
 showMemRow :: Int -> DVS.Vector Word8 -> Line
-showMemRow o eles = Line [Element (Label (printf "%04x: " o), elements)]
-  where elements cpu =
+showMemRow o eles = Line [Element (Label (printf "%04x: " o), \cpu -> (cpu & memory) <> ascii)]
+  where memory cpu =
           Value $ foldMap (++ " ") (
             (\(i, v) ->
               if | i == fromIntegral (cpu & pc)                       -> printf "%s%02x%s" pcHere v normal
                  | i == fromIntegral (fromIntegral (cpu & s) + stack) -> printf "%s%02x%s" spHere v normal
                  | otherwise                                          -> printf "%s%02x" normal v
-            ) <$> zip [o..] (DVS.toList eles))
+            ) <$> zip [o..] eles')
+        ascii = Value $ printf "|%s|" $
+          foldMap (++ "") (
+            (\(_, v) -> printf "%c" (pr (chr (fromIntegral v)))
+            ) <$> zip [o..] eles')
+        eles'  = DVS.toList eles
         pcHere = setSGRCode [SetColor Foreground Vivid Red]
         spHere = setSGRCode [SetColor Foreground Vivid Blue]
         normal = setSGRCode [Reset]
+        pr c   = if isPrint c then c else '.'
 
 rowLength :: Int
 rowLength = 32
@@ -130,8 +137,8 @@ screenMap cpu = ScreenMap $ mapLines (screen cpu) 0
  where
   -- render the elements in each line
   mapLines :: Screen -> Row -> [LineMap]
-  mapLines (Screen (l : ls)) row = mapLine row 0 l ++ mapLines (Screen ls) (row + 1)
-  mapLines (Screen []) _         = []
+  mapLines (Screen (ln : lns)) row = mapLine row 0 ln ++ mapLines (Screen lns) (row + 1)
+  mapLines (Screen []) _           = []
 
   -- render a series of labels and values, remembering the offsets of both
   mapLine :: Row -> Col -> Line -> [LineMap]

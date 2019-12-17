@@ -13,6 +13,7 @@ module CPU
   , indirectZpg
   , indirect
   , msb
+  , zeropage
   , stack
   , kbd
   , irqV
@@ -25,6 +26,8 @@ module CPU
   , wordToFlags
   , bitShow
   , µs
+  , h
+  , l
   ) where
 
 import CPU.Debugger.Mode             (DebugMode (..))
@@ -85,13 +88,14 @@ data CPU = CPU
   , timerA    :: JiffyTimer
   , hz        :: Integer
   , debugMode :: DebugMode
+  , loadPos   :: Word16
   } deriving (Generic, Eq)
 
 mkFlags :: Flags
 mkFlags = Flags False False False False False False False False
 
-mkCPU :: UTCTime -> Integer -> DVS.Vector Word8 -> CPU
-mkCPU t0 h m = CPU m 0 0 0 0 0xff mkFlags 0 t0 0 Nothing Nothing (mkSID t0) (mkJiffyTimer t0) h Debug
+mkCPU :: UTCTime -> Integer -> DVS.Vector Word8 -> Word16 -> CPU
+mkCPU t0 h' m = CPU m 0 0 0 0 0xff mkFlags 0 t0 0 Nothing Nothing (mkSID t0) (mkJiffyTimer t0) h' Debug
 
 µs :: Integer -> Double
 µs rate = secs * 1000 * 1000
@@ -120,6 +124,9 @@ negable r cpu = cpu & field @"p" . field @"negative" .~ ((cpu & r) < 0)
 
 msb :: (Num w, Bits w) => w -> Bool
 msb w = w .&. 0x80 == 0x80
+
+zeropage :: Word16
+zeropage = 0
 
 stack :: Word16
 stack = 0x0100
@@ -178,3 +185,9 @@ bitShow w =
     . (if w ^. bitAt 1 then ('1':) else ('0':))
     . (if w ^. bitAt 0 then ('1':) else ('0':))
     $ ""
+
+h :: Word16 -> Word8
+h w = fromIntegral $ w `shiftR` 8
+
+l :: Word16 -> Word8
+l w = fromIntegral $ w .&. 0x00ff

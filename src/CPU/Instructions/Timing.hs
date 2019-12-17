@@ -212,4 +212,7 @@ instance Timed Opcode where
 
   cycles BRK            = 7
 
-  cycles (LabelDef _ _) = 0
+  cycles (LabelDef _)   = 0
+  cycles Code           = 0
+  cycles Data           = 0
+  cycles (Bytes _)      = 0

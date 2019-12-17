@@ -32,7 +32,7 @@ spec = describe "rol" $ do
   it "acc" $ requireProperty $ do
     cpu     <- forAll $ genCPU 1
     w       <- forAll $ word8 (linear minBound maxBound)
-    c       <- forAll $ bool
+    c       <- forAll bool
     let cpu' = cpu
              & (if c then sec else id)
              & ldaImm w
@@ -48,7 +48,7 @@ spec = describe "rol" $ do
     cpu     <- forAll $ genCPU memSize
     addr    <- forAll $ word8 (linear minBound maxBound)
     w       <- forAll $ word8 (linear minBound maxBound)
-    c       <- forAll $ bool
+    c       <- forAll bool
     let cpu' = cpu
              & (if c then sec else id)
              & ldaImm w
@@ -67,7 +67,7 @@ spec = describe "rol" $ do
     x       <- forAll $ word8 (linear 10 20)
     addr    <- forAll $ word8 (linear minBound (maxBound - 20))
     w       <- forAll $ word8 (linear minBound maxBound)
-    c       <- forAll $ bool
+    c       <- forAll bool
     let cpu' = cpu
              & (if c then sec else id)
              & ldxImm x
@@ -86,7 +86,7 @@ spec = describe "rol" $ do
     cpu     <- forAll $ genCPU memSize
     addr    <- forAll $ word16 (linear minBound (memSize - 1))
     w       <- forAll $ word8 (linear minBound maxBound)
-    c       <- forAll $ bool
+    c       <- forAll bool
     let cpu' = cpu
              & (if c then sec else id)
              & ldaImm w
@@ -105,7 +105,7 @@ spec = describe "rol" $ do
     x       <- forAll $ word8 (linear 10 20)
     addr    <- forAll $ word16 (linear minBound (memSize - 20))
     w       <- forAll $ word8 (linear minBound maxBound)
-    c       <- forAll $ bool
+    c       <- forAll bool
     let cpu' = cpu
              & (if c then sec else id)
              & ldxImm x
@@ -137,7 +137,7 @@ spec = describe "rol" $ do
              & dex & rolAbsX addr
              & dex & rolAbsX addr
     annotateShow cpu'
-    let a' = (cpu' & mem) ! (fromIntegral addr)
+    let a' = (cpu' & mem) ! fromIntegral addr
     let b' = (cpu' & mem) ! (fromIntegral addr + 1)
     let c' = (cpu' & mem) ! (fromIntegral addr + 2)
     let d' = (cpu' & mem) ! (fromIntegral addr + 3)

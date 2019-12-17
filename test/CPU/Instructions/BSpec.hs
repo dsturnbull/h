@@ -23,7 +23,7 @@ spec = describe "branch" $ do
   it "bcc" $ requireProperty $ do
     memSize <- forAll $ G.constant 1
     cpu     <- forAll $ genCPU memSize
-    carry'  <- forAll $ bool_
+    carry'  <- forAll bool_
     rel     <- forAll $ int8 (linear (-4) 4)
     pc'     <- forAll $ word16 (linear 10 maxBound)
     let cpu' = cpu
@@ -35,7 +35,7 @@ spec = describe "branch" $ do
   it "bcs" $ requireProperty $ do
     memSize <- forAll $ G.constant 1
     cpu     <- forAll $ genCPU memSize
-    carry'  <- forAll $ bool_
+    carry'  <- forAll bool
     rel     <- forAll $ int8 (linear (-4) 4)
     pc'     <- forAll $ word16 (linear 10 maxBound)
     let cpu' = cpu
@@ -47,7 +47,7 @@ spec = describe "branch" $ do
   it "beq" $ requireProperty $ do
     memSize <- forAll $ G.constant 1
     cpu     <- forAll $ genCPU memSize
-    zero'   <- forAll $ bool_
+    zero'   <- forAll bool
     rel     <- forAll $ int8 (linear (-4) 4)
     pc'     <- forAll $ word16 (linear 10 maxBound)
     let cpu' = cpu
@@ -59,7 +59,7 @@ spec = describe "branch" $ do
   it "bmi" $ requireProperty $ do
     memSize <- forAll $ G.constant 1
     cpu     <- forAll $ genCPU memSize
-    neg'    <- forAll $ bool_
+    neg'    <- forAll bool
     rel     <- forAll $ int8 (linear (-4) 4)
     pc'     <- forAll $ word16 (linear 10 maxBound)
     let cpu' = cpu
@@ -71,7 +71,7 @@ spec = describe "branch" $ do
   it "bne" $ requireProperty $ do
     memSize <- forAll $ G.constant 1
     cpu     <- forAll $ genCPU memSize
-    zero'   <- forAll $ bool_
+    zero'   <- forAll bool
     rel     <- forAll $ int8 (linear (-4) 4)
     pc'     <- forAll $ word16 (linear 10 maxBound)
     let cpu' = cpu
@@ -83,7 +83,7 @@ spec = describe "branch" $ do
   it "bpl" $ requireProperty $ do
     memSize <- forAll $ G.constant 1
     cpu     <- forAll $ genCPU memSize
-    neg'    <- forAll $ bool_
+    neg'    <- forAll bool
     rel     <- forAll $ int8 (linear (-4) 4)
     pc'     <- forAll $ word16 (linear 10 maxBound)
     let cpu' = cpu
@@ -95,7 +95,7 @@ spec = describe "branch" $ do
   it "bvc" $ requireProperty $ do
     memSize <- forAll $ G.constant 1
     cpu     <- forAll $ genCPU memSize
-    over'   <- forAll $ bool_
+    over'   <- forAll bool
     rel     <- forAll $ int8 (linear (-4) 4)
     pc'     <- forAll $ word16 (linear 10 maxBound)
     let cpu' = cpu
@@ -107,7 +107,7 @@ spec = describe "branch" $ do
   it "bvs" $ requireProperty $ do
     memSize <- forAll $ G.constant 1
     cpu     <- forAll $ genCPU memSize
-    over'   <- forAll $ bool_
+    over'   <- forAll bool
     rel     <- forAll $ int8 (linear (-4) 4)
     pc'     <- forAll $ word16 (linear 10 maxBound)
     let cpu' = cpu

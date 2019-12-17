@@ -33,11 +33,11 @@ rolAcc cpu =
   cpu & setZero v
       & setNegative v
       & field @"rA" .~ v
-      & setCarry h
+      & setCarry hi
   where a = cpu & rA
-        h = a ^. bitAt 7
-        l = cpu & p & carry & fromBool
-        v = a `shiftL` 1 .|. l
+        hi = a ^. bitAt 7
+        lo = cpu & p & carry & fromBool
+        v = a `shiftL` 1 .|. lo
 
 rolZpg :: Word8 -> CPU -> CPU
 rolZpg = rolAbs . fromIntegral
@@ -49,13 +49,13 @@ rol_ :: (CPU -> Word8) -> Word16 -> CPU -> CPU
 rol_ f addr cpu =
   cpu & setZero v
       & setNegative v
-      & setCarry h
+      & setCarry hi
       & st m v
-  where r = (cpu & mem) ! fromIntegral m
-        h = r ^. bitAt 7
-        l = cpu & p & carry & fromBool
-        v = r `shiftL` 1 .|. l
-        m = fromIntegral (addr + fromIntegral (f cpu))
+  where r  = (cpu & mem) ! fromIntegral m
+        hi = r ^. bitAt 7
+        lo = cpu & p & carry & fromBool
+        v  = r `shiftL` 1 .|. lo
+        m  = fromIntegral (addr + fromIntegral (f cpu))
 
 rolAbs :: Word16 -> CPU -> CPU
 rolAbs = rol_ (const 0)

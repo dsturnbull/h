@@ -12,37 +12,36 @@ import Hedgehog.Range as R
 import qualified Data.Vector.Storable as DVS
 
 genInstruction :: MonadGen m => m Instruction
-genInstruction = do
-  ins <- G.choice [ genADC
-                  , genAND
-                  , genASL
-                  -- , genB
-                  , genCMP
-                  , genCPX
-                  , genCPY
-                  , genDE
-                  , genEOR
-                  , genIN
-                  -- , genJMP
-                  -- , genJSR
-                  , genLDA
-                  , genLDX
-                  , genLDY
-                  , genLSR
-                  , genNOP
-                  , genORA
-                  , genCL
-                  , genSE
-                  , genROL
-                  , genROR
-                  -- , genRTI
-                  , genSBC
-                  , genSTA
-                  , genSTX
-                  , genSTY
-                  , genT
-                  ]
-  return ins
+genInstruction =
+  G.choice [ genADC
+           , genAND
+           , genASL
+           -- , genB
+           , genCMP
+           , genCPX
+           , genCPY
+           , genDE
+           , genEOR
+           , genIN
+           -- , genJMP
+           -- , genJSR
+           , genLDA
+           , genLDX
+           , genLDY
+           , genLSR
+           , genNOP
+           , genORA
+           , genCL
+           , genSE
+           , genROL
+           , genROR
+           -- , genRTI
+           , genSBC
+           , genSTA
+           , genSTX
+           , genSTY
+           , genT
+           ]
 
 genCodeBreaking :: MonadGen m => Range Int -> m Instruction -> m [Instruction]
 genCodeBreaking r is = do
@@ -50,7 +49,7 @@ genCodeBreaking r is = do
     return $ code ++ [BRK]
 
 genProg :: MonadGen m => [Instruction] -> m Program
-genProg code = return $ Program (DVS.fromList (join $ asm <$> code))
+genProg code = return $ Program (DVS.fromList (asm =<< code))
 
 genADC :: MonadGen m => m Instruction
 genADC = ADC <$> G.choice [genImm, genZpg, genZpgX, genAbs, genAbsX, genAbsY, genIndX, genIndY]
@@ -62,7 +61,7 @@ genASL :: MonadGen m => m Instruction
 genASL = ASL <$> G.choice [genAcc, genZpg, genZpgX, genAbs, genAbsX]
 
 genB :: MonadGen m => m Instruction
-genB = do
+genB =
   G.choice [ BCC <$> genAddr
            , BCS <$> genAddr
            , BEQ <$> genAddr

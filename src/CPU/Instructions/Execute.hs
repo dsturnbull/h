@@ -222,4 +222,7 @@ execute i =
 
       BRK          -> brk
 
-      LabelDef _ _ -> undefined
+      LabelDef _   -> undefined
+      Code         -> undefined
+      Data         -> undefined
+      Bytes _      -> undefined

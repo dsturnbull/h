@@ -22,7 +22,7 @@ spec = describe "clear" $ do
   it "clc" $ requireProperty $ do
     memSize <- forAll $ G.constant 256
     cpu     <- forAll $ genCPU memSize
-    c       <- forAll $ bool
+    c       <- forAll bool
     let cpu' = cpu
             & field @"p" . field @"carry" .~ c
             & clc
@@ -31,7 +31,7 @@ spec = describe "clear" $ do
   it "cld" $ requireProperty $ do
     memSize <- forAll $ G.constant 256
     cpu     <- forAll $ genCPU memSize
-    d       <- forAll $ bool
+    d       <- forAll bool
     let cpu' = cpu
             & field @"p" . field @"carry" .~ d
             & cld
@@ -40,7 +40,7 @@ spec = describe "clear" $ do
   it "cli" $ requireProperty $ do
     memSize <- forAll $ G.constant 256
     cpu     <- forAll $ genCPU memSize
-    i       <- forAll $ bool
+    i       <- forAll bool
     let cpu' = cpu
             & field @"p" . field @"carry" .~ i
             & cli
@@ -49,7 +49,7 @@ spec = describe "clear" $ do
   it "clv" $ requireProperty $ do
     memSize <- forAll $ G.constant 256
     cpu     <- forAll $ genCPU memSize
-    i       <- forAll $ bool
+    i       <- forAll bool
     let cpu' = cpu
             & field @"p" . field @"carry" .~ i
             & clv

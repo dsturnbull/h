@@ -6,7 +6,7 @@ import CPU.Instructions.Opcode
 import CPU.Operand
 
 class Length a where
-  insLength :: a -> Integer
+  insLength :: a -> Int
 
 instance Length Opcode where
   insLength (ADC (Imm _))  = 2
@@ -110,6 +110,7 @@ instance Length Opcode where
   insLength (LDA (AbsY _)) = 3
   insLength (LDA (IndX _)) = 2
   insLength (LDA (IndY _)) = 2
+  insLength (LDA (Label _))= 3
   insLength (LDA (LabelLowByte _))
                            = 2
   insLength (LDA (LabelHighByte _))
@@ -217,4 +218,7 @@ instance Length Opcode where
 
   insLength BRK            = 1
 
-  insLength (LabelDef _ _) = 0
+  insLength (LabelDef _)   = 0
+  insLength Code           = 0
+  insLength Data           = 0
+  insLength (Bytes ws)     = fromIntegral $ length ws

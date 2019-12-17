@@ -25,18 +25,18 @@ import Hedgehog.Range              as R
 import Test.Hspec
 
 spec :: Spec
-spec = describe "brk" $ do
+spec = describe "brk" $
   it "breaks" $ requireProperty $ do
     memSize <- forAll $ G.constant 512
     cpu     <- forAll $ genCPU memSize
     addr    <- forAll $ word16 (linear minBound memSize)
     n       <- forAll bool
-    v       <- forAll $ bool
+    v       <- forAll bool
     g       <- forAll bool
     b       <- forAll $ G.constant False
     d       <- forAll bool
     i       <- forAll $ G.constant False
-    z       <- forAll $ bool
+    z       <- forAll bool
     c       <- forAll bool
 
     let cpu' = cpu

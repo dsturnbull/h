@@ -39,11 +39,15 @@ data DebugState a = Broken a | Step a | Continue a
 debugger :: Maybe Word8 -> CPU -> IO (DebugState CPU)
 debugger mc cpu =
   case mc of
-    Just 17 -> return $ Continue $ cpu & continue                  -- ^Q
-    Just 24 -> return $ Step cpu                                   -- ^S
-    Just 7  -> return $ Broken $ cpu & field @"debugMode" .~ Debug -- ^G
-    Just c  -> return $ Broken $ cpu & processInput c
-    Nothing -> return $ Broken cpu
+    Just 17   -> return $ Continue $ cpu & continue                  -- ^Q
+    Just 24   -> return $ Step cpu                                   -- ^S
+    Just 7    -> return $ Broken $ cpu & field @"debugMode" .~ Debug -- ^G
+    Just 0x5b -> return $ Broken $ cpu & field @"pc" %~ flip (-) 1
+    Just 0x7b -> return $ Broken $ cpu & field @"pc" %~ flip (-) 16
+    Just 0x5d -> return $ Broken $ cpu & field @"pc" %~ flip (+) 1
+    Just 0x7d -> return $ Broken $ cpu & field @"pc" %~ flip (+) 16
+    Just c    -> return $ Broken $ cpu & processInput c
+    Nothing   -> return $ Broken cpu
 
 continue :: CPU -> CPU
 continue cpu =

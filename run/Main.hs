@@ -17,6 +17,7 @@ import Control.Monad
 import Control.Monad.IO.Class
 import Data.Generics.Product.Fields
 import Data.Time.Clock
+import Data.Word
 import GHC.Generics
 import Options.Applicative
 import System.Posix.IO
@@ -33,14 +34,12 @@ data Run = Run
   , interval  :: Integer
   , debug     :: Bool
   , graphics  :: Bool
+  , location  :: Word16
   } deriving Generic
 
 main :: IO ()
 main = do
   opt <- execParser sasmInfo
-
-  b <- BS.readFile (opt ^. field @"inputFile")
-  let prog = Program (DVSB.byteStringToVector b)
 
   --  $0000 zpg
   --  $0100 stack
@@ -54,7 +53,9 @@ main = do
   -- *$0320 timer a control
   -- *$0321-$0382 timer a
   -- *$0323 timer irq
-  --  $0400 - $0500 audio
+  --  $0400 - $041c audio
+  --  $04fc-$04fd reset vector address
+  --  $04fe-$04ff reset routine address
 
   --  $0300 - 0x11a0 bitmap
   --  ????? - colour
@@ -64,9 +65,14 @@ main = do
 
   tty <- getSlaveTerminalName mfd
 
+  let loc  = opt ^. field @"location"
+  b <- BS.readFile (opt ^. field @"inputFile")
+  let prog = Program (DVSB.byteStringToVector b)
+
   now <- getCurrentTime
-  let initial = load 0 prog $ mkCPU now (opt ^. field @"hz") (DVS.replicate (opt ^. field @"memory") 0)
-                            & field @"ttyName" ?~ tty
+  let initial = load prog $ mkCPU now (opt ^. field @"hz") (DVS.replicate (opt ^. field @"memory") 0) loc
+                          & field @"ttyName" ?~ tty
+                          & field @"pc" .~ fromIntegral loc
   initial & initDebugger
 
   cpuSTM <- initSound initial >>= newTVarIO
@@ -83,9 +89,10 @@ sasmInfo = info (sasmOpts <**> helper) (fullDesc <> progDesc "compile 6502 progr
 
 sasmOpts :: Parser Run
 sasmOpts = Run
-  <$> strOption   (long "input-file"                  <> short 'f'       <> metavar "FILE"  <> help "file to assemble")
-  <*> option auto (long "memory-size" <> value 0x500  <> short 'm'       <> metavar "BYTES" <> help "mem size")
-  <*> option auto (long "hz"          <> value 985248 <> short 'h'       <> metavar "Hz"    <> help "Hz")
-  <*> option auto (long "interval"    <> value 50     <> short 'i'       <> metavar "Hz"    <> help "Hz (show)")
-  <*> switch      (long "debug"                       <> short 'd'                          <> help "debug")
-  <*> switch      (long "graphics"                    <> short 'g'                          <> help "graphics")
+  <$> strOption   (long "input-file"                  <> short 'f'       <> metavar "FILE"   <> help "file to assemble")
+  <*> option auto (long "memory-size" <> value 0x500  <> short 'm'       <> metavar "BYTES"  <> help "mem size")
+  <*> option auto (long "hz"          <> value 985248 <> short 'h'       <> metavar "Hz"     <> help "Hz")
+  <*> option auto (long "interval"    <> value 50     <> short 'i'       <> metavar "Hz"     <> help "Hz (show)")
+  <*> switch      (long "debug"                       <> short 'd'                           <> help "debug")
+  <*> switch      (long "graphics"                    <> short 'g'                           <> help "graphics")
+  <*> option auto (long "location"    <> value 0x200  <> short 'l'       <> metavar "OFFSET" <> help "target location")

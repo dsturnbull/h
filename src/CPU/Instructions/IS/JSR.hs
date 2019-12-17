@@ -16,7 +16,7 @@ jsrAbs :: Word16 -> CPU -> CPU
 jsrAbs addr cpu =
   cpu & st s1 r1
       & st s2 r2
-      & field @"s" %~ (flip (-) 2)
+      & field @"s" %~ flip (-) 2
       & field @"pc" .~ addr
   where s1 = fromIntegral (cpu & s) + stack
         s2 = fromIntegral (cpu & s) + stack - 1

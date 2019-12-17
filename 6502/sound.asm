@@ -17,7 +17,7 @@ _start:
   lda #%11111111    ; sustain 8 (100ms), release 8 (300ms)
   sta $0406
 
-; $1d1e is 440 Hz
+  ; $1d1e is 440 Hz
   lda <#$1d1e       ; note l
   sta $0400
   lda >#$1d1e       ; note h

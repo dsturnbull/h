@@ -49,11 +49,11 @@ import System.Posix.Types           (Fd)
 import qualified Data.Vector.Storable as DVS
 
 runCPU :: TMVar Word8 -> Integer -> Fd -> TVar CPU -> IO ()
-runCPU wS h tty cpuSTM =
+runCPU wS h' tty cpuSTM =
   forever $ do
   -- void $ flip repeatedTimer (usDelay (ceiling (CPU.µs h))) $
     sl <- stepCPU wS tty cpuSTM
-    let delay = ceiling $ CPU.µs h
+    let delay = ceiling $ CPU.µs h'
     threadDelay (sl * delay)
 
 runShowCPU :: Integer -> TVar CPU -> IO ()
@@ -65,9 +65,9 @@ runSound cpuSTM =
   void $ flip repeatedTimer (usDelay (fromInteger (ceiling CPU.Hardware.Sound.SID.µs))) $
     stepSound cpuSTM
 
-load :: Int -> Program -> CPU -> CPU
-load o (Program bin) cpu = do
-  let w = zip [o..] (DVS.toList bin)
+load :: Program -> CPU -> CPU
+load (Program bin) cpu = do
+  let w = zip [0..] (DVS.toList bin)
   cpu & field @"mem" %~ (// w)
 
 stepCPU :: TMVar Word8 -> Fd -> TVar CPU -> IO Int

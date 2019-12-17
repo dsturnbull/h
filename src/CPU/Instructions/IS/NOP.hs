@@ -1,5 +1,4 @@
-{-# LANGUAGE DataKinds        #-}
-{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE DataKinds #-}
 
 module CPU.Instructions.IS.NOP
   ( nop

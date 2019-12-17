@@ -23,7 +23,7 @@ import Test.Hspec
 spec :: Spec
 spec = describe "ph" $ do
   it "pha" $ requireProperty $ do
-    memSize <- forAll $ (G.constant 512)
+    memSize <- forAll $ G.constant 512
     cpu     <- forAll $ genCPU memSize
     w       <- forAll $ word8 (linear minBound maxBound)
     let cpu' = cpu & ldaImm w & pha
@@ -31,7 +31,7 @@ spec = describe "ph" $ do
     (cpu' & mem) ! fromIntegral (fromIntegral (cpu' & s) + stack + 1) === w
 
   it "php" $ requireProperty $ do
-    memSize <- forAll $ (G.constant 512)
+    memSize <- forAll $ G.constant 512
     cpu     <- forAll $ genCPU memSize
     n       <- forAll bool
     v       <- forAll bool

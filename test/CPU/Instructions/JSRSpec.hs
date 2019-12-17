@@ -21,7 +21,7 @@ import Hedgehog.Range              as R
 import Test.Hspec
 
 spec :: Spec
-spec = describe "jsr" $ do
+spec = describe "jsr" $
   it "abs" $ requireProperty $ do
     memSize <- forAll $ G.constant 512
     cpu     <- forAll $ genCPU memSize

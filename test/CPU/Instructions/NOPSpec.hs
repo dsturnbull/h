@@ -14,7 +14,7 @@ import Hedgehog.Gen                as G
 import Test.Hspec
 
 spec :: Spec
-spec = describe "lsr" $ do
+spec = describe "lsr" $
   it "imm" $ requireProperty $ do
     memSize <- forAll $ G.constant 256
     cpu     <- forAll $ genCPU memSize

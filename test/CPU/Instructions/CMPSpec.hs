@@ -31,7 +31,7 @@ spec = describe "cmp" $ do
              & cmpImm w'
     (cpu' & p & carry)    === (w >= w')
     (cpu' & p & zero)     === (w == w')
-    (cpu' & p & negative) === (msb (w - w'))
+    (cpu' & p & negative) === msb (w - w')
 
   it "zpg" $ requireProperty $ do
     memSize <- forAll $ G.constant 256
@@ -45,7 +45,7 @@ spec = describe "cmp" $ do
              & cmpZpg addr
     (cpu' & p & carry)    === (w >= w')
     (cpu' & p & zero)     === (w == w')
-    (cpu' & p & negative) === (msb (w - w'))
+    (cpu' & p & negative) === msb (w - w')
 
   it "zpg, x" $ requireProperty $ do
     memSize <- forAll $ G.constant 256
@@ -61,7 +61,7 @@ spec = describe "cmp" $ do
              & cmpZpgX addr
     (cpu' & p & carry)    === (w >= w')
     (cpu' & p & zero)     === (w == w')
-    (cpu' & p & negative) === (msb (w - w'))
+    (cpu' & p & negative) === msb (w - w')
 
   it "abs" $ requireProperty $ do
     memSize <- forAll $ G.constant (maxBound :: Word16)
@@ -75,7 +75,7 @@ spec = describe "cmp" $ do
              & cmpAbs (fromIntegral addr)
     (cpu' & p & carry)    === (w >= w')
     (cpu' & p & zero)     === (w == w')
-    (cpu' & p & negative) === (msb (w - w'))
+    (cpu' & p & negative) === msb (w - w')
 
   it "abs, x" $ requireProperty $ do
     memSize <- forAll $ G.constant (maxBound :: Word8)
@@ -91,7 +91,7 @@ spec = describe "cmp" $ do
              & cmpAbsX (fromIntegral addr)
     (cpu' & p & carry)    === (w >= w')
     (cpu' & p & zero)     === (w == w')
-    (cpu' & p & negative) === (msb (w - w'))
+    (cpu' & p & negative) === msb (w - w')
 
   it "abs, y" $ requireProperty $ do
     memSize <- forAll $ G.constant (maxBound :: Word8)
@@ -107,7 +107,7 @@ spec = describe "cmp" $ do
              & cmpAbsY (fromIntegral addr)
     (cpu' & p & carry)    === (w >= w')
     (cpu' & p & zero)     === (w == w')
-    (cpu' & p & negative) === (msb (w - w'))
+    (cpu' & p & negative) === msb (w - w')
 
   it "x, ind" $ requireProperty $ do
     memSize <- forAll $ G.constant 40
@@ -119,13 +119,13 @@ spec = describe "cmp" $ do
     addr    <- forAll $ word16 (linear 20 30)
     let cpu' = cpu
              & ldxImm x
-             & ldaImm (fromIntegral (addr .&. 0x00ff)) & staZpgX (ind)
+             & ldaImm (fromIntegral (addr .&. 0x00ff)) & staZpgX ind
              & ldaImm (fromIntegral (addr `shiftR` 8)) & staZpgX (ind + 1)
              & ldaImm w' & staAbs (fromIntegral addr)
              & ldaImm w  & cmpIndX ind
     (cpu' & p & carry)    === (w >= w')
     (cpu' & p & zero)     === (w == w')
-    (cpu' & p & negative) === (msb (w - w'))
+    (cpu' & p & negative) === msb (w - w')
 
   it "ind, y" $ requireProperty $ do
     memSize <- forAll $ G.constant 40
@@ -136,10 +136,10 @@ spec = describe "cmp" $ do
     ind     <- forAll $ G.constant 8
     addr    <- forAll $ word16 (linear 20 30)
     let cpu' = cpu
-             & ldaImm (fromIntegral (addr .&. 0x00ff)) & staZpg (ind)
+             & ldaImm (fromIntegral (addr .&. 0x00ff)) & staZpg ind
              & ldaImm (fromIntegral (addr `shiftR` 8)) & staZpg (ind + 1)
              & ldxImm y & ldaImm w' & staAbsX (fromIntegral addr)
              & ldyImm y & ldaImm w  & cmpIndY ind
     (cpu' & p & carry)    === (w >= w')
     (cpu' & p & zero)     === (w == w')
-    (cpu' & p & negative) === (msb (w - w'))
+    (cpu' & p & negative) === msb (w - w')

@@ -200,11 +200,11 @@ instance Decodes Opcode where
       0xBA -> TXS
 
       0x00 -> BRK
-      _    -> undefined
+      a    -> Bytes [a]
 
     where instruction = m ! 0
           imm         = m ! 1
-          addr        = (w16 $ take 2 (drop 1 m))
+          addr        = w16 $ take 2 (drop 1 m)
 
 w16 :: Vector Word8 -> Word16
 w16 v = (addrH `shiftL` 8) .|. addrL

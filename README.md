@@ -13,3 +13,8 @@
 3. Refactor
    * minimalise modules
    * clearly separate ASM from decoder (separate project?)
+
+4. exe format
+   * code, data segments
+
+5. invertibility

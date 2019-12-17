@@ -33,8 +33,8 @@ spec = fdescribe "cpu runner" $ do
           |]
 
     let cpu' = load 0 (assemble code) cpu
-    ((step cpu') & rA) === 0x20
-    ((step cpu') & pc) === 0x2
+    (step cpu' & rA) === 0x20
+    (step cpu' & pc) === 0x2
 
   it "executes instructions" $ requireProperty $ do
     memSize <- forAll $ G.constant 512
@@ -45,4 +45,4 @@ spec = fdescribe "cpu runner" $ do
     let cpu' = load 0x0000 prog cpu
     annotateShow prog
     annotateShow cpu'
-    ((run cpu') & pc) === (fromIntegral $ sum (insLength <$> code) + 1)
+    (run cpu' & pc) === fromIntegral (sum (insLength <$> code) + 1)

@@ -15,7 +15,7 @@ import Data.Word
 
 push :: Word8 -> CPU -> CPU
 push w cpu = cpu & st addr w
-                 & field @"s" %~ (flip (-) 1)
+                 & field @"s" %~ flip (-) 1
   where addr = fromIntegral (cpu & s) + stack
 
 pha :: CPU -> CPU

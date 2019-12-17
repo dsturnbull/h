@@ -1,5 +1,5 @@
-{-# LANGUAGE DataKinds        #-}
-{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE DataKinds #-}
+
 module CPU.Instructions.PLSpec
   ( spec
   ) where
@@ -25,7 +25,7 @@ import Test.Hspec
 spec :: Spec
 spec = describe "pl" $ do
   it "pla" $ requireProperty $ do
-    memSize <- forAll $ (G.constant 512)
+    memSize <- forAll $ G.constant 512
     cpu     <- forAll $ genCPU memSize
     w       <- forAll $ word8 (linear minBound maxBound)
     w'      <- forAll $ word8 (linear minBound maxBound)
@@ -38,7 +38,7 @@ spec = describe "pl" $ do
     (cpu' & rA) === w
 
   it "plp" $ requireProperty $ do
-    memSize <- forAll $ (G.constant 512)
+    memSize <- forAll $ G.constant 512
     cpu     <- forAll $ genCPU memSize
     w       <- forAll $ word8 (linear minBound maxBound)
     let cpu' = cpu

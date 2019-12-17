@@ -33,11 +33,11 @@ rorAcc cpu =
   cpu & setZero v
       & setNegative v
       & field @"rA" .~ v
-      & setCarry h
-  where a = cpu & rA
-        h = a ^. bitAt 0
-        l = cpu & p & carry & fromBool
-        v = a `shiftR` 1 .|. (l `shiftL` 7)
+      & setCarry hi
+  where a  = cpu & rA
+        hi = a ^. bitAt 0
+        lo = cpu & p & carry & fromBool
+        v  = a `shiftR` 1 .|. (lo `shiftL` 7)
 
 rorZpg :: Word8 -> CPU -> CPU
 rorZpg = rorAbs . fromIntegral
@@ -49,13 +49,13 @@ ror_ :: (CPU -> Word8) -> Word16 -> CPU -> CPU
 ror_ f addr cpu =
   cpu & setZero v
       & setNegative v
-      & setCarry h
+      & setCarry hi
       & st m v
-  where r = (cpu & mem) ! fromIntegral m
-        h = r ^. bitAt 0
-        l = cpu & p & carry & fromBool
-        v = r `shiftR` 1 .|. (l `shiftL` 7)
-        m = fromIntegral (addr + fromIntegral (f cpu))
+  where r  = (cpu & mem) ! fromIntegral m
+        hi = r ^. bitAt 0
+        lo = cpu & p & carry & fromBool
+        v  = r `shiftR` 1 .|. (lo `shiftL` 7)
+        m  = fromIntegral (addr + fromIntegral (f cpu))
 
 rorAbs :: Word16 -> CPU -> CPU
 rorAbs = ror_ (const 0)

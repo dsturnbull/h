@@ -12,25 +12,29 @@ import Control.Lens        hiding (elements)
 import Data.Foldable
 import Data.List
 import Data.Maybe
-import Data.Word
 import System.Console.ANSI
 import Text.Printf
 
-import qualified ASM.Assembler       as A (disasm)
-import qualified CPU.Debugger.Status as DBG
+import qualified ASM.Assembler        as A (disasm)
+import qualified CPU.Debugger.Status  as DBG
+import qualified Data.Vector.Storable as DVS
 
 disasm :: CPU -> IO ()
 disasm cpu = for_ relevant $ \(o, ins) -> putStrLn $ showMe o ins
-  where code          = A.disasm (Program (cpu & mem))
-        position      = fromMaybe 0 $ findIndex (\(o, _) -> o == (cpu & pc)) code
-        (b, a)        = splitAt position code
-        relevant      = reverse (take 9 (reverse b ++ replicate (9 - length b) empty)) ++ take 10 a
-        showMe o ins | o == (cpu & pc) = pcHere ++ showIn o ins ++ normal
+  where code       = A.disasm (Program (DVS.slice 0 memL (cpu & mem)))
+        memL       = DVS.length (cpu & mem)
+        listPos    = fromMaybe 0 $ elemIndex position (fst <$> code)
+        position   = fromMaybe 0 . listToMaybe . reverse $ fst <$> takeWhile (\(o, _) -> o < (cpu & pc)) code
+        (bef, aft) = splitAt listPos code
+        relevant   = reverse (take befL (reverse bef ++ empty)) ++ take aftL aft
+        pcHere     = setSGRCode [SetColor Foreground Vivid Red]
+        normal     = setSGRCode [Reset]
+        empty      = replicate (befL - length bef) (0, "")
+        befL       = 9
+        aftL       = 10
+        showIn     = printf "%04x: %s"
+        showMe o ins | o == position = pcHere ++ showIn o ins ++ normal
         showMe o ins = showIn o ins
-        showIn = printf "%04x: %s"
-        pcHere = setSGRCode [SetColor Foreground Vivid Red]
-        normal = setSGRCode [Reset]
-        empty :: (Word16, String) = (0, "")
 
 updateScreen :: CPU -> IO ()
 updateScreen cpu = do
