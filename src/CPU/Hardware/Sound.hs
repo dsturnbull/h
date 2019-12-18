@@ -14,7 +14,7 @@ module CPU.Hardware.Sound
   )
   where
 
-import CPU                      (CPU (audio, mem, sid), sound)
+import CPU                      (CPU (audio, mem, sid), soundV)
 import CPU.Hardware.Sound.SID
 import CPU.Hardware.Sound.Voice
 import CPU.Instructions.Decodes
@@ -131,7 +131,7 @@ tickSound cpu =
 
     Nothing -> return cpu
 
-  where vol = (cpu & mem) ! fromIntegral (sound & volumeControl) .&. 0b00000111
+  where vol = (cpu & mem) ! fromIntegral (soundV & volumeControl) .&. 0b00000111
 
 -- gate on -> start attack
 -- gate on -> attack finished -> decay
@@ -165,10 +165,10 @@ updateVoice v set get cpu = do
       & field @"sustain"   %~ (\a -> fromIntegral (sustain' vsr)) -- can it be changed?
 
   where dt'     = (cpu & sid & dt) / 1000 / 1000 / 1000 / 1000
-        vctrl   = (cpu & mem) ! fromIntegral (sound & v & voiceControl)
-        vad     = (cpu & mem) ! fromIntegral (sound & v & voiceAD)
-        vsr     = (cpu & mem) ! fromIntegral (sound & v & voiceSR)
-        freqW'  = w16 $ DVS.slice (fromIntegral (sound & v & voiceFreqH)) 2 (cpu & mem)
+        vctrl   = (cpu & mem) ! fromIntegral (soundV & v & voiceControl)
+        vad     = (cpu & mem) ! fromIntegral (soundV & v & voiceAD)
+        vsr     = (cpu & mem) ! fromIntegral (soundV & v & voiceSR)
+        freqW'  = w16 $ DVS.slice (fromIntegral (soundV & v & voiceFreqH)) 2 (cpu & mem)
         freq'   = (fromInteger . fromIntegral $ freqW') / sidFreq
         gate' b = b ^. bitAt 0
         wave' b = if | b ^. bitAt 7 -> Noise

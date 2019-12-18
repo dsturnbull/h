@@ -20,7 +20,9 @@ module CPU
   , brkV
   , nmiV
   , timerAV
-  , sound
+  , screenV
+  , soundV
+  , colourV
   , page
   , flagsToWord
   , wordToFlags
@@ -146,8 +148,14 @@ nmiV = 0x0318
 timerAV :: Word16
 timerAV = 0x0320
 
-sound :: Word16
-sound = 0xd400
+screenV :: Word16
+screenV = 0x0400
+
+soundV :: Word16
+soundV = 0xd400
+
+colourV :: Word16
+colourV = 0xd800
 
 page :: Word8
 page = maxBound
