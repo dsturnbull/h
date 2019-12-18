@@ -77,26 +77,34 @@ showMemRows :: CPU -> [Line]
 showMemRows cpu = uncurry showMemRow <$> rows
   where
     rows      = (\i -> (i, (cpu & mem) & DVS.slice i rowLength)) <$> rowStarts
-    rowStarts = (* rowLength) <$> [0 .. (cpu & mem & DVS.length) `div` rowLength - 1]
+    rowStarts = (* rowLength) <$> [w `div` rowLength .. e `div` rowLength]
+    w         = max 0 (m - fromIntegral n * rowLength)
+    e         = max m (fromIntegral ((fromIntegral m :: Word16) + n * fromIntegral rowLength) + r)
+    r         = fromIntegral n * rowLength - (fromIntegral m - w)
+    m         = fromIntegral (cpu & pc) `div` rowLength * rowLength
+    n         = 8
 
 showMemRow :: Int -> DVS.Vector Word8 -> Line
-showMemRow o eles = Line [Element (Label (printf "%04x: " o), \cpu -> (cpu & memory) <> ascii)]
+showMemRow o eles = Line [Element (Label "", \cpu -> Value $ printf "%04x: " o <> memory cpu <> ascii cpu)]
   where memory cpu =
-          Value $ foldMap (++ " ") (
+          foldMap (++ " ") (
             (\(i, v) ->
               if | i == fromIntegral (cpu & pc)                       -> printf "%s%02x" pcHere v
                  | i == fromIntegral (fromIntegral (cpu & s) + stack) -> printf "%s%02x%s" spHere v normal
                  | otherwise                                          -> printf "%s%02x" normal v
             ) <$> zip [o..] eles')
-        ascii = Value $ printf "|%s|" $
+        ascii cpu = printf "|%s|" $
           foldMap (++ "") (
-            (\(_, v) -> printf "%c" (pr (chr (fromIntegral v)))
+            (\(i, v) ->
+              if | i == fromIntegral (cpu & pc)                       -> printf "%s%c%s" pcHere' (pr (chr (fromIntegral v))) normal
+                 | otherwise                                          -> printf "%c" (pr (chr (fromIntegral v)))
             ) <$> zip [o..] eles')
-        eles'  = DVS.toList eles
-        pcHere = saveCursorCode
-        spHere = setSGRCode [SetColor Foreground Vivid Blue]
-        normal = setSGRCode [Reset]
-        pr c   = if isPrint c then c else '.'
+        eles'   = DVS.toList eles
+        pcHere  = saveCursorCode
+        pcHere' = setSGRCode [SetColor Foreground Vivid Red]
+        spHere  = setSGRCode [SetColor Foreground Vivid Blue]
+        normal  = setSGRCode [Reset]
+        pr c    = if isPrint c then c else '.'
 
 rowLength :: Int
 rowLength = 32

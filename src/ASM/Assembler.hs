@@ -1,4 +1,3 @@
-{-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications    #-}
 
@@ -6,6 +5,7 @@ module ASM.Assembler
   ( assemble
   , disasm
   , insPositions
+  , writeProgram
   ) where
 
 import ASM.Parser
@@ -19,22 +19,23 @@ import Data.Bifunctor
 import Data.Either
 import Data.Function
 import Data.List
-import Data.Vector.Storable ((//))
 import Data.Word
-import Prelude              hiding (all, lines)
+import Prelude        hiding (all, lines)
 import Text.Printf
 
-import qualified Data.Vector.Storable as DVS
+import qualified Data.ByteString.Builder         as BB
+import qualified Data.ByteString.Lazy            as LBS
+import qualified Data.Vector.Storable            as DVS
+import qualified Data.Vector.Storable.ByteString as DVSB
 
 assemble :: Word16 -> Word16 -> String -> Program
-assemble codeLoc dataLoc prog = Program code
+assemble codeLoc dataLoc prog = Program (codeLoc, DVS.fromList (snd <$> sortOn fst cs)) (dataLoc, DVS.fromList (snd <$> sortOn fst ds))
   where inss = parseAssembly prog
-        ws   = insPositions CodeSegment (fromIntegral codeLoc) (fromIntegral codeLoc) (fromIntegral dataLoc) (fromIntegral dataLoc) ins ins [] []
-        ins  = fromRight [] inss
-        code = DVS.replicate (fromIntegral $ codeLoc + 0x100) 0 // ws
+        (cs, ds) = insPositions CodeSegment (fromIntegral codeLoc) (fromIntegral codeLoc) (fromIntegral dataLoc) (fromIntegral dataLoc) ins ins [] []
+        ins      = fromRight [] inss
 
-disasm :: Program -> [(Word16, String)]
-disasm (Program prog) = showIns <$> instructions 0 prog
+disasm :: Program -> ([(Word16, String)], [(Word16, String)])
+disasm (Program (coff, cs') (doff, ds')) = (showIns <$> instructions (fromIntegral coff) cs', showIns <$> instructions (fromIntegral doff) ds')
   where showIns (o, w, i) = (fromIntegral o, printf "%-9s %20s %s" (showWords w) ";" (show i))
         showWords ws = foldMap (++ " ") (printf "%02x" <$> ws)
 
@@ -47,12 +48,22 @@ instructions o ws =
         s = insLength d
         w = DVS.toList $ DVS.take s ws
 
-insPositions :: Segment -> Int -> Int -> Int -> Int -> [Opcode] -> [Opcode] -> [(Int, Word8)] -> [(Int, Word8)] -> [(Int, Word8)]
+insPositions :: Segment -> Int -> Int -> Int -> Int -> [Opcode] -> [Opcode] -> [(Int, Word8)] -> [(Int, Word8)] -> ([(Int, Word8)], [(Int, Word8)])
 insPositions seg coff coff' doff doff' ins (i:is) cs ds =
   case i of
     Code       -> insPositions CodeSegment coff coff' doff doff' ins is cs ds
     Data       -> insPositions DataSegment coff coff' doff doff' ins is cs ds
-    (Bytes ws) -> (first (doff' +) <$> zip [0..] ws) ++ insPositions seg coff coff' doff (doff' + length ws)   ins is cs ds
-    _          -> (first (coff' +) <$> zip [0..]  c) ++ insPositions seg coff (coff' + insLength i) doff doff' ins is cs ds
+    (Bytes ws) -> insPositions seg coff coff' doff (doff' + length ws)   ins is cs ((first (doff' +) <$> zip [0..] ws) ++ ds)
+    _          -> insPositions seg coff (coff' + insLength i) doff doff' ins is    ((first (coff' +) <$> zip [0..]  c) ++ cs) ds
   where c = asm coff' seg (fromIntegral coff) (fromIntegral doff) ins i
-insPositions _ _ _ _ _ _ [] _ _ = []
+insPositions _ _ _ _ _ _ [] cs ds = (cs, ds)
+
+writeProgram :: Program -> LBS.ByteString
+writeProgram (Program (cloc, cdat) (dloc, ddat)) =
+  cloc' <> clen' <> cdat' <> dloc' <> dlen' <> ddat'
+  where cloc' = BB.toLazyByteString . BB.word16BE $ cloc
+        clen' = BB.toLazyByteString . BB.word16BE . fromIntegral $ DVS.length cdat
+        cdat' = LBS.fromStrict . DVSB.vectorToByteString $ cdat
+        dloc' = BB.toLazyByteString . BB.word16BE $ dloc
+        dlen' = BB.toLazyByteString . BB.word16BE . fromIntegral $ DVS.length ddat
+        ddat' = LBS.fromStrict . DVSB.vectorToByteString $ ddat

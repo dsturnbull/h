@@ -33,15 +33,15 @@ import System.Posix.Types           (Fd)
 import qualified CPU.Debugger.Debug  as Debug
 import qualified CPU.Debugger.Status as Status
 
-data DebugState a = Broken a | Step a | Continue a | Overwrite a
+data DebugState a = Broken a | Step a | Continue a | Overwrite a | Goto a
   deriving Generic
 
 debugger :: [Word8] -> CPU -> IO (DebugState CPU)
 debugger mc cpu =
   case mc of
     [0x11]             -> return $ Continue $ cpu & continue                  -- ^Q
-    [0x18]             -> return $ Step cpu                                   -- ^S
-    [0x07]             -> return $ Broken $ cpu & field @"debugMode" .~ Debug -- ^G
+    [0x18]             -> return $ Step cpu                                   -- ^X
+    [0x07]             -> return $ Goto $ cpu                               -- ^G
     [0x5b]             -> return $ Broken $ cpu & field @"pc" %~ flip (-) 1   -- [
     [0x7b]             -> return $ Broken $ cpu & field @"pc" %~ flip (-) 16  -- {
     [0x5d]             -> return $ Broken $ cpu & field @"pc" %~ flip (+) 1   -- ]

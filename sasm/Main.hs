@@ -13,8 +13,7 @@ import Options.Applicative
 import System.IO
 import Text.Printf
 
-import qualified Data.ByteString                 as BS
-import qualified Data.Vector.Storable.ByteString as DVSB
+import qualified Data.ByteString.Lazy as LBS
 
 data SASM = SASM
   { inputFile  :: FilePath
@@ -38,15 +37,14 @@ main = do
         t
 
   handle <- openBinaryFile out WriteMode
-  let bs = DVSB.vectorToByteString (prog ^. the @"program")
-  BS.hPut handle bs
+  LBS.hPut handle $ writeProgram prog
   hClose handle
 
   when verbose $ print prog
-  when verbose $ putStrLn $ foldMap (++ "\n") ((\(o, s) -> printf "%04x: " o <> s) <$> disasm prog)
-  putStrLn $ "wrote " <> show (BS.length bs) <> " bytes to " <> out
-
-  return ()
+  let (cdat, ddat) = disasm prog
+  when verbose $ putStrLn $ foldMap (++ "\n") ((\(o, s) -> printf "%04x: " o <> s) <$> cdat)
+  when verbose $ putStrLn $ foldMap (++ "\n") ((\(o, s) -> printf "%04x: " o <> s) <$> ddat)
+  -- putStrLn $ "wrote " <> show (BS.length bs) <> " bytes to " <> out
 
 sasmInfo :: ParserInfo SASM
 sasmInfo = info (sasmOpts <**> helper) (fullDesc <> progDesc "compile 6502 program" <> header "sasm")

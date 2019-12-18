@@ -8,7 +8,8 @@
 {-# LANGUAGE UndecidableInstances  #-}
 
 module CPU.Run
-  ( load
+  ( readProgram
+  , load
   , runShowCPU
   , runCPU
   , runSound
@@ -34,20 +35,22 @@ import Control.Concurrent.Suspend
 import Control.Concurrent.Timer
 import Control.Lens
 import Control.Monad
+import Data.Binary                  hiding (decode)
+import Data.Binary.Get
 import Data.Char
 import Data.Fixed
 import Data.Generics.Product.Any
 import Data.Generics.Product.Fields
 import Data.Time.Clock
 import Data.Vector.Storable         ((//))
-import Data.Word
 import GHC.Generics
 import GHC.IO                       (evaluate)
 import Options.Applicative
 import Prelude                      hiding (break)
 import System.Posix.Types           (Fd)
 
-import qualified Data.Vector.Storable as DVS
+import qualified Data.Vector.Storable            as DVS
+import qualified Data.Vector.Storable.ByteString as DVSB
 
 runCPU :: TMVar Word8 -> Integer -> Fd -> TVar CPU -> IO ()
 runCPU wS h' tty cpuSTM =
@@ -66,10 +69,28 @@ runSound cpuSTM =
   void $ flip repeatedTimer (usDelay (fromInteger (ceiling CPU.Hardware.Sound.SID.µs))) $
     stepSound cpuSTM
 
+readProgram :: Get (Word16, Program)
+readProgram = do
+  cloc <- loc
+  clen <- len
+  cdat <- getByteString (fromIntegral clen)
+  dloc <- loc
+  dlen <- len
+  ddat <- getByteString (fromIntegral dlen)
+  return (cloc, Program (cloc, DVSB.byteStringToVector cdat) (dloc, DVSB.byteStringToVector ddat))
+
+  where
+    loc :: Get Word16
+    loc = getWord16be
+
+    len :: Get Word16
+    len = getWord16be
+
 load :: Program -> CPU -> CPU
-load (Program bin) cpu = do
-  let w = zip [0..] (DVS.toList bin)
-  cpu & field @"mem" %~ (// w)
+load (Program (coff, cdat) (doff, ddat)) cpu = do
+  let c = zip [fromIntegral coff..] (DVS.toList cdat)
+  let d = zip [fromIntegral doff..] (DVS.toList ddat)
+  cpu & field @"mem" %~ (// (c ++ d))
 
 stepCPU :: TMVar Word8 -> Fd -> TVar CPU -> IO Int
 stepCPU wS tty cpuSTM = do
@@ -108,6 +129,13 @@ debugged wS _ (Overwrite cpu) = do
   b <- atomically $ takeTMVar wS
   let val = read $ "0x" <> [chr (fromIntegral a), chr (fromIntegral b)]
   return $ Broken (cpu & st (cpu & pc) val & field @"pc" %~ flip (+) 1)
+debugged wS _ (Goto cpu) = do
+  a <- atomically $ takeTMVar wS
+  b <- atomically $ takeTMVar wS
+  c <- atomically $ takeTMVar wS
+  d <- atomically $ takeTMVar wS
+  let val = read $ "0x" <> (chr . fromIntegral <$> [a, b, c, d])
+  return $ Broken $ cpu & field @"pc" .~ val
 
 stepSound :: TVar CPU -> IO ()
 stepSound cpuSTM = do

@@ -17,4 +17,4 @@
 4. exe format
    * code, data segments
 
-5. invertibility
+5. graphics
