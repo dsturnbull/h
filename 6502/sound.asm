@@ -12,30 +12,30 @@ _noop:
 
 _start:
   lda #%00000001    ; volume 1
-  sta $0418
+  sta $d418
 
   ;     76543210
   lda #%11100110    ; attack 8 (100ms), decay 8 (300ms)
-  sta $0405
+  sta $d405
 
   ;     76543210
   lda #%11111111    ; sustain 8 (100ms), release 8 (300ms)
-  sta $0406
+  sta $d406
 
   ; $1d1e is 440 Hz
   lda <#$1d1e       ; note l
-  sta $0400
+  sta $d400
   lda >#$1d1e       ; note h
-  sta $0401
+  sta $d401
 
   ;     76543210
   lda #%00010001    ; gate + triangle
-  sta $0404         ; v1 ctrl
+  sta $d404         ; v1 ctrl
 
   lda <_isr
-  sta $0314
+  sta $fffe
   lda >_isr
-  sta $0315
+  sta $ffff
 
   ; count $000f
   lda #$01
@@ -74,7 +74,7 @@ _kbd_s:
   cmp #'s'
   bne _kbd_inc_mag
   lda #%00000000     ; gate off
-  sta $0404
+  sta $b404
   jmp _kbd_ret
 
 _kbd_inc_mag:
@@ -92,25 +92,25 @@ _kbd_dec_mag:
 _kbd_inc:
   cmp #'.'
   bne _kbd_dec
-  lda $0400
+  lda $d400
   clc
   adc _mag          ; some note-like amount up
-  sta $0400
-  lda $0401
+  sta $d400
+  lda $d401
   adc #$00
-  sta $0401
+  sta $d401
   jmp _kbd_ret
 
 _kbd_dec:
   cmp #','
   bne _kbd_ret
-  lda $0400
+  lda $d400
   sec               ; no borrow
   sbc _mag          ; some note-like amount down
-  sta $0400
-  lda $0401
+  sta $d400
+  lda $d401
   sbc #$00
-  sta $0401
+  sta $d401
   jmp _kbd_ret
 
 _kbd_ret:
@@ -124,7 +124,7 @@ _kbd_ret:
 
 _isr_timer:
   lda #%00000000    ; off gate
-  sta $0404         ; v1 ctrl
+  sta $d404         ; v1 ctrl
 
   clc
   ror $0323         ; clear timer

@@ -44,15 +44,15 @@ main = do
   -- *$0300 kbd in
   -- *$0301 kbd out
   -- *$0302 kbd irq
-  --  $0314-$0315 irq vector    -- XXX $FFFE-$FFFF irq+brk (https://www.c64-wiki.com/wiki/Interrupt#Interrupt_Request_.28IRQ.29)
+  --  $fffe-ffff irq vector    -- (https://www.c64-wiki.com/wiki/Interrupt#Interrupt_Request_.28IRQ.29)
   --  $0316-$0317 break vector
   --  $0318-$0319 nmi vector
   -- *$0320 timer a control
   -- *$0321-$0382 timer a
   -- *$0323 timer irq
-  --  $0400 - $041c audio
-  --  $04fc-$04fd reset vector address
-  --  $04fe-$04ff reset routine address
+  --  $d400-$d41c audio
+  --  $d4fc-$d4fd reset vector address
+  --  $d4fe-$d4ff reset routine address
 
   --  $0300 - 0x11a0 bitmap
   --  ????? - colour

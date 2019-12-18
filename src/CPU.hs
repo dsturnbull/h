@@ -135,7 +135,7 @@ kbd :: Word16
 kbd = 0x300
 
 irqV :: Word16
-irqV = 0x0314
+irqV = 0xfffe
 
 brkV :: Word16
 brkV = 0x0316
@@ -147,7 +147,7 @@ timerAV :: Word16
 timerAV = 0x0320
 
 sound :: Word16
-sound = 0x0400
+sound = 0xd400
 
 page :: Word8
 page = maxBound
