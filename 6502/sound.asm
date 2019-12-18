@@ -1,5 +1,10 @@
 ; f0SID= f0 ⋅ 16.94 = 440 ⋅ 16.94 ≈ 7454
 
+.data
+_mag:
+  .byte $10
+
+.code
 _main:
   jsr _start
 _noop:
@@ -41,6 +46,9 @@ _start:
   lda #%00000001    ; enable timer
   sta $0320
 
+  lda $01
+  sta _mag          ; initial magnitude of frequency changes
+
   rts
 
 _isr:
@@ -58,49 +66,54 @@ _isr_kbd:
   ; space -> restart
   lda $0300
   cmp #' '
-  bne _isr_kbd_s
+  bne _kbd_s
   jsr _start
 
-_isr_kbd_s:
+_kbd_s:
   ; s -> stop sound
   cmp #'s'
-  bne _isr_kbd_inc
-  lda #%00000000    ; gate off
+  bne _kbd_inc_mag
+  lda #%00000000     ; gate off
   sta $0404
-  jmp _isr_kbd_ret
+  jmp _kbd_ret
 
-_isr_kbd_inc:
+_kbd_inc_mag:
+  cmp #']'
+  bne _kbd_dec_mag
+  rol _mag           ; some note-like amount up
+  jmp _kbd_ret
+
+_kbd_dec_mag:
+  cmp #'['
+  bne _kbd_inc
+  ror _mag           ; some note-like amount down
+  jmp _kbd_ret
+
+_kbd_inc:
   cmp #'.'
-  bne _isr_kbd_dec
+  bne _kbd_dec
   lda $0400
   clc
-  adc #$10          ; some note-like amount up
+  adc _mag          ; some note-like amount up
   sta $0400
   lda $0401
   adc #$00
   sta $0401
-  jmp _isr_kbd_ret
+  jmp _kbd_ret
 
-_isr_kbd_dec:
+_kbd_dec:
   cmp #','
-  bne _isr_kbd_ret
+  bne _kbd_ret
   lda $0400
   sec               ; no borrow
-  sbc #$10          ; some note-like amount down
+  sbc _mag          ; some note-like amount down
   sta $0400
   lda $0401
   sbc #$00
   sta $0401
-  jmp _isr_kbd_ret
+  jmp _kbd_ret
 
-  ; multiply to sid freq (*16.94)
-
-  ; lda <#$b901
-  ; sta $0400
-  ; lda >#$b901
-  ; sta $0401
-
-_isr_kbd_ret:
+_kbd_ret:
   ; lda $0300
   ; sta $0301
 
@@ -117,8 +130,3 @@ _isr_timer:
   ror $0323         ; clear timer
 
   rti
-
-_exit:
-  ;     76543210
-  lda #%00000000    ; gate + triangle
-  sta $0404         ; v1 ctrl

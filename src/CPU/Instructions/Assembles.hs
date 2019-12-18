@@ -1,4 +1,5 @@
-{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE LambdaCase          #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module CPU.Instructions.Assembles
   ( Assembles(..)
@@ -13,6 +14,7 @@ import CPU.Instructions.Opcode
 import CPU.Operand
 import CPU.Segment
 
+import Data.Function
 import Data.List
 import Data.Maybe
 import Data.Word
@@ -29,6 +31,7 @@ instance Assembles Opcode where
   asm _ _ _ _ _ (ADC (AbsY w))  = [0x79, l w, h w]
   asm _ _ _ _ _ (ADC (IndX w))  = [0x61, w]
   asm _ _ _ _ _ (ADC (IndY w))  = [0x71, w]
+  asm _ _ c d a (ADC (Label s)) = findLabel Nothing 0x6D c d a s
   asm _ _ _ _ _ (ADC _)         = undefined
 
   asm _ _ _ _ _ (AND (Imm  w))  = [0x29, w]
@@ -146,10 +149,12 @@ instance Assembles Opcode where
   asm _ _ _ _ _ (LDA (IndX w))  = [0xA1, w]
   asm _ _ _ _ _ (LDA (IndY w))  = [0xB1, w]
   asm _ _ c d a (LDA (Label s)) = findLabel Nothing 0xAD c d a s
-  asm _ _ c _ a (LDA (LabelLowByte s))
-                              = [0xA9, label c a s !! 0]
-  asm _ _ c _ a (LDA (LabelHighByte s))
-                              = [0xA9, label c a s !! 1]
+  asm _ _ c d a (LDA (LabelLowByte s))
+                                = findLabel Nothing 0xA9 c d a s & \case [i, hi, _] -> [i, hi]
+                                                                         _          -> undefined
+  asm _ _ c d a (LDA (LabelHighByte s))
+                                = findLabel Nothing 0xA9 c d a s & \case [i, _, lo] -> [i, lo]
+                                                                         _          -> undefined
   asm _ _ _ _ _ (LDA _)         = undefined
 
   asm _ _ _ _ _ (LDX (Imm  w))  = [0xA2, w]
@@ -195,6 +200,7 @@ instance Assembles Opcode where
   asm _ _ _ _ _ (ROL (ZpgX w))  = [0x36, w]
   asm _ _ _ _ _ (ROL (Abs  w))  = [0x2E, l w, h w]
   asm _ _ _ _ _ (ROL (AbsX w))  = [0x3E, l w, h w]
+  asm _ _ c d a (ROL (Label s)) = findLabel Nothing 0x2E c d a s
   asm _ _ _ _ _ (ROL _)         = undefined
 
   asm _ _ _ _ _ (ROR Acc)       = [0x6A]
@@ -202,6 +208,7 @@ instance Assembles Opcode where
   asm _ _ _ _ _ (ROR (ZpgX w))  = [0x76, w]
   asm _ _ _ _ _ (ROR (Abs  w))  = [0x6E, l w, h w]
   asm _ _ _ _ _ (ROR (AbsX w))  = [0x7E, l w, h w]
+  asm _ _ c d a (ROR (Label s)) = findLabel Nothing 0x6E c d a s
   asm _ _ _ _ _ (ROR _)         = undefined
 
   asm _ _ _ _ _ RTI             = [0x40]
@@ -215,6 +222,7 @@ instance Assembles Opcode where
   asm _ _ _ _ _ (SBC (AbsY w))  = [0xF9, l w, h w]
   asm _ _ _ _ _ (SBC (IndX w))  = [0xE1, w]
   asm _ _ _ _ _ (SBC (IndY w))  = [0xF1, w]
+  asm _ _ c d a (SBC (Label s)) = findLabel Nothing 0xED c d a s
   asm _ _ _ _ _ (SBC _)         = undefined
 
   asm _ _ _ _ _ SEC             = [0x38]
@@ -228,6 +236,7 @@ instance Assembles Opcode where
   asm _ _ _ _ _ (STA (AbsY w))  = [0x99, l w, h w]
   asm _ _ _ _ _ (STA (IndX w))  = [0x81, w]
   asm _ _ _ _ _ (STA (IndY w))  = [0x91, w]
+  asm _ _ c d a (STA (Label s)) = findLabel Nothing 0x8D c d a s
   asm _ _ _ _ _ (STA _)         = undefined
 
   asm _ _ _ _ _ (STX (Zpg  w))  = [0x86, w]
@@ -254,23 +263,16 @@ instance Assembles Opcode where
   asm _ _ _ _ _ Data            = []
   asm _ _ _ _ _ (Bytes ws)      = ws
 
-label :: Word16 -> [Opcode] -> String -> [Word8]
-label base a s =
-  case findIndex (\case
-                    LabelDef s' -> s' == s
-                    _           -> False) a of
-    Just p  -> [l w, h w]
-      where w = base + (fromIntegral . sum $ insLength <$> fst (splitAt p a))
-    Nothing -> error $ "cannot find label " <> s
-
 relLabel :: Word16 -> [Opcode] -> Int -> String -> [Word8]
 relLabel base a o s =
   case findIndex (\case
                     LabelDef s' -> s' == s
-                    _           -> False) a of
-    Just p  -> [fromIntegral w]
-      where w = fromIntegral base + (fromIntegral . sum $ insLength <$> fst (splitAt p a)) - o
+                    _           -> False) codes of
+    Just p  -> [fromIntegral (w p)]
     Nothing -> error $ "cannot find label " <> s
+  where w p = fromIntegral base + dist p - o
+        dist p = fromIntegral . sum $ insLength <$> fst (splitAt p codes)
+        (_, codes) = splitAt (fromMaybe (length a) $ elemIndex Code a) a
 
 findLabel :: Maybe Word8 -> Word8 -> Word16 -> Word16 -> [Opcode] -> String -> [Word8]
 findLabel _ a c d ins s =
@@ -278,10 +280,12 @@ findLabel _ a c d ins s =
     CodeSegment -> [a, l codeLoc, h codeLoc]
     DataSegment -> [a, l dataLoc, h dataLoc]
   where
-    (codes, datas) = splitAt (fromMaybe (length ins) $ elemIndex Data ins) ins
-    codeLoc  = fromIntegral . fst . fromMaybe (0, NOP) $ find (\(_, i) -> case i of LabelDef s' -> s' == s; _           -> False) codeLocs
-    dataLoc  = fromIntegral . fst . fromMaybe (0, NOP) $ find (\(_, i) -> case i of LabelDef s' -> s' == s; _           -> False) dataLocs
-    codeLocs = snd $ mapAccumL (\p i -> (p + insLength i, (p + insLength i, i))) (fromIntegral c) codes
-    dataLocs = snd $ mapAccumL (\p i -> (p + insLength i, (p + insLength i, i))) (fromIntegral d) datas
-    seg      = if insPos >= length codes then DataSegment else CodeSegment
-    insPos   = fromMaybe 0 $ findIndex (\case LabelDef s' -> s' == s; _           -> False) ins
+    (datas, codes) = splitAt (fromMaybe (length ins) $ elemIndex Code ins) ins
+    codeLoc   = findLoc $ locate c codes
+    dataLoc   = findLoc $ locate d datas
+    findLoc   = fromIntegral . fst . fromMaybe (0, NOP) . find (\(_, i) -> case i of LabelDef s' -> s' == s
+                                                                                     _           -> False)
+    locate o  = snd . mapAccumL (\p i -> (p + insLength i, (p + insLength i, i))) (fromIntegral o)
+    seg       = if insPos >= length datas then CodeSegment else DataSegment
+    insPos    = fromMaybe 0 $ findIndex (\case LabelDef s' -> s' == s
+                                               _           -> False) ins

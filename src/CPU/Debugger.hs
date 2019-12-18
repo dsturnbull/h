@@ -41,11 +41,7 @@ debugger mc cpu =
   case mc of
     [0x11]             -> return $ Continue $ cpu & continue                  -- ^Q
     [0x18]             -> return $ Step cpu                                   -- ^X
-    [0x07]             -> return $ Goto $ cpu                               -- ^G
-    [0x5b]             -> return $ Broken $ cpu & field @"pc" %~ flip (-) 1   -- [
-    [0x7b]             -> return $ Broken $ cpu & field @"pc" %~ flip (-) 16  -- {
-    [0x5d]             -> return $ Broken $ cpu & field @"pc" %~ flip (+) 1   -- ]
-    [0x7d]             -> return $ Broken $ cpu & field @"pc" %~ flip (+) 16  -- }
+    [0x07]             -> return $ Goto cpu                                   -- ^G
     [0x1b, 0x5b, 0x41] -> return $ Broken $ cpu & field @"pc" %~ flip (-) 32  -- <up>
     [0x1b, 0x5b, 0x42] -> return $ Broken $ cpu & field @"pc" %~ flip (+) 32  -- <down>
     [0x1b, 0x5b, 0x43] -> return $ Broken $ cpu & field @"pc" %~ flip (+) 1   -- <right>

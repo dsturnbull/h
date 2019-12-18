@@ -82,7 +82,7 @@ showMemRows cpu = uncurry showMemRow <$> rows
     e         = max m (fromIntegral ((fromIntegral m :: Word16) + n * fromIntegral rowLength) + r)
     r         = fromIntegral n * rowLength - (fromIntegral m - w)
     m         = fromIntegral (cpu & pc) `div` rowLength * rowLength
-    n         = 8
+    n         = 16
 
 showMemRow :: Int -> DVS.Vector Word8 -> Line
 showMemRow o eles = Line [Element (Label "", \cpu -> Value $ printf "%04x: " o <> memory cpu <> ascii cpu)]

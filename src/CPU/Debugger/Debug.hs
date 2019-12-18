@@ -40,8 +40,8 @@ updateScreen :: CPU -> IO ()
 updateScreen cpu = do
   DBG.updateScreen cpu
   clearFromCursorToScreenEnd
-  -- putStr "\n\n"
-  -- cpu & disasm
+  putStr "\n\n"
+  cpu & disasm
 
   -- redraw PC specially
   restoreCursor

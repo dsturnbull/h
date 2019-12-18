@@ -31,12 +31,13 @@ import qualified Data.Vector.Storable.ByteString as DVSB
 assemble :: Word16 -> Word16 -> String -> Program
 assemble codeLoc dataLoc prog = Program (codeLoc, DVS.fromList (snd <$> sortOn fst cs)) (dataLoc, DVS.fromList (snd <$> sortOn fst ds))
   where inss = parseAssembly prog
-        (cs, ds) = insPositions CodeSegment (fromIntegral codeLoc) (fromIntegral codeLoc) (fromIntegral dataLoc) (fromIntegral dataLoc) ins ins [] []
+        (cs, ds) = insPositions DataSegment (fromIntegral codeLoc) (fromIntegral codeLoc) (fromIntegral dataLoc) (fromIntegral dataLoc) ins ins [] []
         ins      = fromRight [] inss
 
 disasm :: Program -> ([(Word16, String)], [(Word16, String)])
-disasm (Program (coff, cs') (doff, ds')) = (showIns <$> instructions (fromIntegral coff) cs', showIns <$> instructions (fromIntegral doff) ds')
-  where showIns (o, w, i) = (fromIntegral o, printf "%-9s %20s %s" (showWords w) ";" (show i))
+disasm (Program (coff, cs') (doff, ds')) = (showIns <$> instructions (fromIntegral coff) cs', showData <$> bytes (fromIntegral doff) ds')
+  where showIns (o, w, i)  = (fromIntegral o, printf "%-9s %20s %s" (showWords w) ";" (show i))
+        showData (o, w) = (fromIntegral o, printf "%02x" w)
         showWords ws = foldMap (++ " ") (printf "%02x" <$> ws)
 
 instructions :: Int -> DVS.Vector Word8 -> [(Int, [Word8], Opcode)]
@@ -47,6 +48,13 @@ instructions o ws =
   where d = decode @Opcode ws
         s = insLength d
         w = DVS.toList $ DVS.take s ws
+
+bytes :: Int -> DVS.Vector Word8 -> [(Int, Word8)]
+bytes o ws =
+  if DVS.length ws > 0
+    then (o, w) : bytes (o + 1) (DVS.drop 1 ws)
+    else []
+  where w = head . DVS.toList $ DVS.take 1 ws
 
 insPositions :: Segment -> Int -> Int -> Int -> Int -> [Opcode] -> [Opcode] -> [(Int, Word8)] -> [(Int, Word8)] -> ([(Int, Word8)], [(Int, Word8)])
 insPositions seg coff coff' doff doff' ins (i:is) cs ds =
