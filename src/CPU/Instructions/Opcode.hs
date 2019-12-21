@@ -2,7 +2,7 @@ module CPU.Instructions.Opcode
   ( Opcode(..)
   ) where
 
-import CPU.Operand
+import CPU.Instructions.Operand
 
 import Control.Monad
 import Data.List

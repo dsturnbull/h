@@ -6,12 +6,14 @@ module CPU.Debugger.Debug
   ) where
 
 import CPU
-import CPU.Program (Program (..))
+import CPU.Hardware.TTY
+import CPU.Program      (Program (..))
 
-import Control.Lens        hiding (elements)
+import Control.Lens
 import Data.Foldable
 import Data.List
 import Data.Maybe
+import Data.Vector.Storable ((!))
 import System.Console.ANSI
 import Text.Printf
 
@@ -19,8 +21,8 @@ import qualified ASM.Assembler        as A (disasm)
 import qualified CPU.Debugger.Status  as DBG
 import qualified Data.Vector.Storable as DVS
 
-disasm :: CPU -> IO ()
-disasm cpu = for_ relevant $ \(o, ins) -> putStrLn $ showMe o ins
+disasm :: CPU -> [String]
+disasm cpu = relevant <&> uncurry showMe
   where (cdat, _)    = A.disasm (Program (0, DVS.slice 0 memL (cpu & mem)) (0, DVS.fromList []))
         memL         = DVS.length (cpu & mem)
         listPos      = fromMaybe 0 $ elemIndex position (fst <$> cdat)
@@ -38,17 +40,18 @@ disasm cpu = for_ relevant $ \(o, ins) -> putStrLn $ showMe o ins
 
 updateScreen :: CPU -> IO ()
 updateScreen cpu = do
-  DBG.updateScreen cpu
-  clearFromCursorToScreenEnd
-  putStr "\n\n"
-  cpu & disasm
+    DBG.updateScreen cpu
+    tout "\r\n\r\n"
+    tout clearFromCursorToScreenEndCode
+    for_ (cpu & disasm) (\d -> tout $ d ++ "\n")
 
-  -- redraw PC specially
-  restoreCursor
-  setSGR [SetBlinkSpeed RapidBlink]
-  setSGR [SetUnderlining SingleUnderline]
-  setSGR [SetColor Foreground Vivid Red]
-  let m = (cpu & mem) DVS.! fromIntegral (cpu & pc)
-  putStr (printf "%02x" m)
-  setSGR [Reset]
-  cursorBackward 2
+    -- redraw PC specially
+    tout restoreCursorCode
+    tout $ setSGRCode [SetUnderlining SingleUnderline]
+    tout $ setSGRCode [SetColor Foreground Vivid Red]
+    let m = (cpu & mem) ! fromIntegral (cpu & pc)
+    tout (printf "%02x" m)
+    tout $ setSGRCode [Reset]
+    tout $ cursorBackwardCode 2
+  where
+    tout = cpu & tty & out

@@ -2,70 +2,40 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module CPU.Hardware.Terminal
-  ( getInput
-  , readKbd
-  , readTermKbd
-  , writeOutput
+  ( readTermKbd
+  , updateScreen
   , processInput
+  , checkForDebug
   ) where
 
 import CPU
 import CPU.Hardware.Interrupt
+import CPU.Hardware.TTY
 import CPU.Instructions.Impl
 
 import Control.Concurrent.STM
-import Control.Exception
 import Control.Lens
 import Control.Monad
-import Data.Char              (ord)
-import Data.Vector.Storable   ((!))
+import Data.Char
+import Data.Foldable
+import Data.Vector.Storable   (slice)
 import Data.Word
-import Foreign                hiding (void)
 import Prelude                hiding (break)
-import System.Posix.IO
-import System.Posix.Types     (Fd)
+import System.Console.ANSI
+import Text.Latin1
 
-getInput :: Fd -> IO (Maybe Word8)
-getInput tty =
-  allocaBytes 1 $ \ptr -> do
-    nr <- fdReadBuf tty ptr 1 `catch` (\(_ :: IOException) -> pure 0)
-    if nr > 0
-      then do c <- peek ptr
-              return $ Just c
-      else return Nothing
+import qualified Data.Vector.Storable as DVS
 
-readKbd :: Fd -> CPU -> IO CPU
-readKbd tty cpu =
-  if cpu & p & interrupt & not
-    then do
-      mc <- getInput tty
-      case mc of
-        Just 19 -> return $ cpu & brk
-        Just c  -> return $ cpu & processInput c
-        Nothing -> return cpu
-    else return cpu
-
-readTermKbd :: TMVar Word8 -> TVar CPU -> IO ()
-readTermKbd wS cpuSTM = do
+readTermKbd :: TVar CPU -> IO ()
+readTermKbd cpuSTM = do
   c <- fromIntegral . ord <$> getChar
   atomically $ do
-    cpu <- readTVar cpuSTM
+    cpu <- readTVar cpuSTM -- keep waiting for cpu to change
+    when (cpu & p & interrupt & not) $ void $ tryPutTMVar (cpu & ready) () -- keep waiting for interrupt clear
+    _   <- takeTMVar (cpu & ready) -- make non-ready
+    writeTVar cpuSTM (cpu & processInput c) -- interrupts, so we will now wait for interrupt to clear again
 
-    if cpu & p & break
-      then
-        -- only put chars for debugger when broken, and not immediately.
-        putTMVar wS c
-      else
-        -- otherwise, update as normal
-        if cpu & p & interrupt & not
-          then do
-            let cpu' = if | c == 19   -> cpu & brk
-                          | otherwise -> cpu & processInput c
-            writeTVar cpuSTM cpu'
-          else
-            writeTVar cpuSTM cpu
-
-  readTermKbd wS cpuSTM
+  readTermKbd cpuSTM
 
 processInput :: Word8 -> CPU -> CPU
 processInput c cpu =
@@ -73,13 +43,27 @@ processInput c cpu =
       & st (fromIntegral (kbd + 2)) 1
       & intr
 
-{-# WARNING writeOutput "If noone is connected to the pty, then output to it will loop for a long time." #-}
-writeOutput :: Fd -> CPU -> IO CPU
-writeOutput tty cpu =
-  allocaBytes 1 $ \ptr -> do
-    when (c > 0) $ do
-      poke ptr c
-      void $ fdWriteBuf tty ptr 1
-    return $ cpu
-           & st (fromIntegral (kbd + 1)) (0 :: Word8)
-    where c = (cpu & mem) ! fromIntegral (kbd + 1)
+screenRows :: Int
+screenRows = 25
+
+screenCols :: Int
+screenCols = 40
+
+updateScreen :: CPU -> IO ()
+updateScreen cpu = traverse_ (uncurry printRow) rows
+  where rows     = getRow <$> [0 .. screenRows - 1]
+        printRow r cols =
+          void . sequence $ zip [0..] (DVS.toList cols) <&>
+            \(c, w) -> do
+              setCursorPosition r c
+              putChar . toPrintable . chr . fromIntegral $ w
+        getRow r = (r, slice (fromIntegral screenV + r * screenCols) screenCols (cpu & mem))
+        toPrintable c = if isPrintable c then c else ' '
+
+checkForDebug :: CPU -> IO CPU
+checkForDebug cpu = do
+  mc <- getInput (cpu & tty & mfd)
+  case mc of
+    Just 19 -> return $ cpu & brk
+    Just _  -> return cpu
+    Nothing -> return cpu

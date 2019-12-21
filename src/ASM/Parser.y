@@ -9,7 +9,7 @@ module ASM.Parser (
 import CPU (l, h)
 import ASM.Lexer
 import CPU.Instructions.Opcode
-import CPU.Operand
+import CPU.Instructions.Operand
 import CPU.Program
 
 import Control.Monad.Except
@@ -186,6 +186,7 @@ oper         :      nm     ',' 'Y'     { ZpgY $1 }
 oper         : '(' '$' w16 ',' 'X' ')' { Ind $3  }
 oper         : '('  nm     ',' 'X' ')' { IndX $2 }
 oper         : '('  nm     ')' ',' 'Y' { IndY $2 }
+oper         : '(' lbl ')'             { IndirectLabel $2 }
 oper         : lbl                     { Label $1 }
 oper         : '<' lbl                 { LabelLowByte $2 }
 oper         : '>' lbl                 { LabelHighByte $2 }

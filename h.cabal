@@ -33,12 +33,14 @@ common common-deps
     , storablevector     ^>= 0.2.13
     , linear             ^>= 1.20.9
     , numeric-prelude    ^>= 0.4.3.1
- -- , timers-tick        ^>= 0.4.2.0
     , timers             ^>= 0.2.0.3
     , suspend            ^>= 0.2.0.0
     , echo               ^>= 0.1.3
     , containers         ^>= 0.6.0.1
     , binary             ^>= 0.8
+    , text-latin1        ^>= 0.3.1
+    , OpenGL             ^>= 3.0.3.0
+    , sdl2               ^>= 2.5.0.0
 
 library
   import:               common-deps, config
@@ -52,12 +54,15 @@ library
                         CPU.Debugger.Mode
                         CPU.Hardware.Interrupt
                         CPU.Hardware.Terminal
+                        CPU.Hardware.TTY
                         CPU.Hardware.Timer
                         CPU.Hardware.Timer.JiffyTimer
                         CPU.Hardware.Sound
                         CPU.Hardware.Sound.SID
                         CPU.Hardware.Sound.Voice
-                        CPU.Operand
+                        CPU.Hardware.Video
+                        CPU.Hardware.Video.Chars
+                        CPU.Hardware.Video.VIC
                         CPU.Program
                         CPU.Run
                         CPU.Segment
@@ -65,6 +70,7 @@ library
                         CPU.Instructions.Decodes
                         CPU.Instructions.Execute
                         CPU.Instructions.Opcode
+                        CPU.Instructions.Operand
                         CPU.Instructions.Impl
                         CPU.Instructions.Jumps
                         CPU.Instructions.Length

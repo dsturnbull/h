@@ -6,7 +6,7 @@ module CPU.Instructions.Decodes
   ) where
 
 import CPU.Instructions.Opcode
-import CPU.Operand
+import CPU.Instructions.Operand
 
 import Data.Bits
 import Data.Vector.Storable

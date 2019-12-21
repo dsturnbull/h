@@ -1,4 +1,4 @@
-module CPU.Operand
+module CPU.Instructions.Operand
   ( Operand(..)
   )
   where
@@ -21,6 +21,7 @@ data Operand
   | IndY Word8
   | Rel Int8
   | Label String
+  | IndirectLabel String
   | LabelLowByte String
   | LabelHighByte String
   deriving Eq
@@ -39,6 +40,7 @@ instance Show Operand where
   show (IndX w)          = "(" ++ showW8 w ++ ",X)"
   show (Rel i)           = showI8 i
   show (Label s)         = s
+  show (IndirectLabel s) = "(" <> s <> ")"
   show (LabelLowByte s)  = "<" <> s
   show (LabelHighByte s) = ">" <> s
 

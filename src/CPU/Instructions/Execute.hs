@@ -5,7 +5,7 @@ module CPU.Instructions.Execute
 import CPU
 import CPU.Instructions.Impl
 import CPU.Instructions.Opcode
-import CPU.Operand
+import CPU.Instructions.Operand
 
 execute :: Opcode -> CPU -> CPU
 execute i =

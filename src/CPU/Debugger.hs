@@ -14,10 +14,9 @@ module CPU.Debugger
 import CPU
 import CPU.Debugger.Mode
 import CPU.Hardware.Terminal
+import CPU.Hardware.TTY
 import CPU.Instructions.Impl (rti)
 
-import Control.Applicative
-import Control.Concurrent.STM
 import Control.Lens                 hiding (elements)
 import Control.Monad
 import Data.Generics.Product.Fields
@@ -27,8 +26,6 @@ import GHC.Generics
 import Prelude                      hiding (break)
 import System.Console.ANSI
 import System.IO
-import System.IO.Echo.Internal
-import System.Posix.Types           (Fd)
 
 import qualified CPU.Debugger.Debug  as Debug
 import qualified CPU.Debugger.Status as Status
@@ -57,9 +54,8 @@ continue cpu =
       & field @"p" . field @"interrupt" .~ False
       & field @"pc" %~ flip (-) 2
 
-debuggerInput :: Bool -> TMVar Word8 -> Fd -> CPU -> IO (DebugState CPU)
-debuggerInput ttyMode wS tty cpu =
-    -- ttyMode <- atomically (isEmptyTMVar wS)
+debuggerInput :: CPU -> IO (DebugState CPU)
+debuggerInput cpu =
     go [] [0x1b, 0x5b]
   where
     go :: [Word8] -> [Word8] -> IO (DebugState CPU)
@@ -75,23 +71,19 @@ debuggerInput ttyMode wS tty cpu =
       case mc of
         Just c -> cpu & debugger (keys ++ [c])
         _      -> cpu & debugger keys
-    getKey =
-      if ttyMode
-        then getInput tty
-        else atomically $ Just <$> takeTMVar wS
+    getKey = getInput (cpu & tty & mfd)
 
 initDebugger :: CPU -> IO ()
-initDebugger cpu = do
-  hSetBuffering stdin NoBuffering
-  hSetEcho stdin False
-  void $ sttyRaw "-ixon"
-  clearScreen
-  cpu & Status.drawScreen
-  hFlush stdout
+initDebugger cpu =
+  when (connected (cpu & tty)) $ do
+    cpu & tty & out $ clearScreenCode
+    cpu & Status.drawScreen
+    hFlush stdout
 
 updateDebugger :: CPU -> IO ()
-updateDebugger cpu = do
-  case cpu & debugMode of
-    Status -> cpu & Status.updateScreen
-    Debug  -> cpu & Debug.updateScreen
-  hFlush stdout
+updateDebugger cpu =
+  when (connected (cpu & tty)) $ do
+    case cpu & debugMode of
+      Status -> cpu & Status.updateScreen
+      Debug  -> cpu & Debug.updateScreen
+    hFlush stdout

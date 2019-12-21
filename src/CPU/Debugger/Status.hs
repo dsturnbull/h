@@ -4,6 +4,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiWayIf                 #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
+{-# LANGUAGE TypeApplications           #-}
 
 module CPU.Debugger.Status
   ( drawScreen
@@ -19,19 +20,21 @@ module CPU.Debugger.Status
 import CPU
 import CPU.Hardware.Sound.SID   as SID (SID (..))
 import CPU.Hardware.Sound.Voice (Voice (..))
+import CPU.Hardware.TTY
 
 import Control.Applicative
-import Control.Lens        hiding (elements)
+import Control.Lens                 hiding (elements)
 import Data.Char
 import Data.Coerce
 import Data.Foldable
-import Data.List           hiding (break)
-import Data.Maybe
+import Data.Generics.Product.Fields
+import Data.List                    hiding (break)
 import Data.Word
-import Foreign             hiding (void)
+import Foreign                      hiding (void)
 import GHC.Generics
-import Prelude             hiding (break)
+import Prelude                      hiding (break)
 import System.Console.ANSI
+import Text.Latin1
 import Text.Printf
 
 import qualified Data.Vector.Storable as DVS
@@ -51,7 +54,7 @@ newtype ScreenMap a = ScreenMap [a] deriving (Functor, Traversable, Foldable)
 
 screen :: CPU -> Screen
 screen cpu = Screen $ coerce
-  [ [ ("tty: ", \cpu' -> fromMaybe "/dev/ttysXXX" (cpu' & ttyName))
+  [ [ ("tty: ", \cpu' -> cpu' ^. field @"tty" . field @"name")
     , ("hz: ",  \cpu' -> printf "%.3f MHz" ((fromInteger (CPU.hz cpu') :: Double) / 1e6))
     , ("m: ",   \cpu' -> show $ cpu' & debugMode)
     , ("s:",    \cpu' -> printf "%2i"   (cpu' & tim)) ]
@@ -96,15 +99,15 @@ showMemRow o eles = Line [Element (Label "", \cpu -> Value $ printf "%04x: " o <
         ascii cpu = printf "|%s|" $
           foldMap (++ "") (
             (\(i, v) ->
-              if | i == fromIntegral (cpu & pc)                       -> printf "%s%c%s" pcHere' (pr (chr (fromIntegral v))) normal
-                 | otherwise                                          -> printf "%c" (pr (chr (fromIntegral v)))
+              if | i == fromIntegral (cpu & pc)                       -> printf "%s%c%s" pcHere' (pr . chr $ fromIntegral v) normal
+                 | otherwise                                          -> printf "%c" (pr . chr $ fromIntegral v)
             ) <$> zip [o..] eles')
         eles'   = DVS.toList eles
         pcHere  = saveCursorCode
         pcHere' = setSGRCode [SetColor Foreground Vivid Red]
         spHere  = setSGRCode [SetColor Foreground Vivid Blue]
         normal  = setSGRCode [Reset]
-        pr c    = if isPrint c then c else '.'
+        pr c    = if isPrintable c && isAscii c then c else '.'
 
 rowLength :: Int
 rowLength = 32
@@ -160,17 +163,19 @@ screenMap cpu = ScreenMap $ mapLines (screen cpu) 0
 drawScreen :: CPU -> IO ()
 drawScreen cpu = traverse_ draw (screenMap cpu)
   where draw (LineMap ((Row row), (Col lcol), (Col vcol), (Label lbl), val)) = do
-            setCursorPosition row lcol
-            putStr lbl
-            setCursorPosition row vcol
-            putStr val'
+            tout (setCursorPositionCode row lcol)
+            tout lbl
+            tout (setCursorPositionCode row vcol)
+            tout val'
           where
             (Value val') = val cpu
+            tout = cpu & tty & out
 
 updateScreen :: CPU -> IO ()
 updateScreen cpu = traverse_ draw (screenMap cpu)
   where draw (LineMap ((Row row), _, (Col vcol), _, val)) = do
-            setCursorPosition row vcol
-            putStr val'
+            tout (setCursorPositionCode row vcol)
+            tout val'
           where
             (Value val') = val cpu
+            tout = cpu & tty & out

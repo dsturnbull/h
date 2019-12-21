@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE DeriveGeneric       #-}
+{-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications    #-}
 
@@ -7,18 +8,21 @@ import CPU
 import CPU.Debugger
 import CPU.Hardware.Sound
 import CPU.Hardware.Terminal
+import CPU.Hardware.TTY
+import CPU.Hardware.Video
 import CPU.Run
 
 import Control.Concurrent
 import Control.Concurrent.STM
 import Control.Lens
-import Control.Monad
 import Control.Monad.IO.Class
 import Data.Binary.Get
 import Data.Generics.Product.Fields
 import Data.Time.Clock
 import GHC.Generics
 import Options.Applicative
+import System.Console.ANSI
+import System.IO
 import System.Posix.IO
 import System.Posix.Terminal
 
@@ -51,34 +55,41 @@ main = do
   -- *$0321-$0382 timer a
   -- *$0323 timer irq
   --  $0400-$07e7 -- screen ram
+  --  $2000-$3fff - bitmap memory
   --  $d400-$d41c audio
   --  $d4fc-$d4fd reset vector address
   --  $d4fe-$d4ff reset routine address
-  --  $d800-$dbe7 -- screen ram
+  --  $d800-$dbe7 -- colour ram
 
-  (mfd, _) <- liftIO openPseudoTerminal
-  liftIO $ setFdOption mfd NonBlockingRead True
-
-  tty <- getSlaveTerminalName mfd
+  (fd, _) <- liftIO openPseudoTerminal
+  liftIO $ setFdOption fd NonBlockingRead True
+  ttyN <- getSlaveTerminalName fd
+  -- putStrLn ttyN
+  -- _ <- getInputBlocking fd
 
   lbs <- LBS.readFile (opt ^. field @"inputFile")
 
   let (cloc, prog) = runGet readProgram lbs
 
+  tm <- newEmptyTMVarIO
   now <- getCurrentTime
-  let initial = load prog $ mkCPU now (opt ^. field @"hz") (DVS.replicate (opt ^. field @"memory") 0) cloc
-                          & field @"ttyName" ?~ tty
+  let initial = load prog $ mkCPU now (mkTTY fd ttyN) (opt ^. field @"hz") (DVS.replicate (opt ^. field @"memory") 0) cloc tm
                           & field @"pc" .~ cloc
   initial & initDebugger
 
+  hSetBuffering stdin NoBuffering
+  hSetEcho stdin False
+  clearScreen
+  hideCursor
+
   cpuSTM <- initSound initial >>= newTVarIO
-  wS <- newEmptyTMVarIO
-  _ <- forkIO $ readTermKbd wS cpuSTM
-  _ <- forkIO $ runCPU wS (opt ^. field @"hz") mfd cpuSTM
+  _ <- forkIO $ readTermKbd cpuSTM
+  _ <- forkIO $ runCPU (opt ^. field @"hz") cpuSTM
+  -- _ <- forkIO $ runScreen (opt ^. field @"interval") cpuSTM
   _ <- forkIO $ runSound cpuSTM
   _ <- forkIO $ runShowCPU (opt ^. field @"interval") cpuSTM
 
-  forever $ threadDelay 10000000
+  runVideo cpuSTM
 
 sasmInfo :: ParserInfo Run
 sasmInfo = info (sasmOpts <**> helper) (fullDesc <> progDesc "compile 6502 program" <> header "sasm")
@@ -88,6 +99,6 @@ sasmOpts = Run
   <$> strOption   (long "input-file"                   <> short 'f'       <> metavar "FILE"   <> help "file to assemble")
   <*> option auto (long "memory-size" <> value 0x10000 <> short 'm'       <> metavar "BYTES"  <> help "mem size")
   <*> option auto (long "hz"          <> value 985248  <> short 'h'       <> metavar "Hz"     <> help "Hz")
-  <*> option auto (long "interval"    <> value 50      <> short 'i'       <> metavar "Hz"     <> help "Hz (show)")
+  <*> option auto (long "interval"    <> value 30      <> short 'i'       <> metavar "Hz"     <> help "Hz (show)")
   <*> switch      (long "debug"                        <> short 'd'                           <> help "debug")
   <*> switch      (long "graphics"                     <> short 'g'                           <> help "graphics")

@@ -35,8 +35,10 @@ module CPU
 import CPU.Debugger.Mode             (DebugMode (..))
 import CPU.Hardware.Sound.SID        (SID, mkSID)
 import CPU.Hardware.Timer.JiffyTimer (JiffyTimer, mkJiffyTimer)
+import CPU.Hardware.TTY
 
 import Bindings.PortAudio
+import Control.Concurrent.STM
 import Control.Lens                 hiding (elements, ignored)
 import Data.Bits
 import Data.Bits.Lens
@@ -84,20 +86,21 @@ data CPU = CPU
   , tim       :: Int
   , clock     :: UTCTime
   , dt        :: Double
-  , ttyName   :: Maybe String
+  , tty       :: TTY
   , audio     :: Maybe (Ptr C'PaStream)
   , sid       :: SID
   , timerA    :: JiffyTimer
   , hz        :: Integer
   , debugMode :: DebugMode
   , loadPos   :: Word16
+  , ready     :: TMVar ()
   } deriving (Generic, Eq)
 
 mkFlags :: Flags
 mkFlags = Flags False False False False False False False False
 
-mkCPU :: UTCTime -> Integer -> DVS.Vector Word8 -> Word16 -> CPU
-mkCPU t0 h' m = CPU m 0 0 0 0 0xff mkFlags 0 t0 0 Nothing Nothing (mkSID t0) (mkJiffyTimer t0) h' Debug
+mkCPU :: UTCTime -> TTY -> Integer -> DVS.Vector Word8 -> Word16 -> TMVar () -> CPU
+mkCPU t0 t h' m = CPU m 0 0 0 0 0xff mkFlags 0 t0 0 t Nothing (mkSID t0) (mkJiffyTimer t0) h' Debug
 
 µs :: Integer -> Double
 µs rate = secs * 1000 * 1000

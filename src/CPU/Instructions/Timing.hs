@@ -4,7 +4,7 @@ module CPU.Instructions.Timing
   where
 
 import CPU.Instructions.Opcode
-import CPU.Operand
+import CPU.Instructions.Operand
 
 class Timed a where
   cycles :: a -> Int

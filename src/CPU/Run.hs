@@ -12,6 +12,7 @@ module CPU.Run
   , load
   , runShowCPU
   , runCPU
+  , runScreen
   , runSound
   ) where
 
@@ -21,6 +22,7 @@ import CPU.Hardware.Sound
 import CPU.Hardware.Sound.SID
 import CPU.Hardware.Terminal
 import CPU.Hardware.Timer
+import CPU.Hardware.TTY
 import CPU.Instructions.Decodes
 import CPU.Instructions.Execute
 import CPU.Instructions.Jumps
@@ -47,22 +49,25 @@ import GHC.Generics
 import GHC.IO                       (evaluate)
 import Options.Applicative
 import Prelude                      hiding (break)
-import System.Posix.Types           (Fd)
 
 import qualified Data.Vector.Storable            as DVS
 import qualified Data.Vector.Storable.ByteString as DVSB
 
-runCPU :: TMVar Word8 -> Integer -> Fd -> TVar CPU -> IO ()
-runCPU wS h' tty cpuSTM =
+runCPU :: Integer -> TVar CPU -> IO ()
+runCPU h' cpuSTM =
   forever $ do
   -- void $ flip repeatedTimer (usDelay (ceiling (CPU.µs h))) $
-    sl <- stepCPU wS tty cpuSTM
+    sl <- stepCPU cpuSTM
     let delay = ceiling $ CPU.µs h'
     threadDelay (sl * delay)
 
 runShowCPU :: Integer -> TVar CPU -> IO ()
 runShowCPU d cpuSTM = void $ flip repeatedTimer (msDelay $ ceiling (((1 :: Double) / fromInteger d) * 1000)) $
   readTVarIO cpuSTM >>= updateDebugger
+
+runScreen :: Integer -> TVar CPU -> IO ()
+runScreen d cpuSTM = void $ flip repeatedTimer (msDelay $ ceiling (((1 :: Double) / fromInteger d) * 1000)) $
+  readTVarIO cpuSTM >>= updateScreen
 
 runSound :: TVar CPU -> IO ()
 runSound cpuSTM =
@@ -92,19 +97,16 @@ load (Program (coff, cdat) (doff, ddat)) cpu = do
   let d = zip [fromIntegral doff..] (DVS.toList ddat)
   cpu & field @"mem" %~ (// (c ++ d))
 
-stepCPU :: TMVar Word8 -> Fd -> TVar CPU -> IO Int
-stepCPU wS tty cpuSTM = do
+stepCPU :: TVar CPU -> IO Int
+stepCPU cpuSTM = do
   cpu' <- readTVarIO cpuSTM >>= \cpu ->
     if cpu & p & break
-      -- TODO: pass in a real ttyMode
-      then cpu & debuggerInput False wS tty
-                  >>= debugged wS (evaluate . step)
-                  >>= debugged wS (writeOutput tty)
-                  >>= debugged wS updateClock
-                  >>= debugged wS updateTimers
+      then cpu & debuggerInput
+                  >>= debugged (evaluate . step)
+                  >>= debugged updateClock
+                  >>= debugged updateTimers
                   >>= (\d -> return $ d ^. the @1)
-      else step cpu & readKbd tty
-                  >>= writeOutput tty
+      else step cpu & checkForDebug
                   >>= updateClock
                   >>= updateTimers
   atomically $ writeTVar cpuSTM cpu'
@@ -120,20 +122,20 @@ step cpu =
         setTim   = field @"tim" .~ t
         t        = cycles ins
 
-debugged :: TMVar Word8 -> (CPU -> IO CPU) -> DebugState CPU -> IO (DebugState CPU)
-debugged _  f (Step cpu)      = Step <$> f cpu
-debugged _  _ (Broken cpu)    = Broken <$> return cpu
-debugged _  _ (Continue cpu)  = Continue <$> return cpu
-debugged wS _ (Overwrite cpu) = do
-  a <- atomically $ takeTMVar wS
-  b <- atomically $ takeTMVar wS
+debugged :: (CPU -> IO CPU) -> DebugState CPU -> IO (DebugState CPU)
+debugged f (Step cpu)      = Step <$> f cpu
+debugged _ (Broken cpu)    = Broken <$> return cpu
+debugged _ (Continue cpu)  = Continue <$> return cpu
+debugged _ (Overwrite cpu) = do
+  a <- getInputBlocking (cpu & tty & mfd)
+  b <- getInputBlocking (cpu & tty & mfd)
   let val = read $ "0x" <> [chr (fromIntegral a), chr (fromIntegral b)]
   return $ Broken (cpu & st (cpu & pc) val & field @"pc" %~ flip (+) 1)
-debugged wS _ (Goto cpu) = do
-  a <- atomically $ takeTMVar wS
-  b <- atomically $ takeTMVar wS
-  c <- atomically $ takeTMVar wS
-  d <- atomically $ takeTMVar wS
+debugged _ (Goto cpu) = do
+  a <- getInputBlocking (cpu & tty & mfd)
+  b <- getInputBlocking (cpu & tty & mfd)
+  c <- getInputBlocking (cpu & tty & mfd)
+  d <- getInputBlocking (cpu & tty & mfd)
   let val = read $ "0x" <> (chr . fromIntegral <$> [a, b, c, d])
   return $ Broken $ cpu & field @"pc" .~ val
 
