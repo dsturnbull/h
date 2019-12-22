@@ -12,7 +12,6 @@ module CPU.Run
   , load
   , runShowCPU
   , runCPU
-  , runScreen
   , runSound
   ) where
 
@@ -20,9 +19,7 @@ import CPU
 import CPU.Debugger
 import CPU.Hardware.Sound
 import CPU.Hardware.Sound.SID
-import CPU.Hardware.Terminal
 import CPU.Hardware.Timer
-import CPU.Hardware.TTY
 import CPU.Instructions.Decodes
 import CPU.Instructions.Execute
 import CPU.Instructions.Jumps
@@ -39,7 +36,6 @@ import Control.Lens
 import Control.Monad
 import Data.Binary                  hiding (decode)
 import Data.Binary.Get
-import Data.Char
 import Data.Fixed
 import Data.Generics.Product.Any
 import Data.Generics.Product.Fields
@@ -56,7 +52,6 @@ import qualified Data.Vector.Storable.ByteString as DVSB
 runCPU :: Integer -> TVar CPU -> IO ()
 runCPU h' cpuSTM =
   forever $ do
-  -- void $ flip repeatedTimer (usDelay (ceiling (CPU.µs h))) $
     sl <- stepCPU cpuSTM
     let delay = ceiling $ CPU.µs h'
     threadDelay (sl * delay)
@@ -64,10 +59,6 @@ runCPU h' cpuSTM =
 runShowCPU :: Integer -> TVar CPU -> IO ()
 runShowCPU d cpuSTM = void $ flip repeatedTimer (msDelay $ ceiling (((1 :: Double) / fromInteger d) * 1000)) $
   readTVarIO cpuSTM >>= updateDebugger
-
-runScreen :: Integer -> TVar CPU -> IO ()
-runScreen d cpuSTM = void $ flip repeatedTimer (msDelay $ ceiling (((1 :: Double) / fromInteger d) * 1000)) $
-  readTVarIO cpuSTM >>= updateScreen
 
 runSound :: TVar CPU -> IO ()
 runSound cpuSTM =
@@ -106,8 +97,7 @@ stepCPU cpuSTM = do
                   >>= debugged updateClock
                   >>= debugged updateTimers
                   >>= (\d -> return $ d ^. the @1)
-      else step cpu & checkForDebug
-                  >>= updateClock
+      else step cpu & updateClock
                   >>= updateTimers
   atomically $ writeTVar cpuSTM cpu'
   return $ cpu' & tim
@@ -127,16 +117,16 @@ debugged f (Step cpu)      = Step <$> f cpu
 debugged _ (Broken cpu)    = Broken <$> return cpu
 debugged _ (Continue cpu)  = Continue <$> return cpu
 debugged _ (Overwrite cpu) = do
-  a <- getInputBlocking (cpu & tty & mfd)
-  b <- getInputBlocking (cpu & tty & mfd)
-  let val = read $ "0x" <> [chr (fromIntegral a), chr (fromIntegral b)]
+  a <- getChar
+  b <- getChar
+  let val = read $ "0x" <> [a, b]
   return $ Broken (cpu & st (cpu & pc) val & field @"pc" %~ flip (+) 1)
 debugged _ (Goto cpu) = do
-  a <- getInputBlocking (cpu & tty & mfd)
-  b <- getInputBlocking (cpu & tty & mfd)
-  c <- getInputBlocking (cpu & tty & mfd)
-  d <- getInputBlocking (cpu & tty & mfd)
-  let val = read $ "0x" <> (chr . fromIntegral <$> [a, b, c, d])
+  a <- getChar
+  b <- getChar
+  c <- getChar
+  d <- getChar
+  let val = read $ "0x" <> [a, b, c, d]
   return $ Broken $ cpu & field @"pc" .~ val
 
 stepSound :: TVar CPU -> IO ()

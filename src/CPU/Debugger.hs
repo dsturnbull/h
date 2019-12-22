@@ -8,24 +8,24 @@ module CPU.Debugger
   , debuggerInput
   , initDebugger
   , updateDebugger
+  , mf
   , DebugState(..)
   ) where
 
 import CPU
 import CPU.Debugger.Mode
-import CPU.Hardware.Terminal
-import CPU.Hardware.TTY
 import CPU.Instructions.Impl (rti)
 
 import Control.Lens                 hiding (elements)
 import Control.Monad
+import Data.Char
 import Data.Generics.Product.Fields
-import Data.Maybe
 import Data.Word
 import GHC.Generics
 import Prelude                      hiding (break)
 import System.Console.ANSI
 import System.IO
+import System.IO.Echo.Internal
 
 import qualified CPU.Debugger.Debug  as Debug
 import qualified CPU.Debugger.Status as Status
@@ -44,7 +44,6 @@ debugger mc cpu =
     [0x1b, 0x5b, 0x43] -> return $ Broken $ cpu & field @"pc" %~ flip (+) 1   -- <right>
     [0x1b, 0x5b, 0x44] -> return $ Broken $ cpu & field @"pc" %~ flip (-) 1   -- <left>
     [0x14]             -> return $ Overwrite cpu                              -- ^T
-    [c]                -> return $ Broken $ cpu & processInput c
     _                  -> return $ Broken cpu
 
 continue :: CPU -> CPU
@@ -60,30 +59,42 @@ debuggerInput cpu =
   where
     go :: [Word8] -> [Word8] -> IO (DebugState CPU)
     go keys (n:ns) = do
-      mc <- getKey
-      case mc of
-        Just c | c == n -> go (keys ++ [c]) ns
-        Just c          -> go (keys ++ [c]) []
-        _               -> go keys (n:ns)
-    go [c] [] = cpu & debugger [c]
+      c <- getKey
+      if c == n
+        then go (keys ++ [c]) ns
+        else go (keys ++ [c]) []
+    go [c] _ = cpu & debugger [c]
     go keys [] = do
-      mc <- getKey
-      case mc of
-        Just c -> cpu & debugger (keys ++ [c])
-        _      -> cpu & debugger keys
-    getKey = getInput (cpu & tty & mfd)
+      c <- getKey
+      cpu & debugger (keys ++ [c])
+    getKey = fromIntegral . ord <$> getChar
+
+mf :: [Word8] -> ([Word8], [Word8], [Word8])
+mf input =
+    go input [] [0x1b, 0x5b]
+  where
+    go :: [Word8] -> [Word8] -> [Word8] -> ([Word8], [Word8], [Word8])
+    go (c:cs) keys (n:ns) =
+      if c == n
+        then go cs (keys ++ [c]) ns
+        else go cs (keys ++ [c]) []
+    go (c:cs) keys [] = (keys ++ [c], [], cs)
+    go [] keys n = (keys, n, [])
 
 initDebugger :: CPU -> IO ()
-initDebugger cpu =
-  when (connected (cpu & tty)) $ do
-    cpu & tty & out $ clearScreenCode
-    cpu & Status.drawScreen
-    hFlush stdout
+initDebugger cpu = do
+  void $ sttyRaw "-ixon"
+  hSetBuffering stdin NoBuffering
+  hSetEcho stdin False
+  hideCursor
+  clearScreen
+
+  cpu & Status.drawScreen
+  hFlush stdout
 
 updateDebugger :: CPU -> IO ()
-updateDebugger cpu =
-  when (connected (cpu & tty)) $ do
-    case cpu & debugMode of
-      Status -> cpu & Status.updateScreen
-      Debug  -> cpu & Debug.updateScreen
-    hFlush stdout
+updateDebugger cpu = do
+  case cpu & debugMode of
+    Status -> cpu & Status.updateScreen
+    Debug  -> cpu & Debug.updateScreen
+  hFlush stdout

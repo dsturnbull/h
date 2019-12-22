@@ -5,12 +5,10 @@
 
 module CPU.Hardware.Video
   ( runVideo
-  , mkSprite
-  , mkRGB332
-  , chars
   ) where
 
 import CPU
+import CPU.Hardware.Interrupt
 import CPU.Hardware.Video.Chars
 
 import Control.Concurrent.STM
@@ -19,14 +17,16 @@ import Control.Monad
 import Data.Bits.Lens
 import Data.Char
 import Data.Foldable
-import Data.Maybe
 import Data.Word
 import Foreign.C.Types
 import SDL
+import System.IO
 
 import qualified Data.ByteString      as BS
 import qualified Data.Map             as M
+import qualified Data.Text            as T
 import qualified Data.Vector.Storable as DVS
+import qualified SDL.Raw.Event        as Raw
 
 mkSprite :: Word8 -> [Word8] -> BS.ByteString
 mkSprite c ws = BS.pack (bs =<< ws)
@@ -41,7 +41,8 @@ mkRGB332 _ False = 0x00
 
 mkChars :: Renderer -> IO (M.Map Char Texture)
 mkChars r = do
-  ts <- traverse charTexture (M.toList charMap)
+  font <- loadFont "fonts/ISKRA1.FNT"
+  ts <- traverse charTexture (M.toList font)
   return $ M.fromList ts
   where charTexture :: (Char, [Word8]) -> IO (Char, Texture)
         charTexture (c, bin) = do
@@ -60,6 +61,8 @@ runVideo cpuSTM = do
   (V2 width height) <- glGetDrawableSize window
   chars <- mkChars renderer
   let i = 0
+  held <- newTMVarIO ()
+  Raw.startTextInput
 
   appLoop $ VIC {..}
 
@@ -71,6 +74,7 @@ data VIC = VIC
   , chars    :: M.Map Char Texture
   , cpuSTM   :: TVar CPU
   , i        :: CInt
+  , held     :: TMVar ()
   }
 
 screenRows :: Int
@@ -82,25 +86,29 @@ screenCols = 40
 appLoop :: VIC -> IO ()
 appLoop vic@VIC {..} = do
   events <- pollEvents
-  let eventIsQPress event =
+  -- let keysPressed = events <&> \event ->
+  --       case eventPayload event of
+  --         KeyboardEvent keyboardEvent -> if keyboardEventKeyMotion keyboardEvent == Pressed
+  --           then Just $ keysymKeycode (keyboardEventKeysym keyboardEvent)
+  --           else Nothing
+  --         _ -> Nothing
+
+  let text = mconcat $ events <&> \event ->
         case eventPayload event of
-          KeyboardEvent keyboardEvent ->
-            keyboardEventKeyMotion keyboardEvent == Pressed &&
-            keysymKeycode (keyboardEventKeysym keyboardEvent) == KeycodeQ
-          _ -> False
-      qPressed = any eventIsQPress events
+          TextInputEvent textInputEvent ->
+            textInputEventText textInputEvent
+          _ -> mempty
 
+  unless (T.null text) $ do
+    ha <- openFile "log" AppendMode
+    hPutStrLn ha $ "t: " <> show text
+    atomically $ do
+      cpu <- readTVar cpuSTM
+      when (cpu & p & interrupt & not) $ void $ tryPutTMVar held ()
+      _   <- takeTMVar held
+      let cpu' = foldl (\cp c -> cp & processInput (fromIntegral . ord $ c)) cpu (T.unpack text)
+      writeTVar cpuSTM (cpu' & intr)
 
-  let keysPressed = events <&> \event ->
-        case eventPayload event of
-          KeyboardEvent keyboardEvent -> if keyboardEventKeyMotion keyboardEvent == Pressed
-            then Just $ keysymKeycode (keyboardEventKeysym keyboardEvent)
-            else Nothing
-          _ -> Nothing
-
-  -- XXX
-  let key = listToMaybe . catMaybes $ keysPressed
-  print key
   rendererDrawColor renderer $= V4 0 0 0 0
   clear renderer
 
@@ -108,7 +116,7 @@ appLoop vic@VIC {..} = do
   drawChars vic cpu
 
   present renderer
-  unless qPressed (appLoop vic)
+  appLoop vic
 
 drawChars :: VIC -> CPU -> IO ()
 drawChars VIC {..} cpu = traverse_ (uncurry printRow) rows
@@ -122,3 +130,8 @@ drawChars VIC {..} cpu = traverse_ (uncurry printRow) rows
                 Nothing -> return ()
         getRow :: Int -> (CInt, DVS.Vector Word8)
         getRow r = (fromIntegral r, DVS.slice (fromIntegral screenV + r * screenCols) screenCols (cpu & mem))
+
+processInput :: Word8 -> CPU -> CPU
+processInput c cpu =
+  cpu & st (fromIntegral kbd) c
+      & st (fromIntegral (kbd + 2)) 1

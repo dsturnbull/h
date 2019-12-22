@@ -6,8 +6,7 @@ module CPU.Debugger.Debug
   ) where
 
 import CPU
-import CPU.Hardware.TTY
-import CPU.Program      (Program (..))
+import CPU.Program (Program (..))
 
 import Control.Lens
 import Data.Foldable
@@ -41,17 +40,15 @@ disasm cpu = relevant <&> uncurry showMe
 updateScreen :: CPU -> IO ()
 updateScreen cpu = do
     DBG.updateScreen cpu
-    tout "\r\n\r\n"
-    tout clearFromCursorToScreenEndCode
-    for_ (cpu & disasm) (\d -> tout $ d ++ "\n")
+    putStr "\n\n"
+    clearFromCursorToScreenEnd
+    for_ (cpu & disasm) putStrLn
 
     -- redraw PC specially
-    tout restoreCursorCode
-    tout $ setSGRCode [SetUnderlining SingleUnderline]
-    tout $ setSGRCode [SetColor Foreground Vivid Red]
+    restoreCursor
+    setSGR [SetUnderlining SingleUnderline]
+    setSGR [SetColor Foreground Vivid Red]
     let m = (cpu & mem) ! fromIntegral (cpu & pc)
-    tout (printf "%02x" m)
-    tout $ setSGRCode [Reset]
-    tout $ cursorBackwardCode 2
-  where
-    tout = cpu & tty & out
+    putStr (printf "%02x" m)
+    setSGR [Reset]
+    cursorBackward 2

@@ -21,8 +21,6 @@ import Data.Generics.Product.Fields
 import Data.Time.Clock
 import GHC.Generics
 import Options.Applicative
-import System.Console.ANSI
-import System.IO
 import System.Posix.IO
 import System.Posix.Terminal
 
@@ -64,8 +62,6 @@ main = do
   (fd, _) <- liftIO openPseudoTerminal
   liftIO $ setFdOption fd NonBlockingRead True
   ttyN <- getSlaveTerminalName fd
-  -- putStrLn ttyN
-  -- _ <- getInputBlocking fd
 
   lbs <- LBS.readFile (opt ^. field @"inputFile")
 
@@ -77,15 +73,9 @@ main = do
                           & field @"pc" .~ cloc
   initial & initDebugger
 
-  hSetBuffering stdin NoBuffering
-  hSetEcho stdin False
-  clearScreen
-  hideCursor
-
   cpuSTM <- initSound initial >>= newTVarIO
   _ <- forkIO $ readTermKbd cpuSTM
   _ <- forkIO $ runCPU (opt ^. field @"hz") cpuSTM
-  -- _ <- forkIO $ runScreen (opt ^. field @"interval") cpuSTM
   _ <- forkIO $ runSound cpuSTM
   _ <- forkIO $ runShowCPU (opt ^. field @"interval") cpuSTM
 

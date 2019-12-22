@@ -20,7 +20,6 @@ module CPU.Debugger.Status
 import CPU
 import CPU.Hardware.Sound.SID   as SID (SID (..))
 import CPU.Hardware.Sound.Voice (Voice (..))
-import CPU.Hardware.TTY
 
 import Control.Applicative
 import Control.Lens                 hiding (elements)
@@ -163,19 +162,17 @@ screenMap cpu = ScreenMap $ mapLines (screen cpu) 0
 drawScreen :: CPU -> IO ()
 drawScreen cpu = traverse_ draw (screenMap cpu)
   where draw (LineMap ((Row row), (Col lcol), (Col vcol), (Label lbl), val)) = do
-            tout (setCursorPositionCode row lcol)
-            tout lbl
-            tout (setCursorPositionCode row vcol)
-            tout val'
+            setCursorPosition row lcol
+            putStr lbl
+            setCursorPosition row vcol
+            putStr val'
           where
             (Value val') = val cpu
-            tout = cpu & tty & out
 
 updateScreen :: CPU -> IO ()
 updateScreen cpu = traverse_ draw (screenMap cpu)
   where draw (LineMap ((Row row), _, (Col vcol), _, val)) = do
-            tout (setCursorPositionCode row vcol)
-            tout val'
+            setCursorPosition row vcol
+            putStr val'
           where
             (Value val') = val cpu
-            tout = cpu & tty & out
