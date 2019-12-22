@@ -76,9 +76,9 @@ instance Decodes Opcode where
       0xCC -> CPY (Abs addr)
 
       0xC6 -> DEC (Zpg imm)
-      0xD6 -> DEC (Zpg imm)
+      0xD6 -> DEC (ZpgX imm)
       0xCE -> DEC (Abs addr)
-      0xDE -> DEC (Abs addr)
+      0xDE -> DEC (AbsX addr)
 
       0xCA -> DEX
       0x88 -> DEY
@@ -93,9 +93,9 @@ instance Decodes Opcode where
       0x51 -> EOR (IndY imm)
 
       0xE6 -> INC (Zpg imm)
-      0xF6 -> INC (Zpg imm)
+      0xF6 -> INC (ZpgX imm)
       0xEE -> INC (Abs addr)
-      0xFE -> INC (Abs addr)
+      0xFE -> INC (AbsX addr)
 
       0xE8 -> INX
       0xC8 -> INY

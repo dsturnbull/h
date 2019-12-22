@@ -21,7 +21,7 @@ setZero :: Word8 -> CPU -> CPU
 setZero w cpu = cpu & field @"p" . field @"zero" .~ (w == 0)
 
 setNegative :: Word8 -> CPU -> CPU
-setNegative w cpu = cpu & field @"p" . field @"negative" .~ (w < 0)
+setNegative w cpu = cpu & field @"p" . field @"negative" .~ (w > 127)
 
 dec :: (CPU -> Word8) -> Word16 -> CPU -> CPU
 dec o m cpu =
