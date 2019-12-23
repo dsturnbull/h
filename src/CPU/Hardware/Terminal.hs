@@ -3,7 +3,7 @@ module CPU.Hardware.Terminal
   ) where
 
 import CPU
-import CPU.Instructions.Impl
+import CPU.Hardware.Interrupt
 
 import Control.Concurrent.STM
 import Control.Lens
@@ -19,6 +19,6 @@ readTermKbd cpuSTM = do
     when (cpu & p & interrupt & not) $ void $ tryPutTMVar (cpu & ready) () -- keep waiting for interrupt clear
     _   <- takeTMVar (cpu & ready) -- make non-ready
     when (c == 0x13) $
-      writeTVar cpuSTM (cpu & brk) -- interrupts, so subsequently we will wait for interrupt to clear again
+      writeTVar cpuSTM (cpu & stop) -- interrupts, so subsequently we will wait for interrupt to clear again
 
   readTermKbd cpuSTM
