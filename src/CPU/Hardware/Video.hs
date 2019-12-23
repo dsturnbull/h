@@ -31,7 +31,7 @@ runVideo cpuSTM = do
   initializeAll
   let w' = 320
   let h' = 200
-  let scale :: CInt = 2
+  let scale :: CInt = 4
   window   <- createWindow "h" (defaultWindow { windowInitialSize = V2 (w' * scale) (h' * scale) })
   renderer <- createRenderer window (-1) defaultRenderer
   (V2 width height) <- glGetDrawableSize window

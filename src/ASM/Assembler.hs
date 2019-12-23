@@ -26,21 +26,22 @@ import Text.Printf
 
 import qualified Data.ByteString.Builder         as BB
 import qualified Data.ByteString.Lazy            as LBS
+import qualified Data.Text                       as T
 import qualified Data.Vector.Storable            as DVS
 import qualified Data.Vector.Storable.ByteString as DVSB
 
-assemble :: String -> Word16 -> Word16 -> Program
+assemble :: T.Text -> Word16 -> Word16 -> Program
 assemble prog = assembleOpcodes ins
-  where ins = fromRight [] $ parseAssembly prog
+  where ins = fromRight [] $ parseAssembly (T.unpack prog)
 
 assembleOpcodes :: [Opcode] -> Word16 -> Word16 -> Program
 assembleOpcodes ins codeLoc dataLoc = Program (codeLoc, DVS.fromList (snd <$> sortOn fst cs)) (dataLoc, DVS.fromList (snd <$> sortOn fst ds))
   where (cs, ds) = insPositions DataSegment (fromIntegral codeLoc) (fromIntegral codeLoc) (fromIntegral dataLoc) (fromIntegral dataLoc) ins ins [] []
 
-disasm :: Program -> ([(Word16, String)], [(Word16, String)])
+disasm :: Program -> ([(Word16, T.Text)], [(Word16, T.Text)])
 disasm (Program (coff, cs') (doff, ds')) = (showIns <$> instructions (fromIntegral coff) cs', showData <$> bytes (fromIntegral doff) ds')
-  where showIns (o, w, i)  = (fromIntegral o, printf "%-9s %20s %s" (showWords w) ";" (show i))
-        showData (o, w) = (fromIntegral o, printf "%02x" w)
+  where showIns (o, w, i)  = (fromIntegral o, T.pack $ printf "%-9s %20s %s" (showWords w) ";" (show i))
+        showData (o, w) = (fromIntegral o, T.pack $ printf "%02x" w)
         showWords ws = foldMap (++ " ") (printf "%02x" <$> ws)
 
 instructions :: Int -> DVS.Vector Word8 -> [(Int, [Word8], Opcode)]

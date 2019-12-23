@@ -14,6 +14,7 @@ import System.IO
 import Text.Printf
 
 import qualified Data.ByteString.Lazy as LBS
+import qualified Data.Text            as T
 
 data SASM = SASM
   { inputFile  :: FilePath
@@ -32,7 +33,7 @@ main = do
   t <- readFile (opt ^. the @"inputFile")
 
   let prog = assemble
-        t
+        (T.pack t)
         (fromIntegral $ opt ^. the @"codeLoc")
         (fromIntegral $ opt ^. the @"dataLoc")
 
@@ -42,9 +43,8 @@ main = do
 
   when verbose $ print prog
   let (cdat, ddat) = disasm prog
-  when verbose $ putStrLn $ foldMap (++ "\n") ((\(o, s) -> printf "%04x: " o <> s) <$> cdat)
-  when verbose $ putStrLn $ foldMap (++ "\n") ((\(o, s) -> printf "%04x: " o <> s) <$> ddat)
-  -- putStrLn $ "wrote " <> show (BS.length bs) <> " bytes to " <> out
+  when verbose $ putStrLn $ foldMap (++ "\n") ((\(o, s) -> printf "%04x: " o <> T.unpack s) <$> cdat)
+  when verbose $ putStrLn $ foldMap (++ "\n") ((\(o, s) -> printf "%04x: " o <> T.unpack s) <$> ddat)
 
 sasmInfo :: ParserInfo SASM
 sasmInfo = info (sasmOpts <**> helper) (fullDesc <> progDesc "compile 6502 program" <> header "sasm")
