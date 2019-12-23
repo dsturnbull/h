@@ -29,7 +29,7 @@ module CPU
   , flagsToWord
   , wordToFlags
   , bitShow
-  , µs
+  , ns
   , h
   , l
   ) where
@@ -137,8 +137,6 @@ data CPU = CPU
   , s         :: Word8
   , p         :: Flags
   , tim       :: Int
-  , clock     :: UTCTime
-  , dt        :: Double
   , tty       :: TTY
   , audio     :: Maybe (Ptr C'PaStream)
   , sid       :: SID
@@ -153,7 +151,7 @@ mkFlags :: Flags
 mkFlags = Flags False False False False False False False False
 
 mkCPU :: UTCTime -> TTY -> Integer -> DVS.Vector Word8 -> Word16 -> TMVar () -> CPU
-mkCPU t0 t h' m = CPU m 0 0 0 0 0xff mkFlags 0 t0 0 t Nothing (mkSID t0) (mkJiffyTimer t0) h' Debug
+mkCPU t0 t h' m = CPU m 0 0 0 0 0xff mkFlags 0 t Nothing (mkSID t0) (mkJiffyTimer t0) h' Debug
 
 _installRoutines :: DVS.Vector Word8 -> DVS.Vector Word8
 _installRoutines = _installISR
@@ -181,8 +179,8 @@ _installISR v = v // isr
               , (0xff5a, 0x03) -- JMP ($0314)	;vector	to ISR
               ]
 
-µs :: Integer -> Double
-µs rate = secs * 1000 * 1000
+ns :: Integer -> Double
+ns rate = secs * 1000 * 1000 * 1000
   where secs = (1 :: Double) / fromInteger rate
 
 st :: Word16 -> Word8 -> CPU -> CPU

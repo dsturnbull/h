@@ -40,6 +40,7 @@ disasm cpu = relevant <&> uncurry showMe
 updateScreen :: CPU -> IO ()
 updateScreen cpu = do
     DBG.updateScreen cpu
+
     putStr "\n\n"
     clearFromCursorToScreenEnd
     for_ (cpu & disasm) putStrLn

@@ -63,7 +63,7 @@ debuggerInput cpu =
       if c == n
         then go (keys ++ [c]) ns
         else go (keys ++ [c]) []
-    go [c] _ = cpu & debugger [c]
+    go [c] [] = cpu & debugger [c]
     go keys [] = do
       c <- getKey
       cpu & debugger (keys ++ [c])
@@ -78,6 +78,7 @@ mf input =
       if c == n
         then go cs (keys ++ [c]) ns
         else go cs (keys ++ [c]) []
+    go (c:cs) [k] [] = ([k], [], cs)
     go (c:cs) keys [] = (keys ++ [c], [], cs)
     go [] keys n = (keys, n, [])
 

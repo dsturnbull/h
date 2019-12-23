@@ -46,16 +46,19 @@ import GHC.Generics
 import GHC.IO                       (evaluate)
 import Options.Applicative
 import Prelude                      hiding (break)
+import System.Posix.Unistd
 
 import qualified Data.Vector.Storable            as DVS
 import qualified Data.Vector.Storable.ByteString as DVSB
 
+-- XXX figure it out
 runCPU :: Integer -> TVar CPU -> IO ()
 runCPU h' cpuSTM =
   forever $ do
     sl <- stepCPU cpuSTM
-    let delay = ceiling $ CPU.µs h'
-    threadDelay (sl * delay)
+    let delay = ceiling $ CPU.ns h'
+    nanosleep (fromIntegral $ delay * sl)
+    yield
 
 runShowCPU :: Integer -> TVar CPU -> IO ()
 runShowCPU d cpuSTM = void $ flip repeatedTimer (msDelay $ ceiling (((1 :: Double) / fromInteger d) * 1000)) $
@@ -95,11 +98,9 @@ stepCPU cpuSTM = do
     if cpu & p & break
       then cpu & debuggerInput
                   >>= debugged (evaluate . step)
-                  >>= debugged updateClock
                   >>= debugged updateTimers
                   >>= (\d -> return $ d ^. the @1)
-      else step cpu & updateClock
-                  >>= updateTimers
+      else step cpu & updateTimers
   atomically $ writeTVar cpuSTM cpu'
   return $ cpu' & tim
 
@@ -136,12 +137,6 @@ stepSound cpuSTM = do
   cpu' <- cpu & updateSIDClock >>= tickSound
   atomically $ writeTVar cpuSTM cpu'
   -- (atomically $ modifyTVar cpuSTM tickSound)
-
-updateClock :: CPU -> IO CPU
-updateClock cpu = do
-  (now, diff) <- timeDelta (cpu  ^. field @"clock")
-  return $ cpu & field @"clock" .~ now
-               & field @"dt"    .~ diff
 
 updateSIDClock :: CPU -> IO CPU
 updateSIDClock cpu = do
