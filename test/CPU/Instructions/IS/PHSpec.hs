@@ -1,14 +1,14 @@
 {-# LANGUAGE DataKinds        #-}
 {-# LANGUAGE TypeApplications #-}
 
-module CPU.Instructions.PHSpec
+module CPU.Instructions.IS.PHSpec
   ( spec
   ) where
 
 import CPU
 import CPU.Gen
-import CPU.Instructions.LDA
-import CPU.Instructions.PH
+import CPU.Instructions.IS.LDA
+import CPU.Instructions.IS.PH
 
 import Control.Lens
 import Data.Generics.Product.Fields
@@ -24,7 +24,7 @@ spec :: Spec
 spec = describe "ph" $ do
   it "pha" $ requireProperty $ do
     memSize <- forAll $ G.constant 512
-    cpu     <- forAll $ genCPU memSize
+    cpu     <- genCPU memSize
     w       <- forAll $ word8 (linear minBound maxBound)
     let cpu' = cpu & ldaImm w & pha
     (cpu' & s) === fromIntegral (stack + fromIntegral page - 1)
@@ -32,7 +32,7 @@ spec = describe "ph" $ do
 
   it "php" $ requireProperty $ do
     memSize <- forAll $ G.constant 512
-    cpu     <- forAll $ genCPU memSize
+    cpu     <- genCPU memSize
     n       <- forAll bool
     v       <- forAll bool
     g       <- forAll bool

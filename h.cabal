@@ -111,8 +111,9 @@ library
     build-depends:      hedgehog
                       , hspec
                       , hw-hspec-hedgehog
-                      , bytestring-to-vector ^>= 0.3.0.1
-                      , optparse-applicative ^>= 0.15.1.0
+                      , bytestring-to-vector   ^>= 0.3.0.1
+                      , optparse-applicative   ^>= 0.15.1.0
+                      , qm-interpolated-string ^>= 0.3.0.0
   build-tool-depends:   alex:alex, happy:happy
 
 -- library sasm-lib
@@ -157,37 +158,37 @@ test-suite h-test
                         CPU.Instructions.Gen
                         ASM.AssemblerSpec
                         CPU.RunSpec
-                        CPU.Instructions.ADCSpec
-                        CPU.Instructions.ANDSpec
-                        CPU.Instructions.ASLSpec
-                        CPU.Instructions.BSpec
-                        CPU.Instructions.BRKSpec
-                        CPU.Instructions.CLSpec
-                        CPU.Instructions.CMPSpec
-                        CPU.Instructions.CPXSpec
-                        CPU.Instructions.CPYSpec
-                        CPU.Instructions.DESpec
-                        CPU.Instructions.EORSpec
-                        CPU.Instructions.INSpec
-                        CPU.Instructions.JMPSpec
-                        CPU.Instructions.JSRSpec
-                        CPU.Instructions.LDASpec
-                        CPU.Instructions.LDXSpec
-                        CPU.Instructions.LDYSpec
-                        CPU.Instructions.LSRSpec
-                        CPU.Instructions.NOPSpec
-                        CPU.Instructions.ORASpec
-                        CPU.Instructions.PHSpec
-                        CPU.Instructions.PLSpec
-                        CPU.Instructions.ROLSpec
-                        CPU.Instructions.RORSpec
-                        CPU.Instructions.RTSpec
-                        CPU.Instructions.SESpec
-                        CPU.Instructions.SBCSpec
-                        CPU.Instructions.STASpec
-                        CPU.Instructions.STXSpec
-                        CPU.Instructions.STYSpec
-                        CPU.Instructions.TSpec
+                        CPU.Instructions.IS.ADCSpec
+                        CPU.Instructions.IS.ANDSpec
+                        CPU.Instructions.IS.ASLSpec
+                        CPU.Instructions.IS.BSpec
+                        CPU.Instructions.IS.BRKSpec
+                        CPU.Instructions.IS.CLSpec
+                        CPU.Instructions.IS.CMPSpec
+                        CPU.Instructions.IS.CPXSpec
+                        CPU.Instructions.IS.CPYSpec
+                        CPU.Instructions.IS.DESpec
+                        CPU.Instructions.IS.EORSpec
+                        CPU.Instructions.IS.INSpec
+                        CPU.Instructions.IS.JMPSpec
+                        CPU.Instructions.IS.JSRSpec
+                        CPU.Instructions.IS.LDASpec
+                        CPU.Instructions.IS.LDXSpec
+                        CPU.Instructions.IS.LDYSpec
+                        CPU.Instructions.IS.LSRSpec
+                        CPU.Instructions.IS.NOPSpec
+                        CPU.Instructions.IS.ORASpec
+                        CPU.Instructions.IS.PHSpec
+                        CPU.Instructions.IS.PLSpec
+                        CPU.Instructions.IS.ROLSpec
+                        CPU.Instructions.IS.RORSpec
+                        CPU.Instructions.IS.RTSpec
+                        CPU.Instructions.IS.SESpec
+                        CPU.Instructions.IS.SBCSpec
+                        CPU.Instructions.IS.STASpec
+                        CPU.Instructions.IS.STXSpec
+                        CPU.Instructions.IS.STYSpec
+                        CPU.Instructions.IS.TSpec
   hs-source-dirs:       test
   ghc-options:          -threaded -rtsopts -with-rtsopts=-N
   build-tool-depends:   hspec-discover:hspec-discover

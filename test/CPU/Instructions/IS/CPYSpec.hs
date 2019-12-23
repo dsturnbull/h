@@ -1,13 +1,13 @@
-module CPU.Instructions.CPXSpec
+module CPU.Instructions.IS.CPYSpec
   ( spec
   ) where
 
 import CPU
 import CPU.Gen
-import CPU.Instructions.CPX
-import CPU.Instructions.LDA
-import CPU.Instructions.LDX
-import CPU.Instructions.STA
+import CPU.Instructions.IS.CPY
+import CPU.Instructions.IS.LDA
+import CPU.Instructions.IS.LDX
+import CPU.Instructions.IS.STA
 
 import Control.Lens
 
@@ -18,43 +18,42 @@ import Hedgehog.Range              as R
 import Test.Hspec
 
 spec :: Spec
-spec = describe "cpx" $ do
+spec = describe "cpy" $ do
   it "imm" $ requireProperty $ do
-    cpu     <- forAll $ genCPU 0
+    cpu     <- genCPU 0
     w       <- forAll $ word8 (linear 7 maxBound)
     w'      <- forAll $ word8 (linear 7 maxBound)
     let cpu' = cpu
              & ldxImm w
-             & cpxImm w'
+             & cpyImm w'
     (cpu' & p & carry)    === (w >= w')
     (cpu' & p & zero)     === (w == w')
     (cpu' & p & negative) === msb (w - w')
 
   it "zpg" $ requireProperty $ do
     memSize <- forAll $ G.constant 256
-    cpu     <- forAll $ genCPU memSize
+    cpu     <- genCPU memSize
     w       <- forAll $ word8 (linear 7 maxBound)
     w'      <- forAll $ word8 (linear 7 maxBound)
     addr    <- forAll $ word8 (linear minBound maxBound)
     let cpu' = cpu
              & ldaImm w' & staZpg addr
              & ldxImm w
-             & cpxZpg addr
-    annotateShow cpu'
+             & cpyZpg addr
     (cpu' & p & carry)    === (w >= w')
     (cpu' & p & zero)     === (w == w')
     (cpu' & p & negative) === msb (w - w')
 
   it "abs" $ requireProperty $ do
     memSize <- forAll $ G.constant 256
-    cpu     <- forAll $ genCPU (fromIntegral memSize)
+    cpu     <- genCPU (fromIntegral memSize)
     w       <- forAll $ word8 (linear 7 maxBound)
     w'      <- forAll $ word8 (linear 7 maxBound)
     addr    <- forAll $ word16 (linear minBound memSize)
     let cpu' = cpu
              & ldaImm w' & staAbs (fromIntegral addr)
              & ldxImm w
-             & cpxAbs (fromIntegral addr)
+             & cpyAbs (fromIntegral addr)
     (cpu' & p & carry)    === (w >= w')
     (cpu' & p & zero)     === (w == w')
     (cpu' & p & negative) === msb (w - w')

@@ -1,16 +1,16 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module CPU.Instructions.ORASpec
+module CPU.Instructions.IS.ORASpec
   ( spec
   ) where
 
 import CPU
 import CPU.Gen
-import CPU.Instructions.LDA
-import CPU.Instructions.LDX
-import CPU.Instructions.LDY
-import CPU.Instructions.ORA
-import CPU.Instructions.STA
+import CPU.Instructions.IS.LDA
+import CPU.Instructions.IS.LDX
+import CPU.Instructions.IS.LDY
+import CPU.Instructions.IS.ORA
+import CPU.Instructions.IS.STA
 
 import Control.Lens
 import Data.Bits
@@ -26,7 +26,7 @@ spec :: Spec
 spec = describe "ora" $ do
   it "imm" $ requireProperty $ do
     memSize <- forAll $ G.constant 255
-    cpu     <- forAll $ genCPU memSize
+    cpu     <- genCPU memSize
     w       <- forAll $ word8 (linear minBound maxBound)
     w'      <- forAll $ word8 (linear minBound maxBound)
     let cpu' = cpu
@@ -38,7 +38,7 @@ spec = describe "ora" $ do
 
   it "zpg" $ requireProperty $ do
     memSize <- forAll $ G.constant 256
-    cpu     <- forAll $ genCPU memSize
+    cpu     <- genCPU memSize
     w       <- forAll $ word8 (linear minBound maxBound)
     w'      <- forAll $ word8 (linear minBound maxBound)
     addr    <- forAll $ word8 (linear 0 255)
@@ -52,7 +52,7 @@ spec = describe "ora" $ do
 
   it "zpg, x" $ requireProperty $ do
     memSize <- forAll $ G.constant 255
-    cpu     <- forAll $ genCPU memSize
+    cpu     <- genCPU memSize
     w       <- forAll $ word8 (linear minBound maxBound)
     w'      <- forAll $ word8 (linear minBound (maxBound - 10))
     x       <- forAll $ word8 (linear minBound 10)
@@ -67,7 +67,7 @@ spec = describe "ora" $ do
 
   it "abs" $ requireProperty $ do
     memSize <- forAll $ G.constant 256
-    cpu     <- forAll $ genCPU memSize
+    cpu     <- genCPU memSize
     w       <- forAll $ word8 (linear minBound maxBound)
     w'      <- forAll $ word8 (linear minBound maxBound)
     addr    <- forAll $ word16 (linear 0 255)
@@ -81,7 +81,7 @@ spec = describe "ora" $ do
 
   it "abs, x" $ requireProperty $ do
     memSize <- forAll $ G.constant 255
-    cpu     <- forAll $ genCPU memSize
+    cpu     <- genCPU memSize
     w       <- forAll $ word8 (linear minBound maxBound)
     w'      <- forAll $ word8 (linear minBound (maxBound - 10))
     x       <- forAll $ word8 (linear minBound 10)
@@ -96,7 +96,7 @@ spec = describe "ora" $ do
 
   it "abs, y" $ requireProperty $ do
     memSize <- forAll $ G.constant 255
-    cpu     <- forAll $ genCPU memSize
+    cpu     <- genCPU memSize
     w       <- forAll $ word8 (linear minBound maxBound)
     w'      <- forAll $ word8 (linear minBound (maxBound - 10))
     y       <- forAll $ word8 (linear minBound 10)
@@ -111,7 +111,7 @@ spec = describe "ora" $ do
 
   it "x, ind" $ requireProperty $ do
     memSize <- forAll $ G.constant 255
-    cpu     <- forAll $ genCPU memSize
+    cpu     <- genCPU memSize
     w       <- forAll $ word8 (linear 1 maxBound)
     w'      <- forAll $ word8 (linear 1 maxBound)
     x       <- forAll $ word8 (linear 1 10)
@@ -130,7 +130,7 @@ spec = describe "ora" $ do
 
   it "ind, y" $ requireProperty $ do
     memSize <- forAll $ G.constant 256
-    cpu     <- forAll $ genCPU memSize
+    cpu     <- genCPU memSize
     w       <- forAll $ word8 (linear 2 maxBound)
     w'      <- forAll $ word8 (linear 5 maxBound)
     y       <- forAll $ word8 (linear 1 10)

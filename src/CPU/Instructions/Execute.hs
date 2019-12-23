@@ -1,5 +1,6 @@
 module CPU.Instructions.Execute
-  ( execute )
+  ( execute
+  )
   where
 
 import CPU

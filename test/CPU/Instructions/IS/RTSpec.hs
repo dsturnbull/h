@@ -1,16 +1,16 @@
 {-# LANGUAGE DataKinds        #-}
 {-# LANGUAGE TypeApplications #-}
 
-module CPU.Instructions.RTSpec
+module CPU.Instructions.IS.RTSpec
   ( spec
   ) where
 
 import CPU
 import CPU.Gen
-import CPU.Instructions.JSR
-import CPU.Instructions.LDA
-import CPU.Instructions.PH
-import CPU.Instructions.RT
+import CPU.Instructions.IS.JSR
+import CPU.Instructions.IS.LDA
+import CPU.Instructions.IS.PH
+import CPU.Instructions.IS.RT
 
 import Control.Lens                 hiding (ignored)
 import Data.Bits
@@ -28,7 +28,7 @@ spec :: Spec
 spec = describe "returning" $ do
   it "rts" $ requireProperty $ do
     memSize <- forAll $ G.constant 0x200
-    cpu     <- forAll $ genCPU memSize
+    cpu     <- genCPU memSize
     addr    <- forAll $ word16 (linear 0x0280 maxBound)
     pc'     <- forAll $ word16 (linear 0x0260 maxBound)
     w       <- forAll $ word8 (linear minBound maxBound)
@@ -41,7 +41,7 @@ spec = describe "returning" $ do
 
   it "rti" $ requireProperty $ do
     memSize <- forAll $ G.constant 0x200
-    cpu     <- forAll $ genCPU memSize
+    cpu     <- genCPU memSize
     pc'     <- forAll $ word16 (linear 0x0260 maxBound)
     n       <- forAll (G.constant True)
     v       <- forAll bool
@@ -71,12 +71,10 @@ spec = describe "returning" $ do
              & ldaImm (fromIntegral (pc' .&. 0x00ff)) & pha
              & ldaImm sr                              & pha
 
-    annotateShow cpu1
     (cpu1 & s) === 0xff - 4
 
     let cpu' = cpu1 & rti
 
-    annotateShow cpu'
     (cpu' & s) === 0xff - 1
     (cpu' & pc) === pc'
     (cpu' & p & negative)  === (sr ^. bitAt 7)

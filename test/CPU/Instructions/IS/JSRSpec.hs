@@ -1,13 +1,13 @@
 {-# LANGUAGE DataKinds        #-}
 {-# LANGUAGE TypeApplications #-}
 
-module CPU.Instructions.JSRSpec
+module CPU.Instructions.IS.JSRSpec
   ( spec
   ) where
 
 import CPU
 import CPU.Gen
-import CPU.Instructions.JSR
+import CPU.Instructions.IS.JSR
 
 import Control.Lens
 import Data.Bits.Lens
@@ -24,7 +24,7 @@ spec :: Spec
 spec = describe "jsr" $
   it "abs" $ requireProperty $ do
     memSize <- forAll $ G.constant 512
-    cpu     <- forAll $ genCPU memSize
+    cpu     <- genCPU memSize
     addr    <- forAll $ word16 (linear minBound maxBound)
     pc'     <- forAll $ word16 (linear 260 maxBound)
     let cpu' = cpu

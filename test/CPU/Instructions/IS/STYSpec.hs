@@ -1,12 +1,12 @@
-module CPU.Instructions.STXSpec
+module CPU.Instructions.IS.STYSpec
   ( spec
   ) where
 
 import CPU
 import CPU.Gen
-import CPU.Instructions.LDX
-import CPU.Instructions.LDY
-import CPU.Instructions.STX
+import CPU.Instructions.IS.LDX
+import CPU.Instructions.IS.LDY
+import CPU.Instructions.IS.STY
 
 import Control.Lens
 import Data.Vector.Storable
@@ -18,35 +18,35 @@ import Hedgehog.Range              as R
 import Test.Hspec
 
 spec :: Spec
-spec = describe "stx" $ do
+spec = describe "sty" $ do
   it "abs" $ requireProperty $ do
     memSize <- forAll $ word16 (linear 1 256)
-    cpu     <- forAll $ genCPU memSize
+    cpu     <- genCPU memSize
     w       <- forAll $ word8 (linear minBound maxBound)
-    addr    <- forAll $ word8 (linear minBound (fromIntegral memSize - 1))
+    addr    <- forAll $ word16 (linear minBound (fromIntegral memSize - 1))
     let cpu' = cpu
-             & ldxImm w
-             & stxAbs (fromIntegral addr)
+             & ldyImm w
+             & styAbs addr
     (cpu' & mem) ! fromIntegral addr === w
 
   it "zeropage" $ requireProperty $ do
     memSize <- forAll $ word16 (linear 2 256)
-    cpu     <- forAll $ genCPU memSize
+    cpu     <- genCPU memSize
     w       <- forAll $ word8 (linear minBound maxBound)
     addr    <- forAll $ word8 (linear minBound (fromIntegral memSize - 1))
     let cpu' = cpu
-             & ldxImm w
-             & stxZpg (fromIntegral addr)
+             & ldyImm w
+             & styZpg (fromIntegral addr)
     (cpu' & mem) ! fromIntegral addr === w
 
-  it "zeropage, y" $ requireProperty $ do
+  it "zeropage, x" $ requireProperty $ do
     memSize <- forAll $ word16 (linear 30 256)
-    cpu     <- forAll $ genCPU memSize
+    cpu     <- genCPU memSize
     w       <- forAll $ word8 (linear 6 maxBound)
-    y       <- forAll $ word8 (linear minBound 10)
+    x       <- forAll $ word8 (linear minBound 10)
     addr    <- forAll $ word8 (linear minBound 10)
     let cpu' = cpu
-             & ldxImm w
-             & ldyImm y
-             & stxZpgY addr
-    (cpu' & mem) ! (fromIntegral addr + fromIntegral y) === w
+             & ldxImm x
+             & ldyImm w
+             & styZpgX (fromIntegral addr)
+    (cpu' & mem) ! (fromIntegral addr + fromIntegral x) === w

@@ -1,13 +1,13 @@
-module CPU.Instructions.ASLSpec
+module CPU.Instructions.IS.ASLSpec
   ( spec
   ) where
 
 import CPU
 import CPU.Gen
-import CPU.Instructions.ASL
-import CPU.Instructions.LDA
-import CPU.Instructions.LDX
-import CPU.Instructions.STA
+import CPU.Instructions.IS.ASL
+import CPU.Instructions.IS.LDA
+import CPU.Instructions.IS.LDX
+import CPU.Instructions.IS.STA
 
 import Control.Lens
 import Data.Bits
@@ -23,7 +23,7 @@ spec :: Spec
 spec = describe "asl" $ do
   it "imm" $ requireProperty $ do
     memSize <- forAll $ G.constant 256
-    cpu     <- forAll $ genCPU memSize
+    cpu     <- genCPU memSize
     w       <- forAll $ word8 (linear minBound maxBound)
     let cpu' = cpu
              & ldaImm w
@@ -35,7 +35,7 @@ spec = describe "asl" $ do
 
   it "zpg" $ requireProperty $ do
     memSize <- forAll $ G.constant 256
-    cpu     <- forAll $ genCPU memSize
+    cpu     <- genCPU memSize
     addr    <- forAll $ word8 (linear minBound maxBound)
     w       <- forAll $ word8 (linear minBound maxBound)
     let cpu' = cpu
@@ -50,7 +50,7 @@ spec = describe "asl" $ do
 
   it "zpg, x" $ requireProperty $ do
     memSize <- forAll $ G.constant 256
-    cpu     <- forAll $ genCPU memSize
+    cpu     <- genCPU memSize
     x       <- forAll $ word8 (linear 10 20)
     addr    <- forAll $ word8 (linear minBound (maxBound - 20))
     w       <- forAll $ word8 (linear minBound maxBound)
@@ -67,7 +67,7 @@ spec = describe "asl" $ do
 
   it "abs" $ requireProperty $ do
     memSize <- forAll $ G.constant 256
-    cpu     <- forAll $ genCPU memSize
+    cpu     <- genCPU memSize
     addr    <- forAll $ word16 (linear minBound (memSize - 1))
     w       <- forAll $ word8 (linear minBound maxBound)
     let cpu' = cpu
@@ -82,7 +82,7 @@ spec = describe "asl" $ do
 
   it "abs, x" $ requireProperty $ do
     memSize <- forAll $ G.constant 256
-    cpu     <- forAll $ genCPU memSize
+    cpu     <- genCPU memSize
     x       <- forAll $ word8 (linear 10 20)
     addr    <- forAll $ word16 (linear minBound (memSize - 20))
     w       <- forAll $ word8 (linear minBound maxBound)

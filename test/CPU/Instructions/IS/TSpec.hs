@@ -1,16 +1,15 @@
-{-# LANGUAGE DataKinds        #-}
-{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE DataKinds #-}
 
-module CPU.Instructions.TSpec
+module CPU.Instructions.IS.TSpec
   ( spec
   ) where
 
 import CPU
 import CPU.Gen
-import CPU.Instructions.LDA
-import CPU.Instructions.LDX
-import CPU.Instructions.LDY
-import CPU.Instructions.T
+import CPU.Instructions.IS.LDA
+import CPU.Instructions.IS.LDX
+import CPU.Instructions.IS.LDY
+import CPU.Instructions.IS.T
 
 import Control.Lens
 -- import Data.Generics.Product.Fields
@@ -26,7 +25,7 @@ spec :: Spec
 spec = describe "transfers" $ do
   it "tax" $ requireProperty $ do
     memSize <- forAll $ G.constant 1
-    cpu     <- forAll $ genCPU memSize
+    cpu     <- genCPU memSize
     w       <- forAll $ word8 (linear minBound maxBound)
     let cpu' = cpu
              & ldaImm w
@@ -35,7 +34,7 @@ spec = describe "transfers" $ do
 
   it "txa" $ requireProperty $ do
     memSize <- forAll $ G.constant 1
-    cpu     <- forAll $ genCPU memSize
+    cpu     <- genCPU memSize
     w       <- forAll $ word8 (linear minBound maxBound)
     let cpu' = cpu
              & ldxImm w
@@ -44,7 +43,7 @@ spec = describe "transfers" $ do
 
   it "tay" $ requireProperty $ do
     memSize <- forAll $ G.constant 1
-    cpu     <- forAll $ genCPU memSize
+    cpu     <- genCPU memSize
     w       <- forAll $ word8 (linear minBound maxBound)
     let cpu' = cpu
              & ldaImm w
@@ -53,7 +52,7 @@ spec = describe "transfers" $ do
 
   it "tya" $ requireProperty $ do
     memSize <- forAll $ G.constant 1
-    cpu     <- forAll $ genCPU memSize
+    cpu     <- genCPU memSize
     w       <- forAll $ word8 (linear minBound maxBound)
     let cpu' = cpu
              & ldyImm w
@@ -62,7 +61,7 @@ spec = describe "transfers" $ do
 
   it "tsx" $ requireProperty $ do
     memSize <- forAll $ G.constant 1
-    cpu     <- forAll $ genCPU memSize
+    cpu     <- genCPU memSize
     s'      <- forAll $ word8 (linear 40 maxBound)
     let cpu' = cpu
              & ldxImm s'
@@ -73,7 +72,7 @@ spec = describe "transfers" $ do
 
   it "txs" $ requireProperty $ do
     memSize <- forAll $ G.constant 1
-    cpu     <- forAll $ genCPU memSize
+    cpu     <- genCPU memSize
     s'      <- forAll $ word8 (linear minBound maxBound)
     let cpu' = cpu
              & ldxImm s'

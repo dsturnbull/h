@@ -1,13 +1,13 @@
-module CPU.Instructions.LDXSpec
+module CPU.Instructions.IS.LDXSpec
   ( spec
   ) where
 
 import CPU
 import CPU.Gen
-import CPU.Instructions.LDA
-import CPU.Instructions.LDX
-import CPU.Instructions.LDY
-import CPU.Instructions.STA
+import CPU.Instructions.IS.LDA
+import CPU.Instructions.IS.LDX
+import CPU.Instructions.IS.LDY
+import CPU.Instructions.IS.STA
 
 import Control.Lens
 
@@ -20,7 +20,7 @@ import Test.Hspec
 spec :: Spec
 spec = describe "ldx" $ do
   it "imm" $ requireProperty $ do
-    cpu  <- forAll $ genCPU 0
+    cpu  <- genCPU 0
     w    <- forAll $ word8 (linear minBound maxBound)
     let cpu' = cpu & ldxImm w
     (cpu' & rX) === w
@@ -28,7 +28,7 @@ spec = describe "ldx" $ do
 
   it "zpg" $ requireProperty $ do
     memSize <- forAll $ word16 (linear 1 256)
-    cpu     <- forAll $ genCPU memSize
+    cpu     <- genCPU memSize
     w       <- forAll $ word8 (linear minBound maxBound)
     addr    <- forAll $ word8 (linear minBound (fromIntegral memSize - 1))
     let cpu' = cpu
@@ -39,7 +39,7 @@ spec = describe "ldx" $ do
 
   it "zpg, y" $ requireProperty $ do
     memSize <- forAll $ word16 (linear 8 256)
-    cpu     <- forAll $ genCPU memSize
+    cpu     <- genCPU memSize
     w       <- forAll $ word8 (linear minBound maxBound)
     y       <- forAll $ word8 (linear 1 2)
     addr    <- forAll $ word8 (linear (fromIntegral y) (fromIntegral memSize `div` 2))
@@ -52,7 +52,7 @@ spec = describe "ldx" $ do
 
   it "abs" $ requireProperty $ do
     memSize <- forAll $ word16 (linear 1 256)
-    cpu     <- forAll $ genCPU memSize
+    cpu     <- genCPU memSize
     w       <- forAll $ word8 (linear minBound maxBound)
     addr    <- forAll $ word16 (linear minBound (fromIntegral memSize - 1))
     let cpu' = cpu
@@ -63,7 +63,7 @@ spec = describe "ldx" $ do
 
   it "abs, y" $ requireProperty $ do
     memSize <- forAll $ word16 (linear 8 256)
-    cpu     <- forAll $ genCPU memSize
+    cpu     <- genCPU memSize
     w       <- forAll $ word8 (linear minBound maxBound)
     y       <- forAll $ word8 (linear 1 2)
     addr    <- forAll $ word16 (linear (fromIntegral y) (fromIntegral memSize `div` 2))
@@ -71,6 +71,5 @@ spec = describe "ldx" $ do
              & ldaImm w & staZpg (fromIntegral addr + y)
              & ldyImm y
              & ldxAbsY (fromIntegral addr)
-    annotateShow cpu'
     (cpu' & rX) === w
     (cpu' & p & zero) === (w == 0)

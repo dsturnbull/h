@@ -1,5 +1,7 @@
 {-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE DeriveGeneric       #-}
+{-# LANGUAGE MultiWayIf          #-}
+{-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications    #-}
 
@@ -42,16 +44,19 @@ import Control.Concurrent.STM
 import Control.Lens                 hiding (elements, ignored)
 import Data.Bits
 import Data.Bits.Lens
+import Data.Char
 import Data.Generics.Product.Fields
 import Data.Maybe
 import Data.Time.Clock
-import Data.Vector.Storable         as V hiding (break)
+import Data.Vector.Storable         (modify, slice, (!), (//))
 import Data.Vector.Storable.Mutable (write)
 import Data.Word
 import Foreign
 import Foreign.Marshal.Utils        (fromBool)
 import GHC.Generics
 import Prelude                      hiding (break, replicate)
+import System.Console.ANSI
+import Text.Printf
 
 import qualified Data.Vector.Storable as DVS
 
@@ -63,6 +68,54 @@ import qualified Data.Vector.Storable as DVS
 -- I	....	Interrupt (IRQ disable)
 -- Z	....	Zero
 -- C	....	Carry
+
+-- XXX unify with Status.hs
+instance Show CPU where
+  show cpu = printf "%s%s\n%s\n%s\n%s" regs pc' sleep status mem'
+    where
+          regs   = foldMap (++ " ")
+                     (showReg <$> [ ("A", cpu & rA)
+                                  , ("X", cpu & rX)
+                                  , ("Y", cpu & rY)
+                                  , ("S", cpu &  s)])
+          status = foldMap (++ " ")
+                     (showStatus <$> [ ("N", cpu & p & negative)
+                                     , ("V", cpu & p & overflow)
+                                     , ("B", cpu & p & break)
+                                     , ("D", cpu & p & decimal)
+                                     , ("I", cpu & p & interrupt)
+                                     , ("Z", cpu & p & zero)
+                                     , ("C", cpu & p & carry) ])
+          sleep :: String      = printf "%ss: %i" (setSGRCode [Reset]) (cpu & tim)
+          showStatus :: (String, Bool) -> String
+          showStatus (n, f)    = if f then on n else off n
+          on :: String -> String
+          on n                 = printf "%s%s%s" onc n normal
+          off :: String -> String
+          off                  = printf "%s%s" (setSGRCode [Reset])
+          pc' :: String        = showPc (cpu & pc)
+          showPc               = printf "%sPC: %04x" (setSGRCode [Reset])
+          showReg :: (String, Word8) -> String
+          showReg (r, v)       = printf "%s%s: %02x" (setSGRCode [Reset]) r v
+          mem'              = header ++ foldMap (++ "\n") (showRow <$> rows)
+          header            = "    : " ++ foldMap (++ " ") (printf "%02x" <$> [0 .. rowLength - 1]) ++ "\n"
+          showRow (o, row)  = printf "%04x: %s |%s|" o (elements o row) (ascii row)
+          elements o eles   = foldMap (++ " ") (
+                                (\(i, v) ->
+                                   if | i == fromIntegral (cpu & pc)                       -> printf "%s%02x%s" pcHere v normal
+                                      | i == fromIntegral (fromIntegral (cpu & s) + stack) -> printf "%s%02x%s" spHere v normal
+                                      | otherwise                                          -> printf "%s%02x" normal v
+                                ) <$> zip [o..] (DVS.toList eles))
+          onc :: String        = setSGRCode [SetColor Foreground Vivid Red]
+          pcHere :: String     = setSGRCode [SetColor Foreground Vivid Red]
+          spHere :: String     = setSGRCode [SetColor Foreground Vivid Blue]
+          normal :: String     = setSGRCode [Reset]
+          ascii eles        = foldMap (++ "") (printf "%c" . toPrintable . chr . fromIntegral <$> DVS.toList eles)
+          toPrintable c     = if isPrint c then c else '.'
+          rows              = (\i -> (i, (cpu & mem) & slice i rowLength)) <$> rowStarts
+          rowStarts         = (* rowLength) <$> [0 .. (cpu & mem & DVS.length) `div` rowLength - 1]
+          rowLength         = min 32 (cpu & mem & DVS.length)
+
 
 data Flags = Flags
   { negative  :: Bool
@@ -76,7 +129,7 @@ data Flags = Flags
   } deriving (Show, Generic, Eq)
 
 data CPU = CPU
-  { mem       :: Vector Word8
+  { mem       :: DVS.Vector Word8
   , rA        :: Word8
   , rX        :: Word8
   , rY        :: Word8
@@ -101,6 +154,32 @@ mkFlags = Flags False False False False False False False False
 
 mkCPU :: UTCTime -> TTY -> Integer -> DVS.Vector Word8 -> Word16 -> TMVar () -> CPU
 mkCPU t0 t h' m = CPU m 0 0 0 0 0xff mkFlags 0 t0 0 t Nothing (mkSID t0) (mkJiffyTimer t0) h' Debug
+
+_installRoutines :: DVS.Vector Word8 -> DVS.Vector Word8
+_installRoutines = _installISR
+
+_installISR :: DVS.Vector Word8 -> DVS.Vector Word8
+_installISR v = v // isr
+  where isr = [ (0xff48, 0x48) -- PHA         ;push A onto stack
+              , (0xff49, 0x8a) -- TXA         ;load X into A
+              , (0xff4a, 0x48) -- push A onto stack (X register)
+              , (0xff4b, 0x98) -- TYA         ;load Y into A
+              , (0xff4c, 0x48) -- push A onto stack (Y register)
+              , (0xff4d, 0xba) -- transfer stack pointer to X
+              , (0xff4e, 0x04) --
+              , (0xff4f, 0x01) --
+              , (0xff50, 0xbd) -- LDA $0104,X ;load processor status into A ?
+              , (0xff51, 0x29) --
+              , (0xff52, 0x10) -- AND #$10		;check for break condition
+              , (0xff53, 0xf0) --
+              , (0xff54, 0x03) -- BEQ $FF58
+              , (0xff55, 0x6c) --
+              , (0xff56, 0x16) --
+              , (0xff57, 0x03) -- JMP ($0316)	;vector to break ISR
+              , (0xff58, 0x6c) --
+              , (0xff59, 0x14) --
+              , (0xff5a, 0x03) -- JMP ($0314)	;vector	to ISR
+              ]
 
 µs :: Integer -> Double
 µs rate = secs * 1000 * 1000

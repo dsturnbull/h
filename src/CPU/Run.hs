@@ -13,6 +13,7 @@ module CPU.Run
   , runShowCPU
   , runCPU
   , runSound
+  , step
   ) where
 
 import CPU

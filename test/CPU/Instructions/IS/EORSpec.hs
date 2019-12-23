@@ -1,14 +1,14 @@
-module CPU.Instructions.CMPSpec
+module CPU.Instructions.IS.EORSpec
   ( spec
   ) where
 
 import CPU
 import CPU.Gen
-import CPU.Instructions.CMP
-import CPU.Instructions.LDA
-import CPU.Instructions.LDX
-import CPU.Instructions.LDY
-import CPU.Instructions.STA
+import CPU.Instructions.IS.EOR
+import CPU.Instructions.IS.LDA
+import CPU.Instructions.IS.LDX
+import CPU.Instructions.IS.LDY
+import CPU.Instructions.IS.STA
 
 import Control.Lens
 import Data.Bits
@@ -21,35 +21,37 @@ import Hedgehog.Range              as R
 import Test.Hspec
 
 spec :: Spec
-spec = describe "cmp" $ do
+spec = describe "eor" $ do
   it "imm" $ requireProperty $ do
-    cpu     <- forAll $ genCPU 0
+    cpu     <- genCPU 1
     w       <- forAll $ word8 (linear 7 maxBound)
     w'      <- forAll $ word8 (linear 7 maxBound)
     let cpu' = cpu
              & ldaImm w
-             & cmpImm w'
-    (cpu' & p & carry)    === (w >= w')
-    (cpu' & p & zero)     === (w == w')
-    (cpu' & p & negative) === msb (w - w')
+             & eorImm w'
+    let r = w .|. w'
+    (cpu' & rA) === r
+    (cpu' & p & zero)     === (r == 0)
+    (cpu' & p & negative) === msb r
 
   it "zpg" $ requireProperty $ do
     memSize <- forAll $ G.constant 256
-    cpu     <- forAll $ genCPU memSize
+    cpu     <- genCPU memSize
     w       <- forAll $ word8 (linear 7 maxBound)
     w'      <- forAll $ word8 (linear 7 maxBound)
     addr    <- forAll $ word8 (linear minBound maxBound)
     let cpu' = cpu
              & ldaImm w' & staZpg addr
              & ldaImm w
-             & cmpZpg addr
-    (cpu' & p & carry)    === (w >= w')
-    (cpu' & p & zero)     === (w == w')
-    (cpu' & p & negative) === msb (w - w')
+             & eorZpg addr
+    let r = w .|. w'
+    (cpu' & rA) === r
+    (cpu' & p & zero)     === (r == 0)
+    (cpu' & p & negative) === msb r
 
   it "zpg, x" $ requireProperty $ do
     memSize <- forAll $ G.constant 256
-    cpu     <- forAll $ genCPU memSize
+    cpu     <- genCPU memSize
     w       <- forAll $ word8 (linear 7 maxBound)
     w'      <- forAll $ word8 (linear 7 maxBound)
     x       <- forAll $ word8 (linear minBound (maxBound `div` 2))
@@ -58,44 +60,47 @@ spec = describe "cmp" $ do
              & ldxImm x
              & ldaImm w' & staZpgX addr
              & ldaImm w
-             & cmpZpgX addr
-    (cpu' & p & carry)    === (w >= w')
-    (cpu' & p & zero)     === (w == w')
-    (cpu' & p & negative) === msb (w - w')
+             & eorZpgX addr
+    let r = w .|. w'
+    (cpu' & rA) === r
+    (cpu' & p & zero)     === (r == 0)
+    (cpu' & p & negative) === msb r
 
   it "abs" $ requireProperty $ do
     memSize <- forAll $ G.constant (maxBound :: Word16)
-    cpu     <- forAll $ genCPU (fromIntegral memSize)
+    cpu     <- genCPU (fromIntegral memSize)
     w       <- forAll $ word8 (linear 7 maxBound)
     w'      <- forAll $ word8 (linear 7 maxBound)
     addr    <- forAll $ word16 (linear minBound maxBound)
     let cpu' = cpu
              & ldaImm w' & staAbs (fromIntegral addr)
              & ldaImm w
-             & cmpAbs (fromIntegral addr)
-    (cpu' & p & carry)    === (w >= w')
-    (cpu' & p & zero)     === (w == w')
-    (cpu' & p & negative) === msb (w - w')
+             & eorAbs (fromIntegral addr)
+    let r = w .|. w'
+    (cpu' & rA) === r
+    (cpu' & p & zero)     === (r == 0)
+    (cpu' & p & negative) === msb r
 
   it "abs, x" $ requireProperty $ do
     memSize <- forAll $ G.constant (maxBound :: Word8)
-    cpu     <- forAll $ genCPU (fromIntegral memSize)
+    cpu     <- genCPU (fromIntegral memSize)
     w       <- forAll $ word8 (linear 7 maxBound)
     w'      <- forAll $ word8 (linear 7 maxBound)
     x       <- forAll $ word8 (linear minBound (maxBound `div` 2))
-    addr    <- forAll $ word8 (linear minBound (maxBound - x))
+    addr    <- forAll $ word8 (linear minBound x)
     let cpu' = cpu
              & ldxImm x
              & ldaImm w' & staAbsX (fromIntegral addr)
              & ldaImm w
-             & cmpAbsX (fromIntegral addr)
-    (cpu' & p & carry)    === (w >= w')
-    (cpu' & p & zero)     === (w == w')
-    (cpu' & p & negative) === msb (w - w')
+             & eorAbsX (fromIntegral addr)
+    let r = w .|. w'
+    (cpu' & rA) === r
+    (cpu' & p & zero)     === (r == 0)
+    (cpu' & p & negative) === msb r
 
   it "abs, y" $ requireProperty $ do
     memSize <- forAll $ G.constant (maxBound :: Word8)
-    cpu     <- forAll $ genCPU (fromIntegral memSize)
+    cpu     <- genCPU (fromIntegral memSize)
     w       <- forAll $ word8 (linear 7 maxBound)
     w'      <- forAll $ word8 (linear 7 maxBound)
     y       <- forAll $ word8 (linear minBound (maxBound `div` 2))
@@ -104,14 +109,15 @@ spec = describe "cmp" $ do
              & ldxImm y
              & ldaImm w' & staAbsY (fromIntegral addr)
              & ldaImm w
-             & cmpAbsY (fromIntegral addr)
-    (cpu' & p & carry)    === (w >= w')
-    (cpu' & p & zero)     === (w == w')
-    (cpu' & p & negative) === msb (w - w')
+             & eorAbsY (fromIntegral addr)
+    let r = w .|. w'
+    (cpu' & rA) === r
+    (cpu' & p & zero)     === (r == 0)
+    (cpu' & p & negative) === msb r
 
   it "x, ind" $ requireProperty $ do
     memSize <- forAll $ G.constant 40
-    cpu     <- forAll $ genCPU memSize
+    cpu     <- genCPU memSize
     w       <- forAll $ word8 (linear 7 maxBound)
     w'      <- forAll $ word8 (linear 7 maxBound)
     x       <- forAll $ G.constant 2
@@ -119,17 +125,18 @@ spec = describe "cmp" $ do
     addr    <- forAll $ word16 (linear 20 30)
     let cpu' = cpu
              & ldxImm x
-             & ldaImm (fromIntegral (addr .&. 0x00ff)) & staZpgX ind
+             & ldaImm (fromIntegral (addr .&. 0x00ff)) & staZpgX (ind)
              & ldaImm (fromIntegral (addr `shiftR` 8)) & staZpgX (ind + 1)
              & ldaImm w' & staAbs (fromIntegral addr)
-             & ldaImm w  & cmpIndX ind
-    (cpu' & p & carry)    === (w >= w')
-    (cpu' & p & zero)     === (w == w')
-    (cpu' & p & negative) === msb (w - w')
+             & ldaImm w  & eorIndX ind
+    let r = w .|. w'
+    (cpu' & rA) === r
+    (cpu' & p & zero)     === (r == 0)
+    (cpu' & p & negative) === msb r
 
   it "ind, y" $ requireProperty $ do
     memSize <- forAll $ G.constant 40
-    cpu     <- forAll $ genCPU memSize
+    cpu     <- genCPU memSize
     w       <- forAll $ word8 (linear 7 maxBound)
     w'      <- forAll $ word8 (linear 7 maxBound)
     y       <- forAll $ G.constant 2
@@ -138,8 +145,9 @@ spec = describe "cmp" $ do
     let cpu' = cpu
              & ldaImm (fromIntegral (addr .&. 0x00ff)) & staZpg ind
              & ldaImm (fromIntegral (addr `shiftR` 8)) & staZpg (ind + 1)
-             & ldxImm y & ldaImm w' & staAbsX (fromIntegral addr)
-             & ldyImm y & ldaImm w  & cmpIndY ind
-    (cpu' & p & carry)    === (w >= w')
-    (cpu' & p & zero)     === (w == w')
-    (cpu' & p & negative) === msb (w - w')
+             & ldxImm y & ldaImm w' & staAbsX addr
+             & ldyImm y & ldaImm w  & eorIndY ind
+    let r = w .|. w'
+    (cpu' & rA) === r
+    (cpu' & p & zero)     === (r == 0)
+    (cpu' & p & negative) === msb r

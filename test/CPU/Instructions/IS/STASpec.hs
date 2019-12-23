@@ -1,13 +1,13 @@
-module CPU.Instructions.STASpec
+module CPU.Instructions.IS.STASpec
   ( spec
   ) where
 
 import CPU
 import CPU.Gen
-import CPU.Instructions.LDA
-import CPU.Instructions.LDX
-import CPU.Instructions.LDY
-import CPU.Instructions.STA
+import CPU.Instructions.IS.LDA
+import CPU.Instructions.IS.LDX
+import CPU.Instructions.IS.LDY
+import CPU.Instructions.IS.STA
 
 import Control.Lens
 import Data.Bits
@@ -23,7 +23,7 @@ spec :: Spec
 spec = describe "sta" $ do
   it "abs" $ requireProperty $ do
     memSize <- forAll $ word16 (linear 1 256)
-    cpu     <- forAll $ genCPU memSize
+    cpu     <- genCPU memSize
     w       <- forAll $ word8 (linear minBound maxBound)
     addr    <- forAll $ word16 (linear minBound (fromIntegral memSize - 1))
     let mem' = cpu
@@ -34,7 +34,7 @@ spec = describe "sta" $ do
 
   it "zpg" $ requireProperty $ do
     memSize <- forAll $ word16 (linear 1 256)
-    cpu     <- forAll $ genCPU memSize
+    cpu     <- genCPU memSize
     w       <- forAll $ word8 (linear minBound maxBound)
     addr    <- forAll $ word16 (linear minBound (fromIntegral memSize - 1))
     let mem' = cpu
@@ -45,7 +45,7 @@ spec = describe "sta" $ do
 
   it "abs, x" $ requireProperty $ do
     memSize <- forAll $ word16 (linear 3 256)
-    cpu     <- forAll $ genCPU memSize
+    cpu     <- genCPU memSize
     w       <- forAll $ word8 (linear minBound maxBound)
     x       <- forAll $ word8 (linear minBound (fromIntegral memSize `div` 2))
     addr    <- forAll $ word16 (linear minBound (fromIntegral memSize - fromIntegral x - 1))
@@ -57,7 +57,7 @@ spec = describe "sta" $ do
 
   it "abs, y" $ requireProperty $ do
     memSize <- forAll $ word16 (linear 4 256)
-    cpu     <- forAll $ genCPU memSize
+    cpu     <- genCPU memSize
     w       <- forAll $ word8 (linear minBound maxBound)
     y       <- forAll $ word8 (linear minBound (fromIntegral (memSize `div` 3)))
     addr    <- forAll $ word16 (linear (fromIntegral y) (fromIntegral memSize `div` 3))
@@ -69,7 +69,7 @@ spec = describe "sta" $ do
 
   it "x, ind" $ requireProperty $ do
     memSize <- forAll $ G.constant 280
-    cpu     <- forAll $ genCPU memSize
+    cpu     <- genCPU memSize
     w       <- forAll $ word8 (linear 7 maxBound)
     x       <- forAll $ word8 (linear 1 2)
     ind     <- forAll $ word8 (linear minBound (maxBound - 2))
@@ -84,7 +84,7 @@ spec = describe "sta" $ do
 
   it "ind, y" $ requireProperty $ do
     memSize <- forAll $ G.constant 40
-    cpu     <- forAll $ genCPU memSize
+    cpu     <- genCPU memSize
     w       <- forAll $ word8 (linear 28 maxBound)
     y       <- forAll $ word8 (linear 1 2)
     ind     <- forAll $ word8 (linear 4 6)
@@ -99,7 +99,7 @@ spec = describe "sta" $ do
 
   it "zeropage" $ requireProperty $ do
     memSize <- forAll $ word16 (linear 2 256)
-    cpu     <- forAll $ genCPU memSize
+    cpu     <- genCPU memSize
     w       <- forAll $ word8 (linear minBound maxBound)
     addr    <- forAll $ word8 (linear minBound (fromIntegral memSize - 1))
     let cpu' = cpu
@@ -109,7 +109,7 @@ spec = describe "sta" $ do
 
   it "zeropage, x" $ requireProperty $ do
     memSize <- forAll $ word16 (linear 30 256)
-    cpu     <- forAll $ genCPU memSize
+    cpu     <- genCPU memSize
     w       <- forAll $ word8 (linear 6 maxBound)
     x       <- forAll $ word8 (linear minBound 10)
     addr    <- forAll $ word8 (linear minBound 10)

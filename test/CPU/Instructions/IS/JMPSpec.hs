@@ -1,12 +1,12 @@
-module CPU.Instructions.JMPSpec
+module CPU.Instructions.IS.JMPSpec
   ( spec
   ) where
 
 import CPU
 import CPU.Gen
-import CPU.Instructions.JMP
-import CPU.Instructions.LDA
-import CPU.Instructions.STA
+import CPU.Instructions.IS.JMP
+import CPU.Instructions.IS.LDA
+import CPU.Instructions.IS.STA
 
 import Control.Lens
 import Data.Bits
@@ -21,14 +21,14 @@ spec :: Spec
 spec = describe "jmp" $ do
   it "abs" $ requireProperty $ do
     memSize <- forAll $ word16 (linear 4 maxBound)
-    cpu     <- forAll $ genCPU (fromIntegral memSize)
+    cpu     <- genCPU (fromIntegral memSize)
     addr    <- forAll $ word16 (linear minBound maxBound)
     let cpu' = cpu & jmpAbs (fromIntegral addr)
     (cpu' & pc) === addr
 
   it "ind" $ requireProperty $ do
     memSize <- forAll $ word16 (linear 4 maxBound)
-    cpu     <- forAll $ genCPU (fromIntegral memSize)
+    cpu     <- genCPU (fromIntegral memSize)
     ind     <- forAll $ word16 (linear minBound (memSize `div` 3))
     addr    <- forAll $ word16 (linear minBound (memSize `div` 3))
     let cpu' = cpu

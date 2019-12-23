@@ -1,10 +1,10 @@
-module CPU.Instructions.NOPSpec
+module CPU.Instructions.IS.NOPSpec
   ( spec
   ) where
 
 import CPU
 import CPU.Gen
-import CPU.Instructions.NOP
+import CPU.Instructions.IS.NOP
 
 import Control.Lens
 
@@ -17,5 +17,5 @@ spec :: Spec
 spec = describe "lsr" $
   it "imm" $ requireProperty $ do
     memSize <- forAll $ G.constant 256
-    cpu     <- forAll $ genCPU memSize
+    cpu     <- genCPU memSize
     (cpu & nop & p) === (cpu & p)

@@ -1,15 +1,15 @@
 {-# LANGUAGE DataKinds #-}
 
-module CPU.Instructions.PLSpec
+module CPU.Instructions.IS.PLSpec
   ( spec
   ) where
 
 import CPU
 import CPU.Gen
-import CPU.Instructions.LDA
-import CPU.Instructions.PH
-import CPU.Instructions.PL
-import CPU.Instructions.STA
+import CPU.Instructions.IS.LDA
+import CPU.Instructions.IS.PH
+import CPU.Instructions.IS.PL
+import CPU.Instructions.IS.STA
 
 import Control.Lens         hiding (ignored)
 import Data.Bits.Lens
@@ -26,7 +26,7 @@ spec :: Spec
 spec = describe "pl" $ do
   it "pla" $ requireProperty $ do
     memSize <- forAll $ G.constant 512
-    cpu     <- forAll $ genCPU memSize
+    cpu     <- genCPU memSize
     w       <- forAll $ word8 (linear minBound maxBound)
     w'      <- forAll $ word8 (linear minBound maxBound)
     let cpu' = cpu
@@ -39,7 +39,7 @@ spec = describe "pl" $ do
 
   it "plp" $ requireProperty $ do
     memSize <- forAll $ G.constant 512
-    cpu     <- forAll $ genCPU memSize
+    cpu     <- genCPU memSize
     w       <- forAll $ word8 (linear minBound maxBound)
     let cpu' = cpu
              & pha -- push nothing, avoid stack underflow when pulling

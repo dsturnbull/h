@@ -2,15 +2,15 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications    #-}
 
-module CPU.Instructions.BRKSpec
+module CPU.Instructions.IS.BRKSpec
   ( spec
   ) where
 
 import CPU
 import CPU.Gen
-import CPU.Instructions.BRK
-import CPU.Instructions.JMP
-import CPU.Instructions.NOP
+import CPU.Instructions.IS.BRK
+import CPU.Instructions.IS.JMP
+import CPU.Instructions.IS.NOP
 
 import Control.Lens
 import Data.Bits
@@ -28,7 +28,7 @@ spec :: Spec
 spec = describe "brk" $
   it "breaks" $ requireProperty $ do
     memSize <- forAll $ G.constant 512
-    cpu     <- forAll $ genCPU memSize
+    cpu     <- genCPU memSize
     addr    <- forAll $ word16 (linear minBound memSize)
     n       <- forAll bool
     v       <- forAll bool
@@ -51,11 +51,10 @@ spec = describe "brk" $
              & jmpAbs addr
              & brk
              & nop
-    annotateShow cpu'
 
     (cpu' & p & break)     === True
     (cpu' & p & interrupt) === True
-    (cpu' & pc)            === (addr + 1)
+    (cpu' & pc)            === (addr + 2)
     (cpu' & s)             === (maxBound - 3)
 
     let sr   = (cpu' & mem) ! (fromIntegral (cpu' & s) + fromIntegral stack + 1)

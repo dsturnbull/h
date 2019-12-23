@@ -3,6 +3,7 @@
 
 module ASM.Assembler
   ( assemble
+  , assembleOpcodes
   , disasm
   , insPositions
   , writeProgram
@@ -28,11 +29,13 @@ import qualified Data.ByteString.Lazy            as LBS
 import qualified Data.Vector.Storable            as DVS
 import qualified Data.Vector.Storable.ByteString as DVSB
 
-assemble :: Word16 -> Word16 -> String -> Program
-assemble codeLoc dataLoc prog = Program (codeLoc, DVS.fromList (snd <$> sortOn fst cs)) (dataLoc, DVS.fromList (snd <$> sortOn fst ds))
-  where inss = parseAssembly prog
-        (cs, ds) = insPositions DataSegment (fromIntegral codeLoc) (fromIntegral codeLoc) (fromIntegral dataLoc) (fromIntegral dataLoc) ins ins [] []
-        ins      = fromRight [] inss
+assemble :: String -> Word16 -> Word16 -> Program
+assemble prog = assembleOpcodes ins
+  where ins = fromRight [] $ parseAssembly prog
+
+assembleOpcodes :: [Opcode] -> Word16 -> Word16 -> Program
+assembleOpcodes ins codeLoc dataLoc = Program (codeLoc, DVS.fromList (snd <$> sortOn fst cs)) (dataLoc, DVS.fromList (snd <$> sortOn fst ds))
+  where (cs, ds) = insPositions DataSegment (fromIntegral codeLoc) (fromIntegral codeLoc) (fromIntegral dataLoc) (fromIntegral dataLoc) ins ins [] []
 
 disasm :: Program -> ([(Word16, String)], [(Word16, String)])
 disasm (Program (coff, cs') (doff, ds')) = (showIns <$> instructions (fromIntegral coff) cs', showData <$> bytes (fromIntegral doff) ds')

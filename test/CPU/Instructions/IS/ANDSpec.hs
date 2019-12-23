@@ -1,14 +1,14 @@
-module CPU.Instructions.ANDSpec
+module CPU.Instructions.IS.ANDSpec
   ( spec
   ) where
 
 import CPU
 import CPU.Gen
-import CPU.Instructions.AND
-import CPU.Instructions.LDA
-import CPU.Instructions.LDX
-import CPU.Instructions.LDY
-import CPU.Instructions.STA
+import CPU.Instructions.IS.AND
+import CPU.Instructions.IS.LDA
+import CPU.Instructions.IS.LDX
+import CPU.Instructions.IS.LDY
+import CPU.Instructions.IS.STA
 
 import Control.Lens
 import Data.Bits
@@ -24,7 +24,7 @@ spec :: Spec
 spec = describe "and" $ do
   it "imm" $ requireProperty $ do
     memSize <- forAll $ G.constant 256
-    cpu     <- forAll $ genCPU memSize
+    cpu     <- genCPU memSize
     w       <- forAll $ word8 (linear minBound maxBound)
     w'      <- forAll $ word8 (linear minBound maxBound)
     let cpu' = cpu
@@ -36,7 +36,7 @@ spec = describe "and" $ do
 
   it "zpg" $ requireProperty $ do
     memSize <- forAll $ G.constant 256
-    cpu     <- forAll $ genCPU memSize
+    cpu     <- genCPU memSize
     w       <- forAll $ word8 (linear minBound maxBound)
     w'      <- forAll $ word8 (linear minBound maxBound)
     addr    <- forAll $ word8 (linear 0 255)
@@ -50,7 +50,7 @@ spec = describe "and" $ do
 
   it "zpg, x" $ requireProperty $ do
     memSize <- forAll $ G.constant 256
-    cpu     <- forAll $ genCPU memSize
+    cpu     <- genCPU memSize
     w       <- forAll $ word8 (linear minBound maxBound)
     w'      <- forAll $ word8 (linear minBound maxBound)
     x       <- forAll $ word8 (linear minBound 10)
@@ -66,7 +66,7 @@ spec = describe "and" $ do
 
   it "abs" $ requireProperty $ do
     memSize <- forAll $ G.constant 256
-    cpu     <- forAll $ genCPU memSize
+    cpu     <- genCPU memSize
     w       <- forAll $ word8 (linear minBound maxBound)
     w'      <- forAll $ word8 (linear minBound maxBound)
     addr    <- forAll $ word16 (linear 0 255)
@@ -80,7 +80,7 @@ spec = describe "and" $ do
 
   it "abs, x" $ requireProperty $ do
     memSize <- forAll $ G.constant 256
-    cpu     <- forAll $ genCPU memSize
+    cpu     <- genCPU memSize
     w       <- forAll $ word8 (linear minBound maxBound)
     w'      <- forAll $ word8 (linear minBound (maxBound - 10))
     x       <- forAll $ word8 (linear minBound 10)
@@ -95,7 +95,7 @@ spec = describe "and" $ do
 
   it "abs, y" $ requireProperty $ do
     memSize <- forAll $ G.constant 256
-    cpu     <- forAll $ genCPU memSize
+    cpu     <- genCPU memSize
     w       <- forAll $ word8 (linear minBound maxBound)
     w'      <- forAll $ word8 (linear minBound (maxBound - 10))
     y       <- forAll $ word8 (linear minBound 10)
@@ -110,7 +110,7 @@ spec = describe "and" $ do
 
   it "x, ind" $ requireProperty $ do
     memSize <- forAll $ G.constant 256
-    cpu     <- forAll $ genCPU memSize
+    cpu     <- genCPU memSize
     w       <- forAll $ word8 (linear 1 maxBound)
     w'      <- forAll $ word8 (linear 1 maxBound)
     x       <- forAll $ word8 (linear 1 10)
@@ -129,7 +129,7 @@ spec = describe "and" $ do
 
   it "ind, y" $ requireProperty $ do
     memSize <- forAll $ G.constant 256
-    cpu     <- forAll $ genCPU memSize
+    cpu     <- genCPU memSize
     w       <- forAll $ word8 (linear 1 maxBound)
     w'      <- forAll $ word8 (linear 1 maxBound)
     y       <- forAll $ word8 (linear 1 10)
@@ -143,7 +143,6 @@ spec = describe "and" $ do
              & ldaImm w'
              & ldyImm y
              & andIndY ind
-    annotateShow cpu'
     (cpu' & rA)           === (w .&. w')
     (cpu' & p & zero)     === ((w .&. w') == 0)
     (cpu' & p & negative) === ((w .&. w') ^. bitAt 7)

@@ -1,13 +1,13 @@
 {-# LANGUAGE DataKinds        #-}
 {-# LANGUAGE TypeApplications #-}
 
-module CPU.Instructions.SESpec
+module CPU.Instructions.IS.SESpec
   ( spec
   ) where
 
 import CPU
 import CPU.Gen
-import CPU.Instructions.SE
+import CPU.Instructions.IS.SE
 
 import Control.Lens
 import Data.Generics.Product.Fields
@@ -21,7 +21,7 @@ spec :: Spec
 spec = describe "set" $ do
   it "sec" $ requireProperty $ do
     memSize <- forAll $ G.constant 256
-    cpu     <- forAll $ genCPU memSize
+    cpu     <- genCPU memSize
     c       <- forAll $ bool
     let cpu' = cpu
             & field @"p" . field @"carry" .~ c
@@ -30,7 +30,7 @@ spec = describe "set" $ do
 
   it "sed" $ requireProperty $ do
     memSize <- forAll $ G.constant 256
-    cpu     <- forAll $ genCPU memSize
+    cpu     <- genCPU memSize
     d       <- forAll $ bool
     let cpu' = cpu
             & field @"p" . field @"carry" .~ d
@@ -39,7 +39,7 @@ spec = describe "set" $ do
 
   it "sei" $ requireProperty $ do
     memSize <- forAll $ G.constant 256
-    cpu     <- forAll $ genCPU memSize
+    cpu     <- genCPU memSize
     i       <- forAll $ bool
     let cpu' = cpu
             & field @"p" . field @"carry" .~ i

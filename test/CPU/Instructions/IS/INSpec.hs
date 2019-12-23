@@ -1,16 +1,16 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module CPU.Instructions.INSpec
+module CPU.Instructions.IS.INSpec
   ( spec
   ) where
 
 import CPU
 import CPU.Gen
-import CPU.Instructions.IN
-import CPU.Instructions.LDA
-import CPU.Instructions.LDX
-import CPU.Instructions.LDY
-import CPU.Instructions.STA
+import CPU.Instructions.IS.IN
+import CPU.Instructions.IS.LDA
+import CPU.Instructions.IS.LDX
+import CPU.Instructions.IS.LDY
+import CPU.Instructions.IS.STA
 
 import Control.Lens
 
@@ -24,7 +24,7 @@ spec :: Spec
 spec = describe "inc" $ do
   it "zpg" $ requireProperty $ do
     memSize <- forAll $ G.constant 256
-    cpu     <- forAll $ genCPU memSize
+    cpu     <- genCPU memSize
     w       <- forAll $ word8 (linear minBound maxBound)
     addr    <- forAll $ word8 (linear minBound maxBound)
     let cpu' = cpu
@@ -38,7 +38,7 @@ spec = describe "inc" $ do
 
   it "zpg, x" $ requireProperty $ do
     memSize <- forAll $ G.constant 256
-    cpu     <- forAll $ genCPU memSize
+    cpu     <- genCPU memSize
     w       <- forAll $ word8 (linear minBound maxBound)
     x       <- forAll $ word8 (linear minBound 20)
     addr    <- forAll $ word8 (linear minBound (maxBound - 20))
@@ -54,7 +54,7 @@ spec = describe "inc" $ do
 
   it "abs" $ requireProperty $ do
     memSize <- forAll $ G.constant 256
-    cpu     <- forAll $ genCPU memSize
+    cpu     <- genCPU memSize
     w       <- forAll $ word8 (linear minBound maxBound)
     addr    <- forAll $ word16 (linear minBound memSize)
     let cpu' = cpu
@@ -68,7 +68,7 @@ spec = describe "inc" $ do
 
   it "abs, x" $ requireProperty $ do
     memSize <- forAll $ G.constant 256
-    cpu     <- forAll $ genCPU memSize
+    cpu     <- genCPU memSize
     w       <- forAll $ word8 (linear minBound maxBound)
     x       <- forAll $ word8 (linear minBound 20)
     addr    <- forAll $ word16 (linear minBound (255 - 20))
@@ -84,7 +84,7 @@ spec = describe "inc" $ do
 
   it "inx" $ requireProperty $ do
     memSize <- forAll $ G.constant 1
-    cpu     <- forAll $ genCPU memSize
+    cpu     <- genCPU memSize
     x       <- forAll $ word8 (linear minBound maxBound)
     let cpu' = cpu
              & ldxImm x
@@ -95,7 +95,7 @@ spec = describe "inc" $ do
 
   it "iny" $ requireProperty $ do
     memSize <- forAll $ G.constant 1
-    cpu     <- forAll $ genCPU memSize
+    cpu     <- genCPU memSize
     y       <- forAll $ word8 (linear minBound maxBound)
     let cpu' = cpu
              & ldyImm y

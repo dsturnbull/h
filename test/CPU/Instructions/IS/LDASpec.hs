@@ -1,13 +1,13 @@
-module CPU.Instructions.LDASpec
+module CPU.Instructions.IS.LDASpec
   ( spec
   ) where
 
 import CPU
 import CPU.Gen
-import CPU.Instructions.LDA
-import CPU.Instructions.LDX
-import CPU.Instructions.LDY
-import CPU.Instructions.STA
+import CPU.Instructions.IS.LDA
+import CPU.Instructions.IS.LDX
+import CPU.Instructions.IS.LDY
+import CPU.Instructions.IS.STA
 
 import Control.Lens
 import Data.Bits
@@ -21,7 +21,7 @@ import Test.Hspec
 spec :: Spec
 spec = describe "lda" $ do
   it "imm" $ requireProperty $ do
-    cpu  <- forAll $ genCPU 0
+    cpu  <- genCPU 0
     w    <- forAll $ word8 (linear minBound maxBound)
     let cpu' = cpu & ldaImm w
     (cpu' & rA) === w
@@ -29,7 +29,7 @@ spec = describe "lda" $ do
 
   it "abs" $ requireProperty $ do
     memSize <- forAll $ word16 (linear 1 256)
-    cpu     <- forAll $ genCPU memSize
+    cpu     <- genCPU memSize
     w       <- forAll $ word8 (linear minBound maxBound)
     addr    <- forAll $ word16 (linear minBound (fromIntegral memSize - 1))
     let cpu' = cpu
@@ -41,7 +41,7 @@ spec = describe "lda" $ do
 
   it "abs, x" $ requireProperty $ do
     memSize <- forAll $ word16 (linear 2 256)
-    cpu     <- forAll $ genCPU memSize
+    cpu     <- genCPU memSize
     w       <- forAll $ word8 (linear minBound maxBound)
     x       <- forAll $ word8 (linear 1 2)
     addr    <- forAll $ word16 (linear (fromIntegral x) (fromIntegral memSize - 1))
@@ -54,7 +54,7 @@ spec = describe "lda" $ do
 
   it "abs, y" $ requireProperty $ do
     memSize <- forAll $ G.constant 256
-    cpu     <- forAll $ genCPU memSize
+    cpu     <- genCPU memSize
     w       <- forAll $ word8 (linear minBound maxBound)
     y       <- forAll $ word8 (linear 1 2)
     addr    <- forAll $ word16 (linear (fromIntegral y) (fromIntegral memSize - 1))
@@ -67,7 +67,7 @@ spec = describe "lda" $ do
 
   it "x, ind" $ requireProperty $ do
     memSize <- forAll $ G.constant 280
-    cpu     <- forAll $ genCPU memSize
+    cpu     <- genCPU memSize
     w       <- forAll $ word8 (linear 7 maxBound)
     x       <- forAll $ word8 (linear 1 2)
     ind     <- forAll $ word8 (linear (fromIntegral x) maxBound) -- allow space for x
@@ -83,7 +83,7 @@ spec = describe "lda" $ do
 
   it "ind, y" $ requireProperty $ do
     memSize <- forAll $ G.constant 280
-    cpu     <- forAll $ genCPU memSize
+    cpu     <- genCPU memSize
     w       <- forAll $ word8 (linear 7 maxBound)
     y       <- forAll $ word8 (linear 1 2)
     ind     <- forAll $ word8 (linear (fromIntegral y) maxBound) -- allow space for x

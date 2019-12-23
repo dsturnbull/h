@@ -1,18 +1,18 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module CPU.Instructions.ROLSpec
+module CPU.Instructions.IS.ROLSpec
   ( spec
   ) where
 
 import CPU
 import CPU.Gen
-import CPU.Instructions.DE
-import CPU.Instructions.IN
-import CPU.Instructions.LDA
-import CPU.Instructions.LDX
-import CPU.Instructions.ROL
-import CPU.Instructions.SE
-import CPU.Instructions.STA
+import CPU.Instructions.IS.DE
+import CPU.Instructions.IS.IN
+import CPU.Instructions.IS.LDA
+import CPU.Instructions.IS.LDX
+import CPU.Instructions.IS.ROL
+import CPU.Instructions.IS.SE
+import CPU.Instructions.IS.STA
 
 import Control.Lens
 import Data.Bits
@@ -30,7 +30,7 @@ import Test.Hspec
 spec :: Spec
 spec = describe "rol" $ do
   it "acc" $ requireProperty $ do
-    cpu     <- forAll $ genCPU 1
+    cpu     <- genCPU 1
     w       <- forAll $ word8 (linear minBound maxBound)
     c       <- forAll bool
     let cpu' = cpu
@@ -45,7 +45,7 @@ spec = describe "rol" $ do
 
   it "zpg" $ requireProperty $ do
     memSize <- forAll $ G.constant 256
-    cpu     <- forAll $ genCPU memSize
+    cpu     <- genCPU memSize
     addr    <- forAll $ word8 (linear minBound maxBound)
     w       <- forAll $ word8 (linear minBound maxBound)
     c       <- forAll bool
@@ -63,7 +63,7 @@ spec = describe "rol" $ do
 
   it "zpg, x" $ requireProperty $ do
     memSize <- forAll $ G.constant 256
-    cpu     <- forAll $ genCPU memSize
+    cpu     <- genCPU memSize
     x       <- forAll $ word8 (linear 10 20)
     addr    <- forAll $ word8 (linear minBound (maxBound - 20))
     w       <- forAll $ word8 (linear minBound maxBound)
@@ -83,7 +83,7 @@ spec = describe "rol" $ do
 
   it "abs" $ requireProperty $ do
     memSize <- forAll $ G.constant 256
-    cpu     <- forAll $ genCPU memSize
+    cpu     <- genCPU memSize
     addr    <- forAll $ word16 (linear minBound (memSize - 1))
     w       <- forAll $ word8 (linear minBound maxBound)
     c       <- forAll bool
@@ -101,7 +101,7 @@ spec = describe "rol" $ do
 
   it "abs, x" $ requireProperty $ do
     memSize <- forAll $ G.constant 256
-    cpu     <- forAll $ genCPU memSize
+    cpu     <- genCPU memSize
     x       <- forAll $ word8 (linear 10 20)
     addr    <- forAll $ word16 (linear minBound (memSize - 20))
     w       <- forAll $ word8 (linear minBound maxBound)
@@ -121,7 +121,7 @@ spec = describe "rol" $ do
 
   it "double multi-byte numbers" $ requireProperty $ do
     memSize <- forAll $ G.constant 256
-    cpu     <- forAll $ genCPU memSize
+    cpu     <- genCPU memSize
     a       <- forAll $ word8 (linear minBound maxBound)
     b       <- forAll $ word8 (linear minBound maxBound)
     c       <- forAll $ word8 (linear minBound maxBound)
