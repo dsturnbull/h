@@ -62,6 +62,7 @@ library
                         CPU.Hardware.Sound.Voice
                         CPU.Hardware.Video
                         CPU.Hardware.Video.Chars
+                        CPU.Hardware.Video.Font
                         CPU.Hardware.Video.VIC
                         CPU.Program
                         CPU.Run

@@ -1,13 +1,18 @@
 {-# LANGUAGE BinaryLiterals      #-}
+{-# LANGUAGE RecordWildCards     #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module CPU.Hardware.Video.Chars
   ( loadFont
   , mkFont
   , updateCharColour
-  , Font(..)
   , mkARGB8888
+  , drawChars
   ) where
+
+import CPU
+import CPU.Hardware.Video.Font
+import CPU.Hardware.Video.VIC
 
 import Control.Lens
 import Control.Monad
@@ -15,17 +20,16 @@ import Data.Bifunctor
 import Data.Bits
 import Data.Bits.Lens
 import Data.Char
+import Data.Foldable
+import Data.Vector.Storable ((!))
 import Data.Word
+import Foreign.C.Types
 import SDL
 
 import qualified Data.ByteString                 as BS
 import qualified Data.Map.Strict                 as M
 import qualified Data.Vector.Storable            as DVS
 import qualified Data.Vector.Storable.ByteString as DVSB
-
-newtype Font = Font
-  { chars :: M.Map Char (Texture, [Word8])
-  }
 
 loadFont :: FilePath -> IO (M.Map Char [Word8])
 loadFont fp = do
@@ -56,20 +60,20 @@ mkARGB8888 _ bg False = colour bg
 colour :: Word8 -> [Word8]
 colour 0b0000 = [0x00, 0x00, 0x00, 0x00] -- black
 colour 0b0001 = [0xff, 0xff, 0xff, 0x00] -- white
-colour 0b0010 = [0x0d, 0x16, 0x7d, 0x00] -- red
-colour 0b0011 = [0xee, 0xfd, 0xbd, 0x00] -- cyan
-colour 0b0100 = [0xc6, 0x51, 0xbd, 0x00] -- violet
-colour 0b0101 = [0x64, 0xc8, 0x5c, 0x00] -- green
-colour 0b0110 = [0xa3, 0x10, 0x00, 0x00] -- blue
-colour 0b0111 = [0x88, 0xed, 0xee, 0x00] -- yellow
-colour 0b1000 = [0x53, 0x8b, 0xd2, 0x00] -- orange
-colour 0b1001 = [0x13, 0x45, 0x61, 0x00] -- brown
-colour 0b1010 = [0x7b, 0x7f, 0xef, 0x00] -- light red
-colour 0b1011 = [0x1e, 0x1e, 0x1e, 0x00] -- grey 1
-colour 0b1100 = [0x77, 0x77, 0x77, 0x00] -- grey 2
-colour 0b1101 = [0x7c, 0xfc, 0xbd, 0x00] -- light green
-colour 0b1110 = [0xf7, 0x88, 0x37, 0x00] -- light blue
-colour 0b1111 = [0xbb, 0xbb, 0xbb, 0x00] -- grey 3
+colour 0b0010 = [0x43, 0x4e, 0x89, 0x00] -- red
+colour 0b0011 = [0xcb, 0xc3, 0x92, 0x00] -- cyan
+colour 0b0100 = [0xb1, 0x57, 0x8a, 0x00] -- violet
+colour 0b0101 = [0x59, 0xae, 0x80, 0x00] -- green
+colour 0b0110 = [0xa4, 0x3e, 0x45, 0x00] -- blue
+colour 0b0111 = [0x89, 0xde, 0xd7, 0x00] -- yellow
+colour 0b1000 = [0x38, 0x6a, 0x92, 0x00] -- orange
+colour 0b1001 = [0x17, 0x52, 0x64, 0x00] -- brown
+colour 0b1010 = [0x7a, 0x84, 0xb8, 0x00] -- light red
+colour 0b1011 = [0x60, 0x60, 0x60, 0x00] -- grey 1
+colour 0b1100 = [0x8a, 0x8a, 0x8a, 0x00] -- grey 2
+colour 0b1101 = [0x99, 0xe6, 0xbd, 0x00] -- light green
+colour 0b1110 = [0xd8, 0x7c, 0x83, 0x00] -- light blue
+colour 0b1111 = [0xb3, 0xb3, 0xb3, 0x00] -- grey 3
 colour _      = [0x00, 0x00, 0x00, 0x00] -- ???
 
 mkFont :: Renderer -> IO Font
@@ -86,3 +90,20 @@ mkFont r = do
 updateCharColour :: (Texture, [Word8]) -> Word8 -> IO ()
 updateCharColour (t, bin) c =
   void $ updateTexture t Nothing (mkSprite c bin) (8 * 4)
+
+drawChars :: VIC -> CPU -> IO ()
+drawChars VIC {..} cpu = traverse_ (uncurry printRow) rows
+  where rows     = getRow <$> [0 .. screenRows - 1]
+        printRow :: CInt -> DVS.Vector Word8 -> IO ()
+        printRow r cols =
+          void . sequence $ zip [0..] (DVS.toList cols) <&>
+            \(c, w) ->
+              case (font & chars) M.!? chr (fromIntegral w) of
+                Just f@(t, _)  -> do
+                  updateCharColour f (getColour r c)
+                  copy renderer t Nothing (pure $ Rectangle (P (V2 ((c + 4) * 8 * scale) ((r + 4) * 8 * scale))) (V2 (8 * scale) (8 * scale)))
+                Nothing -> return ()
+        getRow :: Int -> (CInt, DVS.Vector Word8)
+        getRow r = (fromIntegral r, DVS.slice (fromIntegral screenV + r * screenCols) screenCols (cpu & mem))
+        getColour :: CInt -> CInt -> Word8
+        getColour r c = (cpu & mem) ! (fromIntegral colourV + fromIntegral r * screenCols + fromIntegral c)
