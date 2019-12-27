@@ -56,7 +56,7 @@ runCPU :: Integer -> TVar CPU -> IO ()
 runCPU h' cpuSTM =
   forever $ do
     sl <- stepCPU cpuSTM
-    let delay = ceiling $ CPU.ns h'
+    let delay = ceiling $ nanos h'
     nanosleep (fromIntegral $ delay * sl)
     yield
 

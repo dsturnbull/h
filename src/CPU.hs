@@ -29,7 +29,7 @@ module CPU
   , flagsToWord
   , wordToFlags
   , bitShow
-  , ns
+  , nanos
   , h
   , l
   ) where
@@ -179,8 +179,8 @@ _installISR v = v // isr
               , (0xff5a, 0x03) -- JMP ($0314)	;vector	to ISR
               ]
 
-ns :: Integer -> Double
-ns rate = secs * 1000 * 1000 * 1000
+nanos :: Integer -> Double
+nanos rate = secs * 1000 * 1000 * 1000
   where secs = (1 :: Double) / fromInteger rate
 
 st :: Word16 -> Word8 -> CPU -> CPU

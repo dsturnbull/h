@@ -8,7 +8,6 @@ module CPU.Debugger
   , debuggerInput
   , initDebugger
   , updateDebugger
-  , mf
   , DebugState(..)
   ) where
 
@@ -68,19 +67,6 @@ debuggerInput cpu =
       c <- getKey
       cpu & debugger (keys ++ [c])
     getKey = fromIntegral . ord <$> getChar
-
-mf :: [Word8] -> ([Word8], [Word8], [Word8])
-mf input =
-    go input [] [0x1b, 0x5b]
-  where
-    go :: [Word8] -> [Word8] -> [Word8] -> ([Word8], [Word8], [Word8])
-    go (c:cs) keys (n:ns) =
-      if c == n
-        then go cs (keys ++ [c]) ns
-        else go cs (keys ++ [c]) []
-    go (c:cs) [k] [] = ([k], [], cs)
-    go (c:cs) keys [] = (keys ++ [c], [], cs)
-    go [] keys n = (keys, n, [])
 
 initDebugger :: CPU -> IO ()
 initDebugger cpu = do
