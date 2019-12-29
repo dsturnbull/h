@@ -17,6 +17,7 @@ import Control.Lens
 import Control.Monad
 import Data.Bits
 import Data.Bits.Lens
+import Data.Foldable
 import Data.Vector.Storable ((!))
 import Data.Word
 import SDL
@@ -67,25 +68,24 @@ colour 0b1111 = [0xb3, 0xb3, 0xb3] -- grey 3
 colour _      = [0x00, 0x00, 0x00] -- ???
 
 drawSprites :: VIC -> CPU -> IO ()
-drawSprites VIC {..} cpu = do
-  let spr0p = (*64) $ w16 $ DVS.slice (fromIntegral (spritePointerV + 0)) 2 (cpu & mem)
-  let spr0c = (cpu & mem) ! fromIntegral (vicV + 0x27 + 0)
-  let spr0x = fromIntegral $ (cpu & mem) ! fromIntegral (vicV + 0)
-  let spr0y = fromIntegral $ (cpu & mem) ! fromIntegral (vicV + 1)
-  case sprites M.!? 0 of
+drawSprites vic cpu =
+  traverse_ (drawSprite vic cpu) [0..7]
+
+drawSprite :: VIC -> CPU -> Word16 -> IO ()
+drawSprite VIC {..} cpu spr = do
+  let sprp = (*64) $ fromIntegral $ (cpu & mem) ! fromIntegral (spritePointerV + spr)
+  let sprc = (cpu & mem) ! fromIntegral (vicV + spr + 0x27)
+  let sprx = fromIntegral $ (cpu & mem) ! fromIntegral (vicV + spr + 0)
+  let spry = fromIntegral $ (cpu & mem) ! fromIntegral (vicV + spr + 1)
+  case sprites M.!? fromIntegral spr of
     Just (t, _) -> do
-      let bin = loadSprite spr0p cpu
-      updateSpriteColour (t, bin) pitch spr0c Transparent
-      copy renderer t Nothing (pure $ Rectangle (P (V2 (spr0x * scale) (spr0y * scale))) (V2 (24 * scale) (21 * scale)))
+      let bin = loadSprite sprp cpu
+      updateSpriteColour (t, bin) pitch sprc Transparent
+      copy renderer t Nothing (pure $ Rectangle (P (V2 (sprx * scale) (spry * scale))) (V2 (24 * scale) (21 * scale)))
     Nothing -> return ()
 
 loadSprite :: Word16 -> CPU -> [Word8]
 loadSprite addr cpu = DVS.toList $ DVS.slice (fromIntegral addr) 63 (cpu & mem)
-
-w16 :: DVS.Vector Word8 -> Word16
-w16 v = (addrH `shiftL` 8) .|. addrL
-  where addrL = fromIntegral (v ! 0)
-        addrH = fromIntegral (v ! 1)
 
 pitch :: Int
 pitch = 24

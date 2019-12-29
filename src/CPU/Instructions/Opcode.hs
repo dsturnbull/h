@@ -5,6 +5,7 @@ module CPU.Instructions.Opcode
 import CPU.Instructions.Operand
 
 import Control.Monad
+import Data.Char
 import Data.List
 import Data.Word
 
@@ -68,7 +69,7 @@ data Opcode
   | Code
   | Data
   | Bytes [Word8]
-  | Binary String
+  | Binary [Word8]
   deriving Eq
 
 instance Show Opcode where
@@ -132,4 +133,4 @@ instance Show Opcode where
   show Code         = ".code"
   show Data         = ".data"
   show (Bytes ws)   = ".byte " ++ join (intersperse " " (show <$> ws))
-  show (Binary s)   = "!bin " <> s
+  show (Binary s)   = "!bin " <> (chr . fromIntegral <$> s)

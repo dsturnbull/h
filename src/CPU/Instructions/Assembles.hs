@@ -259,11 +259,12 @@ instance Assembles Opcode where
 
   asm _ _ _ _ _ BRK                     = [0x00]
 
+  -- handled in the actual assembler
   asm _ _ _ _ _ (LabelDef _)            = []
   asm _ _ _ _ _ Code                    = []
   asm _ _ _ _ _ Data                    = []
-  asm _ _ _ _ _ (Bytes ws)              = ws
-  asm _ _ _ _ _ (Binary s)              = undefined
+  asm _ _ _ _ _ (Bytes _)               = []
+  asm _ _ _ _ _ (Binary _)              = []
 
 relLabel :: Word16 -> [Opcode] -> Int -> String -> [Word8]
 relLabel base a o s =

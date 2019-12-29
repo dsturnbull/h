@@ -30,9 +30,10 @@ import qualified Data.Text                       as T
 import qualified Data.Vector.Storable            as DVS
 import qualified Data.Vector.Storable.ByteString as DVSB
 
-assemble :: T.Text -> Word16 -> Word16 -> Program
-assemble prog = assembleOpcodes ins
-  where ins = fromRight [] $ parseAssembly (T.unpack prog)
+assemble :: T.Text -> Word16 -> Word16 -> IO Program
+assemble prog coff doff = do
+  ins <- fromRight [] <$> parseAssembly (T.unpack prog)
+  return $ assembleOpcodes ins coff doff
 
 assembleOpcodes :: [Opcode] -> Word16 -> Word16 -> Program
 assembleOpcodes ins codeLoc dataLoc = Program (codeLoc, DVS.fromList (snd <$> sortOn fst cs)) (dataLoc, DVS.fromList (snd <$> sortOn fst ds))
@@ -66,7 +67,7 @@ insPositions seg coff coff' doff doff' ins (i:is) cs ds =
     Code       -> insPositions CodeSegment coff coff' doff doff' ins is cs ds
     Data       -> insPositions DataSegment coff coff' doff doff' ins is cs ds
     (Bytes ws) -> insPositions seg coff coff' doff (doff' + length ws)   ins is cs ((first (doff' +) <$> zip [0..] ws) ++ ds)
-    -- (Binary s) -> insPositions seg coff coff' doff (doff' + length ws)   ins is cs ((first (doff' +) <$> zip [0..] ws) ++ ds)
+    (Binary s) -> insPositions seg coff coff' doff (doff' + length s)    ins is cs ((first (doff' +) <$> zip [0..]  s) ++ ds)
     _          -> insPositions seg coff (coff' + insLength i) doff doff' ins is    ((first (coff' +) <$> zip [0..]  c) ++ cs) ds
   where c = asm coff' seg (fromIntegral coff) (fromIntegral doff) ins i
 insPositions _ _ _ _ _ _ [] cs ds = (cs, ds)

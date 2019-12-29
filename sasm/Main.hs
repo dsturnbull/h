@@ -32,10 +32,10 @@ main = do
 
   t <- readFile (opt ^. the @"inputFile")
 
-  let prog = assemble
-        (T.pack t)
-        (fromIntegral $ opt ^. the @"codeLoc")
-        (fromIntegral $ opt ^. the @"dataLoc")
+  prog <- assemble
+            (T.pack t)
+            (fromIntegral $ opt ^. the @"codeLoc")
+            (fromIntegral $ opt ^. the @"dataLoc")
 
   handle <- openBinaryFile out WriteMode
   LBS.hPut handle $ writeProgram prog

@@ -1,4 +1,5 @@
 {
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module ASM.Parser (
   assembly,
@@ -13,6 +14,9 @@ import CPU.Instructions.Operand
 import CPU.Program
 
 import Control.Monad.Except
+import Control.Monad.IO.Class
+
+import qualified Data.ByteString as BS
 
 }
 
@@ -100,7 +104,7 @@ import Control.Monad.Except
     string { TokenString _ $$ }
 
 -- Parser monad
-%monad { Except String } { (>>=) } { return }
+%monad { ExceptT String IO } { (>>=) } { return }
 %error { parseError }
 
 -- Entry point
@@ -175,7 +179,7 @@ instruction  : adc oper { ADC $2 }
              | code     { Code   }
              | data     { Data   }
              | byte bytes { Bytes $2 }
-             | bin string { Binary $2 }
+             | bin string {% do contents <- ExceptT (fmap Right (BS.readFile $2)); return (Binary (BS.unpack contents)) }
 
 oper         : '#'  nm                 { Imm  $2 }
 oper         : '<' '#' '$' w16         { Imm (l $4) }
@@ -206,16 +210,18 @@ labeldef     : lbl ':'                 { LabelDef $1 }
 bytes        : byteval                 { [$1] }
              | byteval ',' bytes       { $1 : $3 }
 byteval      : '$' w8                  { $2 }
+             | '%' w8                  { $2 }
 
 {
-parseError :: [Token] -> Except String a
+parseError :: [Token] -> ExceptT String IO a
 parseError (l:ls) = throwError (show l)
 parseError [] = throwError "Unexpected end of Input"
 
-parseAssembly :: String -> Either String [Opcode]
-parseAssembly input = runExcept $ do
-  tokenStream <- scanTokens input
-  assembly tokenStream
+parseAssembly :: String -> IO (Either String [Opcode])
+parseAssembly input =
+  case runExcept (scanTokens input) of
+    Left e -> error e
+    Right tokens -> runExceptT (assembly tokens)
 
 parseTokens :: String -> Either String [Token]
 parseTokens = runExcept . scanTokens

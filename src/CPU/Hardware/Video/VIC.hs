@@ -6,6 +6,7 @@ module CPU.Hardware.Video.VIC
   , mkVIC
   , screenRows
   , screenCols
+  , vicBankV
   ) where
 
 import CPU.Hardware.Video.Font
@@ -32,7 +33,7 @@ mkVIC :: IO VIC
 mkVIC = do
   let w'             = (40 + 8) * 8
   let h'             = (25 + 8) * 8
-  let scale          = 2
+  let scale          = 4
   window            <- createWindow "h" (defaultWindow { windowInitialSize = V2 (w' * scale) (h' * scale) })
   renderer          <- createRenderer window (-1) defaultRenderer
   (V2 width height) <- glGetDrawableSize window
@@ -46,3 +47,6 @@ screenRows = 25
 
 screenCols :: Int
 screenCols = 40
+
+vicBankV :: Word16
+vicBankV = 0x2000

@@ -117,7 +117,7 @@ tokens :-
 
   -- Macros
   !bin                          { tok (\p _ -> TokenBinary p) }
-  @string                       { tok (\p s -> TokenString p s) }
+  @string                       { tok (\p s -> TokenString p (read s)) }
 {
 tok f = f
 
