@@ -167,7 +167,7 @@ instance Length Opcode where
   insLength (ROL (ZpgX _))            = 2
   insLength (ROL (Abs _))             = 3
   insLength (ROL (AbsX _))            = 3
-  insLength (ROL (Label _))= 3
+  insLength (ROL (Label _))           = 3
   insLength (ROL _)                   = undefined
 
   insLength (ROR Acc)                 = 1
@@ -175,7 +175,7 @@ instance Length Opcode where
   insLength (ROR (ZpgX _))            = 2
   insLength (ROR (Abs _))             = 3
   insLength (ROR (AbsX _))            = 3
-  insLength (ROR (Label _))= 3
+  insLength (ROR (Label _))           = 3
   insLength (ROR _)                   = undefined
 
   insLength RTI                       = 1
@@ -189,7 +189,7 @@ instance Length Opcode where
   insLength (SBC (AbsY _))            = 3
   insLength (SBC (IndX _))            = 2
   insLength (SBC (IndY _))            = 2
-  insLength (SBC (Label _))= 3
+  insLength (SBC (Label _))           = 3
   insLength (SBC _)                   = undefined
 
   insLength SEC                       = 1
@@ -229,3 +229,4 @@ instance Length Opcode where
   insLength Code                      = 0
   insLength Data                      = 0
   insLength (Bytes ws)                = fromIntegral $ length ws
+  insLength (Binary _)                = 0

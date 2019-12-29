@@ -10,6 +10,7 @@ module CPU.Hardware.Video
 import CPU
 import CPU.Hardware.Interrupt
 import CPU.Hardware.Video.Chars
+import CPU.Hardware.Video.Sprites
 import CPU.Hardware.Video.VIC
 
 import Control.Concurrent.STM
@@ -17,7 +18,6 @@ import Control.Lens
 import Control.Monad
 import Data.Char
 import Data.Word
-import Foreign.C.Types
 import SDL
 
 import qualified Data.Text     as T
@@ -26,21 +26,12 @@ import qualified SDL.Raw.Event as Raw
 runVideo :: TVar CPU -> IO ()
 runVideo cpuSTM = do
   initializeAll
-  let w' = (40 + 8) * 8
-  let h' = (25 + 8) * 8
-  let scale :: CInt = 4
-  window   <- createWindow "h" (defaultWindow { windowInitialSize = V2 (w' * scale) (h' * scale) })
-  renderer <- createRenderer window (-1) defaultRenderer
-  (V2 width height) <- glGetDrawableSize window
-  font <- mkFont renderer
-  held <- newTMVarIO ()
-
   Raw.startTextInput
+  vic <- mkVIC
+  appLoop vic cpuSTM
 
-  appLoop $ VIC {..}
-
-appLoop :: VIC -> IO ()
-appLoop vic@VIC {..} = do
+appLoop :: VIC -> TVar CPU -> IO ()
+appLoop vic@VIC {..} cpuSTM = do
   events <- pollEvents
 
   let text = mconcat $ events <&> \event ->
@@ -61,9 +52,10 @@ appLoop vic@VIC {..} = do
 
   cpu <- readTVarIO cpuSTM
   drawChars vic cpu
+  drawSprites vic cpu
 
   present renderer
-  appLoop vic
+  appLoop vic cpuSTM
 
 processInput :: Word8 -> CPU -> CPU
 processInput c cpu =

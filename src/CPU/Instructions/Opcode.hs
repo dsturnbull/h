@@ -68,6 +68,7 @@ data Opcode
   | Code
   | Data
   | Bytes [Word8]
+  | Binary String
   deriving Eq
 
 instance Show Opcode where
@@ -131,3 +132,4 @@ instance Show Opcode where
   show Code         = ".code"
   show Data         = ".data"
   show (Bytes ws)   = ".byte " ++ join (intersperse " " (show <$> ws))
+  show (Binary s)   = "!bin " <> s

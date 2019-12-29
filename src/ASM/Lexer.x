@@ -22,6 +22,8 @@ $eol   = [\n]
 $label = [a-zA-Z0-9_]
 $bits  = [01]
 $chr   = .
+@character = . # \" # \\
+@string = \" (@character+)? \"
 
 tokens :-
 
@@ -112,6 +114,10 @@ tokens :-
   .code                         { tok (\p _ -> TokenCode p) }
   .data                         { tok (\p _ -> TokenData p) }
   .byte                         { tok (\p _ -> TokenBytes p) }
+
+  -- Macros
+  !bin                          { tok (\p _ -> TokenBinary p) }
+  @string                       { tok (\p s -> TokenString p s) }
 {
 tok f = f
 
@@ -193,74 +199,9 @@ data Token
   | TokenCode AlexPosn
   | TokenData AlexPosn
   | TokenBytes AlexPosn
+  | TokenBinary AlexPosn
+  | TokenString AlexPosn String
   deriving (Eq,Show)
-
-{-
-token_pos (TokenADC p) = p
-token_pos (TokenAND p) = p
-token_pos (TokenASL p) = p
-token_pos (TokenBCC p) = p
-token_pos (TokenBCS p) = p
-token_pos (TokenBEQ p) = p
-token_pos (TokenBMI p) = p
-token_pos (TokenBNE p) = p
-token_pos (TokenBPL p) = p
-token_pos (TokenBVC p) = p
-token_pos (TokenBVS p) = p
-token_pos (TokenCLC p) = p
-token_pos (TokenCLI p) = p
-token_pos (TokenCLV p) = p
-token_pos (TokenCLD p) = p
-token_pos (TokenCMP p) = p
-token_pos (TokenCPX p) = p
-token_pos (TokenCPY p) = p
-token_pos (TokenDEC p) = p
-token_pos (TokenDEX p) = p
-token_pos (TokenDEY p) = p
-token_pos (TokenEOR p) = p
-token_pos (TokenINC p) = p
-token_pos (TokenINX p) = p
-token_pos (TokenINY p) = p
-token_pos (TokenJMP p) = p
-token_pos (TokenJSR p) = p
-token_pos (TokenLDA p) = p
-token_pos (TokenLDX p) = p
-token_pos (TokenLDY p) = p
-token_pos (TokenLSR p) = p
-token_pos (TokenNOP p) = p
-token_pos (TokenORA p) = p
-token_pos (TokenSEC p) = p
-token_pos (TokenSEI p) = p
-token_pos (TokenSED p) = p
-token_pos (TokenROL p) = p
-token_pos (TokenROR p) = p
-token_pos (TokenRTI p) = p
-token_pos (TokenRTS p) = p
-token_pos (TokenSBC p) = p
-token_pos (TokenSTA p) = p
-token_pos (TokenSTX p) = p
-token_pos (TokenSTY p) = p
-token_pos (TokenTAX p) = p
-token_pos (TokenTXA p) = p
-token_pos (TokenTAY p) = p
-token_pos (TokenTYA p) = p
-token_pos (TokenTSX p) = p
-token_pos (TokenTXS p) = p
-token_pos (TokenBRK p) = p
-
-token_pos (TokenWord8 p _) = p
-token_pos (TokenWord16 p _) = p
-token_pos (TokenDollar p) = p
-token_pos (TokenHash p) = p
-token_pos (TokenComma p) = p
-token_pos (TokenX p) = p
-token_pos (TokenY p) = p
-token_pos (TokenOpenParen p) = p
-token_pos (TokenCloseParen p) = p
-token_pos (TokenEOF p) = p
-token_pos (TokenLabel p _) = p
-token_pos (TokenColon p) = p
--}
 
 scanTokens :: String -> Except String [Token]
 scanTokens str = go (alexStartPos,'\n',[],str)

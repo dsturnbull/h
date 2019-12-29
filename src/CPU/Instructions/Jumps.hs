@@ -67,3 +67,4 @@ instance Jumps Opcode where
   jumps Code         = undefined
   jumps Data         = undefined
   jumps (Bytes _)    = undefined
+  jumps (Binary _)   = undefined

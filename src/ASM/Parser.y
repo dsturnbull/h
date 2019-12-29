@@ -95,7 +95,9 @@ import Control.Monad.Except
 
     code  { TokenCode _ }
     data  { TokenData _ }
-    byte  { TokenBytes _}
+    byte  { TokenBytes _ }
+    bin   { TokenBinary _ }
+    string { TokenString _ $$ }
 
 -- Parser monad
 %monad { Except String } { (>>=) } { return }
@@ -173,6 +175,7 @@ instruction  : adc oper { ADC $2 }
              | code     { Code   }
              | data     { Data   }
              | byte bytes { Bytes $2 }
+             | bin string { Binary $2 }
 
 oper         : '#'  nm                 { Imm  $2 }
 oper         : '<' '#' '$' w16         { Imm (l $4) }

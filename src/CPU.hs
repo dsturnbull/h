@@ -18,11 +18,13 @@ module CPU
   , zeropage
   , stack
   , kbd
+  , spritePointerV
   , irqV
   , brkV
   , nmiV
   , timerAV
   , screenV
+  , vicV
   , soundV
   , colourV
   , page
@@ -216,6 +218,9 @@ stack = 0x0100
 kbd :: Word16
 kbd = 0x300
 
+spritePointerV :: Word16
+spritePointerV = 0x7f8
+
 irqV :: Word16
 irqV = 0xfffe
 
@@ -230,6 +235,9 @@ timerAV = 0x0320
 
 screenV :: Word16
 screenV = 0x0400
+
+vicV :: Word16
+vicV = 0xd000
 
 soundV :: Word16
 soundV = 0xd400

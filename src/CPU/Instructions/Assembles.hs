@@ -262,7 +262,8 @@ instance Assembles Opcode where
   asm _ _ _ _ _ (LabelDef _)            = []
   asm _ _ _ _ _ Code                    = []
   asm _ _ _ _ _ Data                    = []
-  asm _ _ _ _ _ (Bytes ws)      = ws
+  asm _ _ _ _ _ (Bytes ws)              = ws
+  asm _ _ _ _ _ (Binary s)              = undefined
 
 relLabel :: Word16 -> [Opcode] -> Int -> String -> [Word8]
 relLabel base a o s =

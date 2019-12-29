@@ -66,6 +66,7 @@ insPositions seg coff coff' doff doff' ins (i:is) cs ds =
     Code       -> insPositions CodeSegment coff coff' doff doff' ins is cs ds
     Data       -> insPositions DataSegment coff coff' doff doff' ins is cs ds
     (Bytes ws) -> insPositions seg coff coff' doff (doff' + length ws)   ins is cs ((first (doff' +) <$> zip [0..] ws) ++ ds)
+    -- (Binary s) -> insPositions seg coff coff' doff (doff' + length ws)   ins is cs ((first (doff' +) <$> zip [0..] ws) ++ ds)
     _          -> insPositions seg coff (coff' + insLength i) doff doff' ins is    ((first (coff' +) <$> zip [0..]  c) ++ cs) ds
   where c = asm coff' seg (fromIntegral coff) (fromIntegral doff) ins i
 insPositions _ _ _ _ _ _ [] cs ds = (cs, ds)
