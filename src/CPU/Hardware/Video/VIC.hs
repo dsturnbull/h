@@ -7,6 +7,7 @@ module CPU.Hardware.Video.VIC
   , screenRows
   , screenCols
   , vicBankV
+  , border
   ) where
 
 import CPU.Hardware.Video.Font
@@ -31,8 +32,8 @@ data VIC = VIC
 
 mkVIC :: IO VIC
 mkVIC = do
-  let w'             = (40 + 8) * 8
-  let h'             = (25 + 8) * 8
+  let w'             = (fromIntegral screenCols + 8) * 8
+  let h'             = (fromIntegral screenRows + 8) * 8
   let scale          = 2
   window            <- createWindow "h" (defaultWindow { windowInitialSize = V2 (w' * scale) (h' * scale) })
   renderer          <- createRenderer window (-1) defaultRenderer
@@ -47,6 +48,9 @@ screenRows = 25
 
 screenCols :: Int
 screenCols = 40
+
+border :: Int
+border = 4
 
 vicBankV :: Word16
 vicBankV = 0x2000

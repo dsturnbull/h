@@ -40,7 +40,9 @@ drawChar r c w col VIC {..} =
   case (font & chars) M.!? chr (fromIntegral w) of
     Just f@(t, _)  -> do
       updateSpriteColour f pitch col Colour
-      copy renderer t Nothing (pure $ Rectangle (P (V2 ((c + 4) * 8 * scale) ((r + 4) * 8 * scale))) (V2 (8 * scale) (8 * scale)))
+      copy renderer t Nothing (pure $ Rectangle (P (V2 ((c + fromIntegral border) * 8 * scale)
+                                                       ((r + fromIntegral border) * 8 * scale)))
+                                                (V2 (8 * scale) (8 * scale)))
     Nothing -> return ()
 
 pitch :: Int
