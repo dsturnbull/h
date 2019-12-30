@@ -227,4 +227,4 @@ execute i =
       Code         -> undefined
       Data         -> undefined
       Bytes _      -> undefined
-      Binary _     -> undefined
+      Origin _     -> undefined

@@ -2,5 +2,7 @@ module CPU.Segment
   (Segment(..))
   where
 
-data Segment = CodeSegment | DataSegment
+import Data.Word
+
+data Segment = CodeSegment | DataSegment | OffsetSegment Word16
   deriving (Show, Eq)

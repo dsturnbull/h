@@ -114,6 +114,7 @@ tokens :-
   .code                         { tok (\p _ -> TokenCode p) }
   .data                         { tok (\p _ -> TokenData p) }
   .byte                         { tok (\p _ -> TokenBytes p) }
+  .org                          { tok (\p _ -> TokenOrigin p) }
 
   -- Macros
   !bin                          { tok (\p _ -> TokenBinary p) }
@@ -201,6 +202,7 @@ data Token
   | TokenBytes AlexPosn
   | TokenBinary AlexPosn
   | TokenString AlexPosn String
+  | TokenOrigin AlexPosn
   deriving (Eq,Show)
 
 scanTokens :: String -> Except String [Token]

@@ -4,43 +4,24 @@ _posH:
   .byte $04
 _posL:
   .byte $00
-_fill:
-  .byte $ff, $ff
-  .byte $ff, $ff, $ff, $ff, $ff
-  .byte $ff, $ff, $ff, $ff, $ff
-  .byte $ff, $ff, $ff, $ff, $ff
-  .byte $ff, $ff, $ff, $ff, $ff
-  .byte $ff, $ff, $ff, $ff, $ff
-  .byte $ff, $ff, $ff, $ff, $ff
-  .byte $ff, $ff, $ff, $ff, $ff
-  .byte $ff, $ff, $ff, $ff, $ff
-  .byte $ff, $ff, $ff, $ff, $ff
-  .byte $ff, $ff, $ff, $ff, $ff
-  .byte $ff, $ff, $ff, $ff, $ff
-  .byte $ff, $ff, $ff, $ff, $ff
 
-_sprite_0:
-.byte %00000000,%00000000,%00000000
-.byte %00000000,%00000000,%00000000
-.byte %00000000,%00000000,%00000000
-.byte %00011000,%00000000,%00000000
-.byte %00001100,%00000000,%00000000
-.byte %00000010,%00000000,%00000000
-.byte %00000011,%00000000,%00000000
-.byte %00000001,%10000000,%00000000
-.byte %00000000,%11000000,%00000000
-.byte %00000000,%00100000,%00000000
-.byte %00000000,%00011000,%00000000
-.byte %00000000,%00001100,%00000000
-.byte %00000000,%00000011,%00000000
-.byte %00000000,%00000000,%00000000
-.byte %00000000,%00000000,%00000000
-.byte %00000000,%00000000,%00000000
-.byte %00000000,%00000000,%00000000
-.byte %00000000,%00000000,%00000000
-.byte %00000000,%00000000,%00000000
-.byte %00000000,%00000000,%00000000
-.byte %00000000,%00000000,%00000000
+.org $2000
+!bin "6502/hikaty.spr"
+.byte $00
+!bin "6502/hikaty.spr"
+.byte $00
+!bin "6502/hikaty.spr"
+.byte $00
+!bin "6502/hikaty.spr"
+.byte $00
+!bin "6502/hikaty.spr"
+.byte $00
+!bin "6502/hikaty.spr"
+.byte $00
+!bin "6502/hikaty.spr"
+.byte $00
+!bin "6502/hikaty.spr"
+.byte $00
 
 .code
 
@@ -60,41 +41,30 @@ _write_1:
   sta $d015 ; enable sprite 0
   lda #$00
   sta $d01b ; draw sprite in front
-  lda #%00000001
-  sta $d027
-  lda #%00000011
-  sta $d028
-  lda #%00000100
-  sta $d029
-  lda #%00001000
-  sta $d02a
-  lda #%00001111
-  sta $d02b
-  lda #%00000010
-  sta $d02c
-  lda #%00000000
-  sta $d02d
-  lda #%00000110
-  sta $d02e
+
+  ldx #$00
+  ldy #$00
   lda #$80
-  sta $d000 ; set sprite to row 128
-  lda #$40
-  sta $d001 ; set sprite to col 64
+_set_sprite_pos:
+  sta $d000,X
+  sta $d001,X
+  inx
+  inx
+  iny
+  cpy #$10
+  bne _set_sprite_pos
 
-  ; write sprite
-  ; !bin "6502/hikaty.spr"
+  ; set spr ptrs
+  ldx #$00
+_load_spr_ptr:
+  lda #$80
+  sta $07f8,X
+  inx
+  cpx #$08
+  bne _load_spr_ptr
 
-  ; set spr01 ptr
-  lda #$81
-  sta $07f8
-  sta $07f9
-  sta $07fa
-  sta $07fb
-  sta $07fc
-  sta $07fd
-  sta $07fe
-  sta $07ff
-
+_main:
+  lda #$00
 _loop:
   ldx #$ff
   ldy #$ff
@@ -105,19 +75,51 @@ _y:
   dey
   bne _y
 
-  inc $d000
-  inc $d001
-  dec $d002
+  ; spr0 nw
+  dec $d000
+  dec $d001
+  ; spr1 ne
+  inc $d002
   dec $d003
+  ; spr2 e
+  inc $d004
+  ;   $d005
+  ; spr3 se
+  inc $d006
+  inc $d007
+  ; spr4 s
+  ;   $d008
+  inc $d009
+  ; spr5 sw
+  dec $d00a
+  inc $d00b
+  ; spr6 w
+  dec $d00c
+  ;   $d00d
+  ; spr7 n
+  ;   $d00e
+  dec $d00f
+
+  jsr _change_colour
+  adc #$01
   jmp _loop
 
-;   ldx #$ff      ; 2
-; _inc:
-;   inc $d7ff,X   ; 7
-;   dex           ; 2
-;   bne _inc      ; 2
-;   jmp _loop     ; 3
-
+_change_colour:
+  ; set spr0 colour
+  ldx #$00
+_set_colour:
+  sta $e000,X
+  sta $e040,X
+  sta $e080,X
+  sta $e0c0,X
+  sta $e100,X
+  sta $e140,X
+  sta $e180,X
+  sta $e1c0,X
+  inx
+  cpx #$40
+  bne _set_colour
+  rts
 _isr:
   pha
   txa

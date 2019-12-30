@@ -229,4 +229,4 @@ instance Length Opcode where
   insLength Code                      = 0
   insLength Data                      = 0
   insLength (Bytes ws)                = fromIntegral $ length ws
-  insLength (Binary _)                = 0
+  insLength (Origin _)                = 0

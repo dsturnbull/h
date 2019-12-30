@@ -27,6 +27,7 @@ module CPU
   , vicV
   , soundV
   , colourV
+  , vicExtendedV
   , page
   , flagsToWord
   , wordToFlags
@@ -244,6 +245,9 @@ soundV = 0xd400
 
 colourV :: Word16
 colourV = 0xd800
+
+vicExtendedV :: Word16
+vicExtendedV = 0xe000
 
 page :: Word8
 page = maxBound

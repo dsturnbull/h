@@ -216,4 +216,4 @@ instance Timed Opcode where
   cycles Code           = 0
   cycles Data           = 0
   cycles (Bytes _)      = 0
-  cycles (Binary _)     = 0
+  cycles (Origin _)     = 0

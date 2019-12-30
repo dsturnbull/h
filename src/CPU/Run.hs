@@ -51,7 +51,6 @@ import System.Posix.Unistd
 import qualified Data.Vector.Storable            as DVS
 import qualified Data.Vector.Storable.ByteString as DVSB
 
--- XXX figure it out
 runCPU :: Integer -> TVar CPU -> IO ()
 runCPU h' cpuSTM =
   forever $ do
@@ -71,13 +70,13 @@ runSound cpuSTM =
 
 readProgram :: Get (Word16, Program)
 readProgram = do
-  cloc <- loc
-  clen <- len
-  cdat <- getByteString (fromIntegral clen)
-  dloc <- loc
-  dlen <- len
-  ddat <- getByteString (fromIntegral dlen)
-  return (cloc, Program (cloc, DVSB.byteStringToVector cdat) (dloc, DVSB.byteStringToVector ddat))
+  (cloc, cdat) <- segment
+  (dloc, ddat) <- segment
+  n <- len8
+  others <- if n > 0
+              then traverse (const segment) [0 .. n - 1]
+              else return []
+  return (cloc, Program (cloc, cdat) (dloc, ddat) others)
 
   where
     loc :: Get Word16
@@ -86,11 +85,26 @@ readProgram = do
     len :: Get Word16
     len = getWord16be
 
+    len8 :: Get Word8
+    len8 = getWord8
+
+    segment :: Get (Word16, DVS.Vector Word8)
+    segment = do
+      loc' <- loc
+      len' <- len
+      dat' <- getByteString (fromIntegral len')
+      return (loc', DVSB.byteStringToVector dat')
+
 load :: Program -> CPU -> CPU
-load (Program (coff, cdat) (doff, ddat)) cpu = do
+load (Program c d ((ooff, odat) : others)) cpu =
+  let o    = zip [fromIntegral ooff..] (DVS.toList odat)
+      cpu' = cpu & field @"mem" %~ (// o)
+  in load (Program c d others) cpu'
+
+load (Program (coff, cdat) (doff, ddat) []) cpu =
   let c = zip [fromIntegral coff..] (DVS.toList cdat)
-  let d = zip [fromIntegral doff..] (DVS.toList ddat)
-  cpu & field @"mem" %~ (// (c ++ d))
+      d = zip [fromIntegral doff..] (DVS.toList ddat)
+  in cpu & field @"mem" %~ (// (c ++ d))
 
 stepCPU :: TVar CPU -> IO Int
 stepCPU cpuSTM = do

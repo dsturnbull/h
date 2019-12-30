@@ -33,7 +33,7 @@ mkVIC :: IO VIC
 mkVIC = do
   let w'             = (40 + 8) * 8
   let h'             = (25 + 8) * 8
-  let scale          = 4
+  let scale          = 2
   window            <- createWindow "h" (defaultWindow { windowInitialSize = V2 (w' * scale) (h' * scale) })
   renderer          <- createRenderer window (-1) defaultRenderer
   (V2 width height) <- glGetDrawableSize window

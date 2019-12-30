@@ -101,7 +101,8 @@ import qualified Data.ByteString as BS
     data  { TokenData _ }
     byte  { TokenBytes _ }
     bin   { TokenBinary _ }
-    string { TokenString _ $$ }
+    str   { TokenString _ $$ }
+    org   { TokenOrigin _ }
 
 -- Parser monad
 %monad { ExceptT String IO } { (>>=) } { return }
@@ -115,71 +116,73 @@ import qualified Data.ByteString as BS
 %left '*'
 %%
 
-assembly     : instruction                 { [$1] }
-             | instruction assembly        { $1 : $2 }
+assembly     : instruction             { [$1] }
+             | instruction assembly    { $1 : $2 }
 
-instruction  : adc oper { ADC $2 }
-             | and oper { AND $2 }
-             | asl oper { ASL $2 }
-             | bcc rel  { BCC $2 }
-             | bcs rel  { BCS $2 }
-             | beq rel  { BEQ $2 }
-             | bmi rel  { BMI $2 }
-             | bne rel  { BNE $2 }
-             | bne rel  { BNE $2 }
-             | bne rel  { BNE $2 }
-             | bpl rel  { BPL $2 }
-             | bvc rel  { BVC $2 }
-             | bvs rel  { BVS $2 }
-             | clc      { CLC    }
-             | cli      { CLI    }
-             | clv      { CLV    }
-             | cld      { CLD    }
-             | cmp oper { CMP $2 }
-             | cpx oper { CPX $2 }
-             | cpy oper { CPY $2 }
-             | dec oper { DEC $2 }
-             | dex      { DEX    }
-             | dey      { DEY    }
-             | eor oper { EOR $2 }
-             | inc oper { INC $2 }
-             | inx      { INX    }
-             | iny      { INY    }
-             | jmp oper { JMP $2 }
-             | jsr oper { JSR $2 }
-             | lda oper { LDA $2 }
-             | ldx oper { LDX $2 }
-             | ldy oper { LDY $2 }
-             | lsr oper { LSR $2 }
-             | nop      { NOP    }
-             | ora oper { ORA $2 }
-             | pha      { PHA    }
-             | php      { PHP    }
-             | pla      { PLA    }
-             | plp      { PLP    }
-             | rol oper { ROL $2 }
-             | ror oper { ROR $2 }
-             | rti      { RTI    }
-             | rts      { RTS    }
-             | sbc oper { SBC $2 }
-             | sec      { SEC    }
-             | sei      { SEI    }
-             | sed      { SED    }
-             | sta oper { STA $2 }
-             | stx oper { STX $2 }
-             | sty oper { STY $2 }
-             | tax      { TAX    }
-             | txa      { TXA    }
-             | tay      { TAY    }
-             | tya      { TYA    }
-             | tsx      { TXS    }
-             | txs      { TSX    }
-             | brk      { BRK    }
-             | labeldef { $1     }
-             | code     { Code   }
-             | data     { Data   }
-             | byte bytes { Bytes $2 }
-             | bin string {% do contents <- ExceptT (fmap Right (BS.readFile $2)); return (Binary (BS.unpack contents)) }
+instruction  : adc oper                { ADC $2   }
+             | and oper                { AND $2   }
+             | asl oper                { ASL $2   }
+             | asl                     { ASL Acc  }
+             | bcc rel                 { BCC $2   }
+             | bcs rel                 { BCS $2   }
+             | beq rel                 { BEQ $2   }
+             | bmi rel                 { BMI $2   }
+             | bne rel                 { BNE $2   }
+             | bne rel                 { BNE $2   }
+             | bne rel                 { BNE $2   }
+             | bpl rel                 { BPL $2   }
+             | bvc rel                 { BVC $2   }
+             | bvs rel                 { BVS $2   }
+             | clc                     { CLC      }
+             | cli                     { CLI      }
+             | clv                     { CLV      }
+             | cld                     { CLD      }
+             | cmp oper                { CMP $2   }
+             | cpx oper                { CPX $2   }
+             | cpy oper                { CPY $2   }
+             | dec oper                { DEC $2   }
+             | dex                     { DEX      }
+             | dey                     { DEY      }
+             | eor oper                { EOR $2   }
+             | inc oper                { INC $2   }
+             | inx                     { INX      }
+             | iny                     { INY      }
+             | jmp oper                { JMP $2   }
+             | jsr oper                { JSR $2   }
+             | lda oper                { LDA $2   }
+             | ldx oper                { LDX $2   }
+             | ldy oper                { LDY $2   }
+             | lsr oper                { LSR $2   }
+             | nop                     { NOP      }
+             | ora oper                { ORA $2   }
+             | pha                     { PHA      }
+             | php                     { PHP      }
+             | pla                     { PLA      }
+             | plp                     { PLP      }
+             | rol oper                { ROL $2   }
+             | ror oper                { ROR $2   }
+             | rti                     { RTI      }
+             | rts                     { RTS      }
+             | sbc oper                { SBC $2   }
+             | sec                     { SEC      }
+             | sei                     { SEI      }
+             | sed                     { SED      }
+             | sta oper                { STA $2   }
+             | stx oper                { STX $2   }
+             | sty oper                { STY $2   }
+             | tax                     { TAX      }
+             | txa                     { TXA      }
+             | tay                     { TAY      }
+             | tya                     { TYA      }
+             | tsx                     { TXS      }
+             | txs                     { TSX      }
+             | brk                     { BRK      }
+             | labeldef                { $1       }
+             | code                    { Code     }
+             | data                    { Data     }
+             | byte bytes              { Bytes $2 }
+             | bin str                 {% do contents <- ExceptT (fmap Right (BS.readFile $2)); return (Bytes (BS.unpack contents)) }
+             | org '$' w16             { Origin $3 }
 
 oper         : '#'  nm                 { Imm  $2 }
 oper         : '<' '#' '$' w16         { Imm (l $4) }
@@ -190,7 +193,7 @@ oper         :     '$' w16 ',' 'Y'     { AbsY $2 }
 oper         :      nm                 { Zpg  $1 }
 oper         :      nm     ',' 'X'     { ZpgX $1 }
 oper         :      nm     ',' 'Y'     { ZpgY $1 }
-oper         : '(' '$' w16 ',' 'X' ')' { Ind $3  }
+oper         : '(' '$' w16 ',' 'X' ')' { Ind $3 }
 oper         : '('  nm     ',' 'X' ')' { IndX $2 }
 oper         : '('  nm     ')' ',' 'Y' { IndY $2 }
 oper         : '(' lbl ')'             { IndirectLabel $2 }

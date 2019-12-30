@@ -264,7 +264,7 @@ instance Assembles Opcode where
   asm _ _ _ _ _ Code                    = []
   asm _ _ _ _ _ Data                    = []
   asm _ _ _ _ _ (Bytes _)               = []
-  asm _ _ _ _ _ (Binary _)              = []
+  asm _ _ _ _ _ (Origin _)              = []
 
 relLabel :: Word16 -> [Opcode] -> Int -> String -> [Word8]
 relLabel base a o s =
@@ -280,8 +280,9 @@ relLabel base a o s =
 findLabel :: Maybe Word8 -> Word8 -> Word16 -> Word16 -> [Opcode] -> String -> [Word8]
 findLabel _ a c d ins s =
   case seg of
-    CodeSegment -> [a, l codeLoc, h codeLoc]
-    DataSegment -> [a, l dataLoc, h dataLoc]
+    CodeSegment     -> [a, l codeLoc, h codeLoc]
+    DataSegment     -> [a, l dataLoc, h dataLoc]
+    OffsetSegment _ -> undefined
   where
     (datas, codes) = splitAt (fromMaybe (length ins) $ elemIndex Code ins) ins
     codeLoc   = findLoc $ locate c codes

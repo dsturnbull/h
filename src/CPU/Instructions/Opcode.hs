@@ -5,9 +5,9 @@ module CPU.Instructions.Opcode
 import CPU.Instructions.Operand
 
 import Control.Monad
-import Data.Char
 import Data.List
 import Data.Word
+import Text.Printf
 
 data Opcode
   = ADC Operand
@@ -69,7 +69,7 @@ data Opcode
   | Code
   | Data
   | Bytes [Word8]
-  | Binary [Word8]
+  | Origin Word16
   deriving Eq
 
 instance Show Opcode where
@@ -132,5 +132,5 @@ instance Show Opcode where
   show (LabelDef s) = s
   show Code         = ".code"
   show Data         = ".data"
-  show (Bytes ws)   = ".byte " ++ join (intersperse " " (show <$> ws))
-  show (Binary s)   = "!bin " <> (chr . fromIntegral <$> s)
+  show (Bytes ws)   = ".byte " <> join (intersperse " " (show <$> ws))
+  show (Origin l)   = ".org " <> printf "%04x" l

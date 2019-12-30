@@ -24,7 +24,7 @@ import qualified Data.Vector.Storable as DVS
 
 disasm :: CPU -> [T.Text]
 disasm cpu = relevant <&> uncurry showMe
-  where (cdat, _)    = A.disasm (Program (0, DVS.slice 0 memL (cpu & mem)) (0, DVS.fromList []))
+  where (cdat, _)    = A.disasm (Program (0, DVS.slice 0 memL (cpu & mem)) (0, DVS.fromList []) [])
         memL         = DVS.length (cpu & mem)
         listPos      = fromMaybe 0 $ elemIndex position (fst <$> cdat)
         position     = fromMaybe 0 . listToMaybe . reverse $ fst <$> takeWhile (\(o, _) -> o <= (cpu & pc)) cdat

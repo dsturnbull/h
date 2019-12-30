@@ -39,6 +39,17 @@ updateSpriteColour (t, bin) pitch' c bgmode =
   let spr = BS.pack $ mkSprite c bin bgmode
   in void $ updateTexture t Nothing spr (fromIntegral pitch' * 4)
 
+mkSpriteExtended :: [Word8] -> [Word8] -> BackgroundMode -> [Word8]
+mkSpriteExtended cs ws bgmode = uncurry bs =<< zip cs ws
+  where bs c w = mkARGB8888 (lo c) (hi c) bgmode =<< reverse (toListOf bits w)
+        lo n   = n .&. 0b00001111
+        hi n   = if bgmode == Colour then n `shiftR` 4 else 0xff
+
+updateSpriteColourExtended :: (Texture, [Word8]) -> Int -> [Word8] -> BackgroundMode -> IO ()
+updateSpriteColourExtended (t, bin) pitch' cs bgmode =
+  let spr = BS.pack $ mkSpriteExtended cs bin bgmode
+  in void $ updateTexture t Nothing spr (fromIntegral pitch' * 4)
+
 -- little endian so bgra
 mkARGB8888 :: Word8 -> Word8 -> BackgroundMode -> Bool -> [Word8]
 mkARGB8888 fg _ _ True       = colour fg ++ [0xff]
@@ -74,13 +85,14 @@ drawSprites vic cpu =
 drawSprite :: VIC -> CPU -> Word16 -> IO ()
 drawSprite VIC {..} cpu spr = do
   let sprp = (*64) $ fromIntegral $ (cpu & mem) ! fromIntegral (spritePointerV + spr)
-  let sprc = (cpu & mem) ! fromIntegral (vicV + spr + 0x27)
-  let sprx = fromIntegral $ (cpu & mem) ! fromIntegral (vicV + spr + 0)
-  let spry = fromIntegral $ (cpu & mem) ! fromIntegral (vicV + spr + 1)
+  -- let sprc = (cpu & mem) ! fromIntegral (vicV + spr + 0x27)
+  let sprc = DVS.toList $ DVS.slice (fromIntegral (vicExtendedV + spr * 64)) 64 (cpu & mem)
+  let sprx = fromIntegral $ (cpu & mem) ! fromIntegral (vicV + spr * 2 + 0)
+  let spry = fromIntegral $ (cpu & mem) ! fromIntegral (vicV + spr * 2 + 1)
   case sprites M.!? fromIntegral spr of
     Just (t, _) -> do
       let bin = loadSprite sprp cpu
-      updateSpriteColour (t, bin) pitch sprc Transparent
+      updateSpriteColourExtended (t, bin) pitch sprc Transparent
       copy renderer t Nothing (pure $ Rectangle (P (V2 (sprx * scale) (spry * scale))) (V2 (24 * scale) (21 * scale)))
     Nothing -> return ()
 
