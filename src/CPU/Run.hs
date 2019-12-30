@@ -65,7 +65,7 @@ runShowCPU d cpuSTM = void $ flip repeatedTimer (msDelay $ ceiling (((1 :: Doubl
 
 runSound :: TVar CPU -> IO ()
 runSound cpuSTM =
-  void $ flip repeatedTimer (usDelay (fromInteger (ceiling CPU.Hardware.Sound.SID.µs))) $
+  void $ flip repeatedTimer (usDelay (fromInteger (ceiling µs))) $
     stepSound cpuSTM
 
 readProgram :: Get (Word16, Program)
@@ -73,9 +73,10 @@ readProgram = do
   (cloc, cdat) <- segment
   (dloc, ddat) <- segment
   n <- len8
-  others <- if n > 0
-              then traverse (const segment) [0 .. n - 1]
-              else return []
+  others <-
+    if n > 0
+      then traverse (const segment) [0 .. n - 1]
+      else return []
   return (cloc, Program (cloc, cdat) (dloc, ddat) others)
 
   where

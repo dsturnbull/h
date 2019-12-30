@@ -66,14 +66,14 @@ _load_spr_ptr:
 _main:
   lda #$00
 _loop:
-  ldx #$ff
-  ldy #$ff
-_x:
-  dex
-  bne _x
-_y:
-  dey
-  bne _y
+;   ldx #$ff
+;   ldy #$ff
+; _x:
+;   dex
+;   bne _x
+; _y:
+;   dey
+;   bne _y
 
   ; spr0 nw
   dec $d000

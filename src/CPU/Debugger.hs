@@ -13,7 +13,7 @@ module CPU.Debugger
 
 import CPU
 import CPU.Debugger.Mode
-import CPU.Instructions.Impl (rti)
+import CPU.Hardware.Interrupt
 
 import Control.Lens                 hiding (elements)
 import Control.Monad
@@ -44,13 +44,6 @@ debugger mc cpu =
     [0x1b, 0x5b, 0x44] -> return $ Broken $ cpu & field @"pc" %~ flip (-) 1   -- <left>
     [0x14]             -> return $ Overwrite cpu                              -- ^T
     _                  -> return $ Broken cpu
-
-continue :: CPU -> CPU
-continue cpu =
-  cpu & rti
-      & field @"p" . field @"break" .~ False
-      & field @"p" . field @"interrupt" .~ False
-      & field @"pc" %~ flip (-) 2
 
 debuggerInput :: CPU -> IO (DebugState CPU)
 debuggerInput cpu =

@@ -9,6 +9,7 @@ module ASM.AssemblerSpec
 import ASM.Assembler
 import CPU.Program
 
+import Control.Monad.IO.Class
 import HaskellWorks.Hspec.Hedgehog
 import Hedgehog
 import Test.Hspec
@@ -32,4 +33,6 @@ spec = describe "run" $
     let prog = Program
                  (0x0000, DVS.fromList [0xa9, 0x20, 0xa5, 0x80, 0xb5, 0x80, 0xad, 0x00, 0x20, 0xbd, 0x00, 0x20, 0xb9, 0x00, 0x20])
                  (0x0000, DVS.empty)
-    assemble (T.unpack code) 0x0000 0x0000 === prog
+                 []
+    r <- liftIO $ assemble code 0x0000 0x0000
+    r === prog

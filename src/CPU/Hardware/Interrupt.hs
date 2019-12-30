@@ -5,6 +5,7 @@
 module CPU.Hardware.Interrupt
   ( intr
   , stop
+  , continue
   ) where
 
 import CPU
@@ -26,5 +27,10 @@ intr cpu =
     sr  = cpu & p & flagsToWord
 
 stop :: CPU -> CPU
-stop cpu = cpu & brk
-               & field @"pc" %~ flip (-) 2
+stop cpu = cpu & field @"p" . field @"break"     .~ True
+               & field @"p" . field @"interrupt" .~ True
+
+continue :: CPU -> CPU
+continue cpu =
+  cpu & field @"p" . field @"break" .~ False
+      & field @"p" . field @"interrupt" .~ False

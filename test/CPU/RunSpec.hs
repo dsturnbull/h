@@ -13,6 +13,7 @@ import CPU.Instructions.Length
 import CPU.Run
 
 import Control.Lens
+import Control.Monad.IO.Class
 import Prelude                    hiding (break)
 import Text.InterpolatedString.QM
 
@@ -33,7 +34,8 @@ spec = describe "cpu runner" $ do
             lda #$20
           |]
 
-    let cpu' = load (assemble code 0x0000 0x0000) cpu
+    prog <- liftIO $ assemble code 0x0000 0x0000
+    let cpu' = load prog cpu
     (step cpu' & rA) === 0x20
     (step cpu' & pc) === 0x2
 
