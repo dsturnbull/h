@@ -23,6 +23,8 @@ import Hedgehog.Gen                as G
 import Hedgehog.Range              as R
 import Test.Hspec
 
+{-# ANN spec "HLint: ignore Reduce duplication" #-}
+
 spec :: Spec
 spec = describe "sbc" $ do
   it "imm" $ requireProperty $ do
@@ -132,7 +134,7 @@ spec = describe "sbc" $ do
              & ldaImm w
              & ldxImm x
              & sec
-             & sbcIndX (ind)
+             & sbcIndX ind
     (cpu' & rA) === (w - w')
     (cpu' & p & carry) === (w > w')
     (cpu' & p & zero)  === (w - w' == 0)
@@ -152,7 +154,7 @@ spec = describe "sbc" $ do
              & ldaImm w
              & ldyImm y
              & sec
-             & sbcIndY (ind)
+             & sbcIndY ind
     (cpu' & rA) === (w - w')
     (cpu' & p & carry) === (w > w')
     (cpu' & p & zero)  === (w - w' == 0)

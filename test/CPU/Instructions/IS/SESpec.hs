@@ -22,7 +22,7 @@ spec = describe "set" $ do
   it "sec" $ requireProperty $ do
     memSize <- forAll $ G.constant 256
     cpu     <- genCPU memSize
-    c       <- forAll $ bool
+    c       <- forAll bool
     let cpu' = cpu
             & field @"p" . field @"carry" .~ c
             & sec
@@ -31,7 +31,7 @@ spec = describe "set" $ do
   it "sed" $ requireProperty $ do
     memSize <- forAll $ G.constant 256
     cpu     <- genCPU memSize
-    d       <- forAll $ bool
+    d       <- forAll bool
     let cpu' = cpu
             & field @"p" . field @"carry" .~ d
             & sed
@@ -40,7 +40,7 @@ spec = describe "set" $ do
   it "sei" $ requireProperty $ do
     memSize <- forAll $ G.constant 256
     cpu     <- genCPU memSize
-    i       <- forAll $ bool
+    i       <- forAll bool
     let cpu' = cpu
             & field @"p" . field @"carry" .~ i
             & sei

@@ -17,6 +17,8 @@ import Hedgehog.Gen                as G
 import Hedgehog.Range              as R
 import Test.Hspec
 
+{-# ANN spec "HLint: ignore Reduce duplication" #-}
+
 spec :: Spec
 spec = describe "cpx" $ do
   it "imm" $ requireProperty $ do

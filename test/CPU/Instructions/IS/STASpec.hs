@@ -19,6 +19,8 @@ import Hedgehog.Gen                as G
 import Hedgehog.Range              as R
 import Test.Hspec
 
+{-# ANN spec "HLint: ignore Reduce duplication" #-}
+
 spec :: Spec
 spec = describe "sta" $ do
   it "abs" $ requireProperty $ do
@@ -79,8 +81,8 @@ spec = describe "sta" $ do
              & ldaImm  (fromIntegral (addr `shiftR` 8)) & staZpg (ind + x + 1)
              & ldaImm  w
              & ldxImm  x
-             & staIndX (ind)
-    (cpu' & mem) ! (fromIntegral addr) === w
+             & staIndX ind
+    (cpu' & mem) ! fromIntegral addr === w
 
   it "ind, y" $ requireProperty $ do
     memSize <- forAll $ G.constant 40
@@ -94,7 +96,7 @@ spec = describe "sta" $ do
              & ldaImm  (fromIntegral (addr `shiftR` 8)) & staZpg (ind + 1)
              & ldaImm  w
              & ldyImm  y
-             & staIndY (ind)
+             & staIndY ind
     (cpu' & mem) ! (fromIntegral addr + fromIntegral y) === w
 
   it "zeropage" $ requireProperty $ do

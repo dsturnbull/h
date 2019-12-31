@@ -20,6 +20,8 @@ import Hedgehog.Gen                as G
 import Hedgehog.Range              as R
 import Test.Hspec
 
+{-# ANN spec "HLint: ignore Reduce duplication" #-}
+
 spec :: Spec
 spec = describe "eor" $ do
   it "imm" $ requireProperty $ do
@@ -125,7 +127,7 @@ spec = describe "eor" $ do
     addr    <- forAll $ word16 (linear 20 30)
     let cpu' = cpu
              & ldxImm x
-             & ldaImm (fromIntegral (addr .&. 0x00ff)) & staZpgX (ind)
+             & ldaImm (fromIntegral (addr .&. 0x00ff)) & staZpgX ind
              & ldaImm (fromIntegral (addr `shiftR` 8)) & staZpgX (ind + 1)
              & ldaImm w' & staAbs (fromIntegral addr)
              & ldaImm w  & eorIndX ind

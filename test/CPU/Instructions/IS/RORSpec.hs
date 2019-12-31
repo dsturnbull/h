@@ -23,12 +23,14 @@ import Hedgehog.Gen                as G
 import Hedgehog.Range              as R
 import Test.Hspec
 
+{-# ANN spec "HLint: ignore Reduce duplication" #-}
+
 spec :: Spec
 spec = describe "ror" $ do
   it "acc" $ requireProperty $ do
     cpu     <- genCPU 1
     w       <- forAll $ word8 (linear minBound maxBound)
-    c       <- forAll $ bool
+    c       <- forAll bool
     let cpu' = cpu
              & (if c then sec else id)
              & ldaImm w
@@ -44,7 +46,7 @@ spec = describe "ror" $ do
     cpu     <- genCPU memSize
     addr    <- forAll $ word8 (linear minBound maxBound)
     w       <- forAll $ word8 (linear minBound maxBound)
-    c       <- forAll $ bool
+    c       <- forAll bool
     let cpu' = cpu
              & (if c then sec else id)
              & ldaImm w
@@ -63,7 +65,7 @@ spec = describe "ror" $ do
     x       <- forAll $ word8 (linear 10 20)
     addr    <- forAll $ word8 (linear minBound (maxBound - 20))
     w       <- forAll $ word8 (linear minBound maxBound)
-    c       <- forAll $ bool
+    c       <- forAll bool
     let cpu' = cpu
              & (if c then sec else id)
              & ldxImm x
@@ -82,7 +84,7 @@ spec = describe "ror" $ do
     cpu     <- genCPU memSize
     addr    <- forAll $ word16 (linear minBound (memSize - 1))
     w       <- forAll $ word8 (linear minBound maxBound)
-    c       <- forAll $ bool
+    c       <- forAll bool
     let cpu' = cpu
              & (if c then sec else id)
              & ldaImm w
@@ -101,7 +103,7 @@ spec = describe "ror" $ do
     x       <- forAll $ word8 (linear 10 20)
     addr    <- forAll $ word16 (linear minBound (memSize - 20))
     w       <- forAll $ word8 (linear minBound maxBound)
-    c       <- forAll $ bool
+    c       <- forAll bool
     let cpu' = cpu
              & (if c then sec else id)
              & ldxImm x

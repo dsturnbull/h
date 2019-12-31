@@ -17,6 +17,8 @@ import Hedgehog
 import Hedgehog.Gen                as G
 import Test.Hspec
 
+{-# ANN spec "HLint: ignore Reduce duplication" #-}
+
 spec :: Spec
 spec = describe "clear" $ do
   it "clc" $ requireProperty $ do

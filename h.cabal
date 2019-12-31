@@ -3,11 +3,6 @@ name:                   h
 version:                0.0.1
 build-type:             Simple
 
-flag dev
-    description: whether to compile test things
-    default: False
-    manual: True
-
 common config
   ghc-options:          -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wredundant-constraints -msse4.2
   default-language:     Haskell2010
@@ -148,6 +143,13 @@ library cpu-lib
   hs-source-dirs:       cpu
   build-depends:        sasm-lib
 
+library run-lib
+  import:               common-deps, config
+  exposed-modules:      CPU.Run
+  hs-source-dirs:       run
+  build-depends:      , sasm-lib
+                      , cpu-lib
+
 executable run
   import:               common-deps, config
   main-is:              Main.hs
@@ -162,9 +164,9 @@ test-suite h-test
   import:               common-deps, config
   type:                 exitcode-stdio-1.0
   main-is:              Spec.hs
-  other-modules:        CPU.Gen
+  other-modules:        ASM.AssemblerSpec
+                        CPU.Gen
                         CPU.Instructions.Gen
-                        ASM.AssemblerSpec
                         CPU.RunSpec
                         CPU.Instructions.IS.ADCSpec
                         CPU.Instructions.IS.ANDSpec
@@ -208,3 +210,4 @@ test-suite h-test
                       , cpu-lib
                       , sasm-lib
                       , sasm-assembler-lib
+                      , run-lib

@@ -22,6 +22,8 @@ import Hedgehog.Gen                as G
 import Hedgehog.Range              as R
 import Test.Hspec
 
+{-# ANN spec "HLint: ignore Reduce duplication" #-}
+
 shouldCarry :: Word8 -> Word8 -> Bool
 shouldCarry a b = v > fromIntegral (maxBound :: Word8)
   where v :: Int = fromIntegral a + fromIntegral b
