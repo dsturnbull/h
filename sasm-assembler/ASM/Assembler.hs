@@ -1,16 +1,13 @@
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications    #-}
 
 module ASM.Assembler
   ( assemble
   , assembleOpcodes
-  , disasm
   , insPositions
   , writeProgram
   ) where
 
 import ASM.Assembles
-import ASM.Decodes
 import ASM.Length
 import ASM.Opcode
 import ASM.Parser
@@ -22,7 +19,6 @@ import Data.Function
 import Data.List
 import Data.Word
 import Prelude        hiding (all, lines)
-import Text.Printf
 
 import qualified Data.ByteString.Builder         as BB
 import qualified Data.ByteString.Lazy            as LBS
@@ -41,28 +37,6 @@ assembleOpcodes ins codeLoc dataLoc = Program (codeLoc, wo cs) (dataLoc, wo ds) 
   where (cs, ds, oss) = insPositions DataSegment 0 (fromIntegral codeLoc) (fromIntegral codeLoc) (fromIntegral dataLoc) (fromIntegral dataLoc) ins ins [] [] []
         other :: [(Word16, DVS.Vector Word8)] = second wo <$> M.toList (M.fromListWith (++) oss)
         wo seg = DVS.fromList (snd <$> sortOn fst seg)
-
-disasm :: Program -> ([(Word16, T.Text)], [(Word16, T.Text)])
-disasm (Program (coff, cs') (doff, ds') _) = (showIns <$> instructions (fromIntegral coff) cs', showData <$> bytes (fromIntegral doff) ds')
-  where showIns (o, w, i)  = (fromIntegral o, T.pack $ printf "%-9s %20s %s" (showWords w) ";" (show i))
-        showData (o, w) = (fromIntegral o, T.pack $ printf "%02x" w)
-        showWords ws = foldMap (++ " ") (printf "%02x" <$> ws)
-
-instructions :: Int -> DVS.Vector Word8 -> [(Int, [Word8], Opcode)]
-instructions o ws =
-  if DVS.length ws > 0
-    then (o, w, d) : instructions (o + s) (DVS.drop s ws)
-    else []
-  where d = decode @Opcode ws
-        s = insLength d
-        w = DVS.toList $ DVS.take s ws
-
-bytes :: Int -> DVS.Vector Word8 -> [(Int, Word8)]
-bytes o ws =
-  if DVS.length ws > 0
-    then (o, w) : bytes (o + 1) (DVS.drop 1 ws)
-    else []
-  where w = head . DVS.toList $ DVS.take 1 ws
 
 insPositions :: ()
   => Segment -> Int -> Int -> Int -> Int -> Int

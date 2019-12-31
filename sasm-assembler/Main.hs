@@ -1,9 +1,11 @@
+{-# LANGUAGE BangPatterns        #-}
 {-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE DeriveGeneric       #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications    #-}
 
 import ASM.Assembler
+import CPU.Disassembler
 
 import Control.Lens
 import Control.Monad
@@ -42,7 +44,7 @@ main = do
   hClose handle
 
   when verbose $ print prog
-  let (cdat, ddat) = disasm prog
+  let !(cdat, ddat) = disasm prog
   when verbose $ putStrLn $ foldMap (++ "\n") ((\(o, s) -> printf "%04x: " o <> T.unpack s) <$> cdat)
   when verbose $ putStrLn $ foldMap (++ "\n") ((\(o, s) -> printf "%04x: " o <> T.unpack s) <$> ddat)
 

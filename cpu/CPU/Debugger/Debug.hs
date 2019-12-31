@@ -17,28 +17,28 @@ import Data.Vector.Storable ((!))
 import System.Console.ANSI
 import Text.Printf
 
--- import qualified ASM.Assembler        as A (disasm)
-import qualified CPU.Debugger.Status  as DBG
+import qualified CPU.Debugger.Status as DBG
+import qualified CPU.Disassembler    as D
+
 import qualified Data.Text            as T
 import qualified Data.Vector.Storable as DVS
 
 disasm :: CPU -> [T.Text]
-disasm cpu = []
--- relevant <&> uncurry showMe
---   where (cdat, _)    = (undefined, undefined) -- A.disasm (Program (0, DVS.slice 0 memL (cpu & mem)) (0, DVS.fromList []) [])
---         memL         = DVS.length (cpu & mem)
---         listPos      = fromMaybe 0 $ elemIndex position (fst <$> cdat)
---         position     = fromMaybe 0 . listToMaybe . reverse $ fst <$> takeWhile (\(o, _) -> o <= (cpu & pc)) cdat
---         (bef, aft)   = splitAt listPos cdat
---         relevant     = reverse (take befL (reverse bef ++ empty)) ++ take aftL aft
---         pcHere       = T.pack $ setSGRCode [SetColor Foreground Vivid Red]
---         normal       = T.pack $ setSGRCode [Reset]
---         empty        = replicate (befL - length bef) (0, "")
---         befL         = 9
---         aftL         = 10
---         showIn o i   = T.pack $ printf "%04x: %s" o i
---         showMe o ins | o == position = pcHere <> showIn o ins <> normal
---         showMe o ins = showIn o ins
+disasm cpu = relevant <&> uncurry showMe
+  where (cdat, _)    = D.disasm (Program (0, DVS.slice 0 memL (cpu & mem)) (0, DVS.fromList []) [])
+        memL         = DVS.length (cpu & mem)
+        listPos      = fromMaybe 0 $ elemIndex position (fst <$> cdat)
+        position     = fromMaybe 0 . listToMaybe . reverse $ fst <$> takeWhile (\(o, _) -> o <= (cpu & pc)) cdat
+        (bef, aft)   = splitAt listPos cdat
+        relevant     = reverse (take befL (reverse bef ++ empty)) ++ take aftL aft
+        pcHere       = T.pack $ setSGRCode [SetColor Foreground Vivid Red]
+        normal       = T.pack $ setSGRCode [Reset]
+        empty        = replicate (befL - length bef) (0, "")
+        befL         = 9
+        aftL         = 10
+        showIn o i   = T.pack $ printf "%04x: %s" o i
+        showMe o ins | o == position = pcHere <> showIn o ins <> normal
+        showMe o ins = showIn o ins
 
 updateScreen :: CPU -> IO ()
 updateScreen cpu = do

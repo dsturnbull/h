@@ -43,39 +43,49 @@ common common-deps
     , unix                 ^>= 2.7.2.2
     , vector               ^>= 0.12.0.3
 
-library sasm-lib
+library sasm-lexer-lib
+  import:               common-deps, config
+  exposed-modules:      ASM.Lexer
+  hs-source-dirs:       sasm-lexer
+  build-tool-depends:   alex:alex
+
+library sasm-parser-lib
+  import:               common-deps, config
+  exposed-modules:      ASM.Parser
+  hs-source-dirs:       sasm-parser
+  build-tool-depends:   alex:alex
+  build-depends:        sasm-lib
+                      , sasm-lexer-lib
+  build-tool-depends:   happy:happy
+
+library sasm-assembler-lib
   import:               common-deps, config
   exposed-modules:      ASM.Assembler
-                        ASM.Assembles
-                        ASM.Decodes
+  hs-source-dirs:       sasm-assembler
+  build-depends:        sasm-parser-lib
+                      , sasm-lib
+
+library sasm-lib
+  import:               common-deps, config
+  exposed-modules:      ASM.Assembles
                         ASM.Length
-                        ASM.Lexer
                         ASM.Opcode
                         ASM.Operand
-                        ASM.Parser
                         ASM.Program
                         ASM.Segment
   hs-source-dirs:       sasm
-  build-tool-depends:   alex:alex, happy:happy
 
 executable sasm
   import:               common-deps, config
   main-is:              Main.hs
   other-modules:        ASM.Assembler
-                        ASM.Assembles
-                        ASM.Decodes
-                        ASM.Lexer
-                        ASM.Length
-                        ASM.Opcode
-                        ASM.Operand
-                        ASM.Parser
-                        ASM.Program
-                        ASM.Segment
-  hs-source-dirs:       sasm
+  hs-source-dirs:       sasm-assembler
   ghc-options:          -threaded -rtsopts
   build-depends:      , optparse-applicative ^>= 0.15.1.0
                       , cpu-lib
-  build-tool-depends:   alex:alex, happy:happy
+                      , sasm-lib
+                      , sasm-parser-lib
+                      , sasm-assembler-lib
 
 library cpu-lib
   import:               common-deps, config
@@ -84,6 +94,7 @@ library cpu-lib
                         CPU.Debugger.Status
                         CPU.Debugger.Debug
                         CPU.Debugger.Mode
+                        CPU.Disassembler
                         CPU.Hardware.Interrupt
                         CPU.Hardware.Terminal
                         CPU.Hardware.TTY
@@ -98,6 +109,7 @@ library cpu-lib
                         CPU.Hardware.Video.Sprite
                         CPU.Hardware.Video.Sprites
                         CPU.Hardware.Video.VIC
+                        CPU.Instructions.Decodes
                         CPU.Instructions.Execute
                         CPU.Instructions.Impl
                         CPU.Instructions.Jumps
@@ -193,5 +205,6 @@ test-suite h-test
                       , hw-hspec-hedgehog
                       , hspec-megaparsec           ^>= 2.1.0
                       , qm-interpolated-string     ^>= 0.3.0.0
-                      , sasm-lib
                       , cpu-lib
+                      , sasm-lib
+                      , sasm-assembler-lib

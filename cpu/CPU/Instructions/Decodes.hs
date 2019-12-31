@@ -1,6 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 
-module ASM.Decodes
+module CPU.Instructions.Decodes
   ( Decodes(..)
   , w16
   ) where
