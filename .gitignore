@@ -4,6 +4,6 @@
 *.dyn_o
 dist-newstyle/
 .ghc.environment.*
-cabal.project.local
+cabal.project.local*
 a.out
 log

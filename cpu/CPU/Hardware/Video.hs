@@ -47,7 +47,7 @@ appLoop vic@VIC {..} cpuSTM = do
     let cpu' = foldl (\cp c -> cp & processInput (fromIntegral . ord $ c)) cpu (T.unpack text)
     writeTVar cpuSTM (cpu' & intr)
 
-  -- rendererDrawColor renderer $= V4 0x83 0x7c 0xd8 0
+  rendererDrawColor renderer $= V4 0x83 0x7c 0xd8 0
   clear renderer
 
   cpu <- readTVarIO cpuSTM

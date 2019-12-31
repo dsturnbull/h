@@ -114,9 +114,6 @@ _kbd_dec:
   jmp _kbd_ret
 
 _kbd_ret:
-  ; lda $0300
-  ; sta $0301
-
   clc
   ror $0302         ; clear kbd
   cli

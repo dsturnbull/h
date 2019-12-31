@@ -14,40 +14,57 @@ common config
 
 common common-deps
   build-depends:
-      base                >= 4.7          && < 5
-    , ansi-terminal      ^>= 0.10.2
-    , array              ^>= 0.5.3.0
-    , bytestring         ^>= 0.10.10.0
-    , generic-lens       ^>= 1.1.0.0
-    , hw-bits            ^>= 0.7.0.9
-    , lens               ^>= 4.18.1
-    , mtl                ^>= 2.2.2
-    , text               ^>= 1.2.4.0
-    , unix               ^>= 2.7.2.2
-    , vector             ^>= 0.12.0.3
-    , stm                ^>= 2.5.0.0
-    , bindings-portaudio ^>= 0.2
-    , linear             ^>= 1.20.9
-    , time               ^>= 1.9.3
-    , synthesizer-core   ^>= 0.8.2.1
-    , storablevector     ^>= 0.2.13
-    , linear             ^>= 1.20.9
-    , numeric-prelude    ^>= 0.4.3.1
-    , timers             ^>= 0.2.0.3
-    , suspend            ^>= 0.2.0.0
-    , echo               ^>= 0.1.3
-    , containers         ^>= 0.6.0.1
-    , binary             ^>= 0.8
-    , text-latin1        ^>= 0.3.1
-    , OpenGL             ^>= 3.0.3.0
-    , sdl2               ^>= 2.5.0.0
+      base                  >= 4.7          && < 5
+    , ansi-terminal        ^>= 0.10.2
+    , array                ^>= 0.5.3.0
+    , binary               ^>= 0.8
+    , bindings-portaudio   ^>= 0.2.1
+    , bytestring           ^>= 0.10.10.0
+    , bytestring-to-vector ^>= 0.3.0.1
+    , containers           ^>= 0.6.0.1
+    , echo                 ^>= 0.1.3
+    , generic-lens         ^>= 1.2.0.1
+    , hw-bits              ^>= 0.7.0.9
+    , lens                 ^>= 4.18.1
+    , linear               ^>= 1.20.9
+    , linear               ^>= 1.20.9
+    , mtl                  ^>= 2.2.2
+    , numeric-prelude      ^>= 0.4.3.1
+    , OpenGL               ^>= 3.0.3.0
+    , sdl2                 ^>= 2.5.0.0
+    , stm                  ^>= 2.5.0.0
+    , storablevector       ^>= 0.2.13
+    , suspend              ^>= 0.2.0.0
+    , synthesizer-core     ^>= 0.8.2.1
+    , text                 ^>= 1.2.4.0
+    , text-latin1          ^>= 0.3.1
+    , time                 ^>= 1.9.3
+    , timers               ^>= 0.2.0.3
+    , unix                 ^>= 2.7.2.2
+    , vector               ^>= 0.12.0.3
 
-library
+library sasm-lib
   import:               common-deps, config
   exposed-modules:      ASM.Assembler
                         ASM.Lexer
                         ASM.Parser
-                        CPU
+  hs-source-dirs:       sasm
+  build-tool-depends:   alex:alex, happy:happy
+  build-depends:        cpu-lib
+
+executable sasm
+  import:               common-deps, config
+  main-is:              Main.hs
+  other-modules:        ASM.Assembler
+  hs-source-dirs:       sasm
+  ghc-options:          -threaded -rtsopts
+  build-depends:      , optparse-applicative ^>= 0.15.1.0
+                      , sasm-lib
+                      , cpu-lib
+
+library cpu-lib
+  import:               common-deps, config
+  exposed-modules:      CPU
                         CPU.Debugger
                         CPU.Debugger.Status
                         CPU.Debugger.Debug
@@ -109,49 +126,16 @@ library
                         CPU.Instructions.IS.STX
                         CPU.Instructions.IS.STY
                         CPU.Instructions.IS.T
-  hs-source-dirs:       src
-  if flag(dev)
-    build-depends:      hedgehog
-                      , hspec
-                      , hw-hspec-hedgehog
-                      , bytestring-to-vector   ^>= 0.3.0.1
-                      , optparse-applicative   ^>= 0.15.1.0
-                      , qm-interpolated-string ^>= 0.3.0.0
-  build-tool-depends:   alex:alex, happy:happy
-
--- library sasm-lib
---   import:               common-deps, config
---   exposed-modules:      Assembler
---                         Assembly
---   hs-source-dirs:       sasm
---   build-depends:        h
---   build-tool-depends:   alex:alex
-
-executable sasm
-  import:               common-deps, config
-  main-is:              Main.hs
-  hs-source-dirs:       sasm
-  ghc-options:          -threaded -rtsopts
-  build-depends:        h
-                      , bytestring-to-vector ^>= 0.3.0.1
-                      , optparse-applicative ^>= 0.15.1.0
-  --, sasm-lib
-
--- library cpu-lib
---   import:               common-deps, config
---   build-depends:        h, sasm-lib
---   exposed-modules:      Run
---   hs-source-dirs:       cpu
+  hs-source-dirs:       cpu
 
 executable run
   import:               common-deps, config
   main-is:              Main.hs
   hs-source-dirs:       run
   ghc-options:          -threaded -rtsopts
-  build-depends:        h
-                      , bytestring-to-vector ^>= 0.3.0.1
-                      , optparse-applicative ^>= 0.15.1.0
-  --, sasm-lib, cpu-lib
+  build-depends:      , optparse-applicative ^>= 0.15.1.0
+                      , sasm-lib
+                      , cpu-lib
 
 test-suite h-test
   import:               common-deps, config
@@ -195,11 +179,10 @@ test-suite h-test
   hs-source-dirs:       test
   ghc-options:          -threaded -rtsopts -with-rtsopts=-N
   build-tool-depends:   hspec-discover:hspec-discover
-  build-depends:        h
-                      , hedgehog
+  build-depends:      , hedgehog
                       , hspec
                       , hw-hspec-hedgehog
                       , hspec-megaparsec           ^>= 2.1.0
                       , qm-interpolated-string     ^>= 0.3.0.0
-                      -- , sasm-lib
-                      -- , cpu-lib
+                      , sasm-lib
+                      , cpu-lib

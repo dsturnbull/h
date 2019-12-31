@@ -44,7 +44,6 @@ import Data.Time.Clock
 import Data.Vector.Storable         ((//))
 import GHC.Generics
 import GHC.IO                       (evaluate)
-import Options.Applicative
 import Prelude                      hiding (break)
 import System.Posix.Unistd
 
@@ -151,7 +150,6 @@ stepSound cpuSTM = do
   cpu <- readTVarIO cpuSTM
   cpu' <- cpu & updateSIDClock >>= tickSound
   atomically $ writeTVar cpuSTM cpu'
-  -- (atomically $ modifyTVar cpuSTM tickSound)
 
 updateSIDClock :: CPU -> IO CPU
 updateSIDClock cpu = do

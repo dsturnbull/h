@@ -8,10 +8,11 @@
 {-# OPTIONS_GHC -fno-warn-unused-binds #-}
 {-# OPTIONS_GHC -fno-warn-unused-matches #-}
 
+  -- ( initSound
+  -- , tickSound
+  -- )
+
 module CPU.Hardware.Sound
-  ( initSound
-  , tickSound
-  )
   where
 
 import CPU                      (CPU (audio, mem, sid), soundV)
@@ -21,21 +22,24 @@ import CPU.Instructions.Decodes
 import CPU.Instructions.Impl
 
 import Bindings.PortAudio
+import Control.Concurrent
 import Control.Concurrent.STM
 import Control.Concurrent.Suspend
 import Control.Concurrent.Timer
 import Control.Exception
-import Control.Lens               hiding (set)
+import Control.Lens                 hiding (set)
 import Control.Monad
--- import Control.Timer.Tick
 import Data.Bits.Lens
 import Data.Generics.Product.Fields
 import Data.Vector.Storable         ((!))
 import Foreign                      hiding (void)
 import Foreign.C.Types
 import Linear                       (V2 (..))
+import System.IO
 import System.PortAudio
+import Text.Printf
 
+import qualified Data.Vector                   as V
 import qualified Data.Vector.Storable          as DVS
 import qualified Data.Vector.Storable.Internal as DVSI
 
@@ -46,6 +50,8 @@ import qualified Algebra.Additive       as Additive
 import qualified Algebra.RealRing       as RealRing
 import qualified Algebra.Transcendental as Trans
 
+import qualified Data.Foldable                as F
+import qualified Data.Vector.Storable.Mutable as MV
 
 {-
 $0400 frequency voice 1 low byte
@@ -90,6 +96,28 @@ $041c envelope voice 3 (read only)
 $0500..$07ff sid registers mirrored
 -}
 
+period :: Int
+period = 200
+
+table :: V.Vector Float
+table = V.fromList [sin t | i <- [0..period - 1], let t = fromIntegral i / fromIntegral period * 2 * pi]
+
+callback :: MVar Int -> Status -> input -> MV.IOVector (V2 Float) -> IO StreamCallbackResult
+callback phase _ _ o = do
+  i0 <- takeMVar phase
+  go i0 0
+  putMVar phase $ i0 + n
+  return Continue
+  where
+    n = MV.length o
+    go :: Int -> Int -> IO ()
+    go i0 i
+      | i == n = return ()
+      | otherwise = do
+        let v = table V.! ((i0 + i) `mod` period)
+        MV.write o i (V2 v v)
+        go i0 (i + 1)
+
 initSound :: CPU -> IO CPU
 initSound cpu = do
   ps <- malloc
@@ -98,18 +126,24 @@ initSound cpu = do
 
   let output :: Maybe (StreamParameters Output (V2 Float)) = streamParameters dev 0
 
+  -- phase <- newMVar 0
+  -- withStream 44100 1024 noConnection output mempty (callback phase) $
+  --   threadDelay 10000000
+
   withMaybe noConnection $ \pin -> withMaybe output $ \pout ->
     we $ c'Pa_OpenStream ps
       (castPtr pin)
       (castPtr pout)
       (CDouble (fromInteger . fromIntegral $ rate))
-      framesPerBuffer
+      0
       0
       nullFunPtr
       nullPtr
 
   stream <- peek ps
+  we $ c'Pa_StartStream stream
   return $ cpu & field @"audio" ?~ stream
+  -- return cpu
 
 tickSound :: CPU -> IO CPU
 tickSound cpu =
@@ -119,15 +153,6 @@ tickSound cpu =
       cpu' &   updateVoice v1 (field @"voice1") (field @"voice1")
            >>= updateVoice v2 (field @"voice2") (field @"voice2")
            >>= updateVoice v3 (field @"voice3") (field @"voice3")
-
-      -- let sid' = cpu' & sid
-      -- let voice = sid' & voice1
-      -- let attackMultiplier = 1 - ((voice & attack) / (voice & attackW & attackTable))
-      -- let freq' = sid' & voice1 & freq
-      -- -- let dur = toInteger $ (voice & attack) * (fromInteger . fromIntegral $ sid' & rate)
-      -- let dur = 1
-      -- let w = SigSt.take dur
-      --           (Osci.staticSine (SigSt.chunkSize dur) Additive.zero freq')
 
     Nothing -> return cpu
 
@@ -150,19 +175,47 @@ updateVoice v set get cpu = do
   let decaying  = high && voice ^. field @"attack" == 0
   let releasing = not high
 
-  return $ cpu & field @"sid" . set %~ \vc ->
-   vc & field @"gate"      .~ gate'    vctrl
-      & field @"wave"      .~ wave'    vctrl
-      & field @"freqW"     .~ freqW'
-      & field @"freq"      .~ freq'
-      & field @"attackW"   .~ attack'  vad
-      & field @"decayW"    .~ decay'   vad
-      & field @"sustainW"  .~ sustain' vsr
-      & field @"releaseW"  .~ release' vsr
-      & field @"attack"    %~ (\a -> if rising then attackTable  (attack'  vad) else if attacking then max 0 (a - dt') else a)
-      & field @"decay"     %~ (\a -> if rising then drTable      (decay'   vad) else if decaying  then max 0 (a - dt') else a)
-      & field @"release"   %~ (\a -> if rising then drTable      (release' vsr) else if releasing then max 0 (a - dt') else a)
-      & field @"sustain"   %~ (\a -> fromIntegral (sustain' vsr)) -- can it be changed?
+  let cpu' = cpu & field @"sid" . set %~ \vc ->
+                vc & field @"gate"      .~ gate'    vctrl
+                   & field @"wave"      .~ wave'    vctrl
+                   & field @"freqW"     .~ freqW'
+                   & field @"freq"      .~ freq'
+                   & field @"attackW"   .~ attack'  vad
+                   & field @"decayW"    .~ decay'   vad
+                   & field @"sustainW"  .~ sustain' vsr
+                   & field @"releaseW"  .~ release' vsr
+                   & field @"attack"    %~ (\a -> if rising then attackTable  (attack'  vad) else if attacking then max 0 (a - dt') else a)
+                   & field @"decay"     %~ (\a -> if rising then drTable      (decay'   vad) else if decaying  then max 0 (a - dt') else a)
+                   & field @"release"   %~ (\a -> if rising then drTable      (release' vsr) else if releasing then max 0 (a - dt') else a)
+                   & field @"sustain"   %~ (\a -> fromIntegral (sustain' vsr)) -- can it be changed?
+
+  {-
+  sample rate: 4000/sec
+  loop freq: 4000/sec (maybe)
+  frames per buffer: 0 (variable)
+  mono
+  -}
+
+  -- let Just str = cpu & audio
+  -- av <- c'Pa_GetStreamWriteAvailable str
+
+  -- let voice' = cpu' ^. field @"sid" . get
+  -- let attackMultiplier = 1 - ((voice' & attack) / (voice' & attackW & attackTable))
+  -- let vfreq = voice' & freq
+  -- let dur = ceiling $ (voice' & attack) * (fromInteger . fromIntegral $ rate) -- * fromInteger ts
+  -- if dur > 0
+  --   then do
+  --     let w = SigSt.take dur
+  --               (Osci.staticSine (SigSt.chunkSize dur) Additive.zero vfreq)
+  --     let vc = DVS.fromList . SigSt.toList $ w
+  --     let t = castPtr . fst $ vectorToPtr0 vc
+  --     we $ c'Pa_WriteStream str t (fromIntegral av)
+  --   else do
+
+  -- let t = castPtr . fst $ vectorToPtr0 silence
+  -- we $ c'Pa_WriteStream str t (fromIntegral av)
+
+  return cpu'
 
   where dt'     = (cpu & sid & dt) / 1000 / 1000 / 1000 / 1000
         vctrl   = (cpu & mem) ! fromIntegral (soundV & v & voiceControl)
@@ -181,32 +234,16 @@ updateVoice v set get cpu = do
         sustain' w = (w .&. 0b11110000) `shiftR` 4
         release' w =  w .&. 0b00001111
 
-      -- we $ c'Pa_StartStream str
-      -- let per = 128
-      -- let t = sine per
-      -- let t' = castPtr . fst $ vectorToPtr0 t
-
-      -- putStrLn $ "frames per buffer: " <> show framesPerBuffer
-      -- putStrLn $ "total loops: " <> show (rate / fromIntegral framesPerBuffer)
-      -- putStrLn $ "buf contains " <> show (DVS.length t)
-
-      -- forM_ [0 .. rate / fromIntegral framesPerBuffer] $
-      --   const . we $ c'Pa_WriteStream str t' framesPerBuffer
-
-      -- we $ c'Pa_StopStream str
-
-      -- return $ cpu & field @"audio" .~ Nothing & brk
-
-framesPerBuffer :: CULong
-framesPerBuffer = 128
+silence :: DVS.Vector Double
+silence = DVS.replicate 4000 0
 
 sine :: Int -> DVS.Vector Float
-sine per = DVS.fromList [sin t | i <- [0..per - 1], let t = fromIntegral i / fromIntegral per * 2 * pi]
+sine per = DVS.fromList [sin t | i <- [0 .. per - 1], let t = fromIntegral i / fromIntegral per * 2 * pi]
 
-vectorToPtr0 :: DVS.Storable a => DVS.Vector a -> (Ptr a,Int)
+vectorToPtr0 :: DVS.Storable a => DVS.Vector a -> (Ptr a, Int)
 vectorToPtr0 vector =
- let (foreignPtr,size) = DVS.unsafeToForeignPtr0 vector
- in (DVSI.getPtr foreignPtr,size)
+ let (foreignPtr, size) = DVS.unsafeToForeignPtr0 vector
+ in (DVSI.getPtr foreignPtr, size)
 
 we :: IO CInt -> IO ()
 we n = do

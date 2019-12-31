@@ -63,7 +63,8 @@ screen cpu = Screen $
          , Element (Label "Y: ",   \cpu' -> Value . T.pack $ printf "%02x"  (cpu' & rY))
          , Element (Label "S: ",   \cpu' -> Value . T.pack $ printf "%02x"  (cpu' &  s))
          , Element (Label "PC: ",  \cpu' -> Value . T.pack $ printf "%04x"  (cpu' & pc)) ]
-  , Line [ Element (Label "vol: ", \cpu' -> Value . T.pack $ printf "%01x"  (cpu' & sid & volume)) ]
+  , Line [ Element (Label "vol: ", \cpu' -> Value . T.pack $ printf "%01x"  (cpu' & sid & volume))
+         , Element (Label "dt: ",  \cpu' -> Value . T.pack $ printf "%09.4f" ((cpu' & sid & dt) / 1000 / 1000 / 1000)) ]
   ]
   ++ [ showVoice 1 SID.voice1
      , showVoice 2 SID.voice2
