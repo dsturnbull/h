@@ -9,12 +9,12 @@ module ASM.Assembler
   , writeProgram
   ) where
 
+import ASM.Assembles
+import ASM.Decodes
+import ASM.Length
+import ASM.Opcode
 import ASM.Parser
-import CPU.Instructions.Assembles
-import CPU.Instructions.Decodes
-import CPU.Instructions.Length
-import CPU.Instructions.Opcode
-import CPU.Program
+import ASM.Program
 
 import Data.Bifunctor
 import Data.Either

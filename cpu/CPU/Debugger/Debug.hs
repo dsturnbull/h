@@ -6,8 +6,8 @@ module CPU.Debugger.Debug
   , disasm
   ) where
 
+import ASM.Program (Program (..))
 import CPU
-import CPU.Program (Program (..))
 
 import Control.Lens
 import Data.Foldable

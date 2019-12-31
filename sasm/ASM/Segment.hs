@@ -1,4 +1,4 @@
-module CPU.Segment
+module ASM.Segment
   (Segment(..))
   where
 

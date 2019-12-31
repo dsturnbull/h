@@ -1,8 +1,8 @@
-module CPU.Instructions.Opcode
+module ASM.Opcode
   ( Opcode(..)
   ) where
 
-import CPU.Instructions.Operand
+import ASM.Operand
 
 import Control.Monad
 import Data.List

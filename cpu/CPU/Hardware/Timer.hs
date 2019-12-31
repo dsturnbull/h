@@ -11,15 +11,17 @@ module CPU.Hardware.Timer
 import CPU                           (CPU (mem), h, l, st, timerAV)
 import CPU.Hardware.Interrupt
 import CPU.Hardware.Timer.JiffyTimer
-import CPU.Instructions.Decodes
 
 import Control.Lens                 hiding (set)
+import Data.Bits
 import Data.Bits.Lens
 import Data.Fixed
 import Data.Generics.Product.Fields
 import Data.Time.Clock
 import Data.Vector.Storable         (slice, (!))
 import Data.Word
+
+import qualified Data.Vector.Storable as DVS
 
 {-
                    control
@@ -67,3 +69,8 @@ timeDelta before = do
 
   where fromPico :: Pico -> Integer
         fromPico (MkFixed i) = i
+
+w16 :: DVS.Vector Word8 -> Word16
+w16 v = (addrH `shiftL` 8) .|. addrL
+  where addrL = fromIntegral (v ! 0)
+        addrH = fromIntegral (v ! 1)

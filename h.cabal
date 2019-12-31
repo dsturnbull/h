@@ -46,21 +46,36 @@ common common-deps
 library sasm-lib
   import:               common-deps, config
   exposed-modules:      ASM.Assembler
+                        ASM.Assembles
+                        ASM.Decodes
+                        ASM.Length
                         ASM.Lexer
+                        ASM.Opcode
+                        ASM.Operand
                         ASM.Parser
+                        ASM.Program
+                        ASM.Segment
   hs-source-dirs:       sasm
   build-tool-depends:   alex:alex, happy:happy
-  build-depends:        cpu-lib
 
 executable sasm
   import:               common-deps, config
   main-is:              Main.hs
   other-modules:        ASM.Assembler
+                        ASM.Assembles
+                        ASM.Decodes
+                        ASM.Lexer
+                        ASM.Length
+                        ASM.Opcode
+                        ASM.Operand
+                        ASM.Parser
+                        ASM.Program
+                        ASM.Segment
   hs-source-dirs:       sasm
   ghc-options:          -threaded -rtsopts
   build-depends:      , optparse-applicative ^>= 0.15.1.0
-                      , sasm-lib
                       , cpu-lib
+  build-tool-depends:   alex:alex, happy:happy
 
 library cpu-lib
   import:               common-deps, config
@@ -83,17 +98,9 @@ library cpu-lib
                         CPU.Hardware.Video.Sprite
                         CPU.Hardware.Video.Sprites
                         CPU.Hardware.Video.VIC
-                        CPU.Program
-                        CPU.Run
-                        CPU.Segment
-                        CPU.Instructions.Assembles
-                        CPU.Instructions.Decodes
                         CPU.Instructions.Execute
-                        CPU.Instructions.Opcode
-                        CPU.Instructions.Operand
                         CPU.Instructions.Impl
                         CPU.Instructions.Jumps
-                        CPU.Instructions.Length
                         CPU.Instructions.Timing
                         CPU.Instructions.IS.ADC
                         CPU.Instructions.IS.AND
@@ -127,10 +134,12 @@ library cpu-lib
                         CPU.Instructions.IS.STY
                         CPU.Instructions.IS.T
   hs-source-dirs:       cpu
+  build-depends:        sasm-lib
 
 executable run
   import:               common-deps, config
   main-is:              Main.hs
+  other-modules:        CPU.Run
   hs-source-dirs:       run
   ghc-options:          -threaded -rtsopts
   build-depends:      , optparse-applicative ^>= 0.15.1.0

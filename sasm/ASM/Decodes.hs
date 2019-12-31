@@ -1,12 +1,12 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 
-module CPU.Instructions.Decodes
+module ASM.Decodes
   ( Decodes(..)
   , w16
   ) where
 
-import CPU.Instructions.Opcode
-import CPU.Instructions.Operand
+import ASM.Opcode
+import ASM.Operand
 
 import Data.Bits
 import Data.Vector.Storable

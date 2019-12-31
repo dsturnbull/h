@@ -1,9 +1,9 @@
 module CPU.Instructions.Gen where
 
 import ASM.Assembler
-import CPU.Instructions.Opcode
-import CPU.Instructions.Operand
-import CPU.Program
+import ASM.Opcode
+import ASM.Operand
+import ASM.Program
 
 import Data.Int
 import Data.Word

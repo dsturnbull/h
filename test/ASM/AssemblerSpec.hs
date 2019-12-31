@@ -7,7 +7,7 @@ module ASM.AssemblerSpec
   ) where
 
 import ASM.Assembler
-import CPU.Program
+import ASM.Program
 
 import Control.Monad.IO.Class
 import HaskellWorks.Hspec.Hedgehog

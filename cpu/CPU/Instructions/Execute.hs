@@ -3,10 +3,10 @@ module CPU.Instructions.Execute
   )
   where
 
+import ASM.Opcode
+import ASM.Operand
 import CPU
 import CPU.Instructions.Impl
-import CPU.Instructions.Opcode
-import CPU.Instructions.Operand
 
 execute :: Opcode -> CPU -> CPU
 execute i =

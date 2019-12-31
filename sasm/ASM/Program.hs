@@ -1,6 +1,6 @@
 {-# LANGUAGE DeriveGeneric #-}
 
-module CPU.Program
+module ASM.Program
   ( Program(..)
   ) where
 

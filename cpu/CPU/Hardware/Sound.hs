@@ -18,7 +18,6 @@ module CPU.Hardware.Sound
 import CPU                      (CPU (audio, mem, sid), soundV)
 import CPU.Hardware.Sound.SID
 import CPU.Hardware.Sound.Voice
-import CPU.Instructions.Decodes
 import CPU.Instructions.Impl
 
 import Bindings.PortAudio
@@ -256,3 +255,8 @@ fromErrorCode n = toEnum (fromIntegral n + 10000)
 withMaybe :: Storable a => Maybe a -> (Ptr a -> IO b) -> IO b
 withMaybe Nothing c  = c nullPtr
 withMaybe (Just a) c = with a c
+
+w16 :: DVS.Vector Word8 -> Word16
+w16 v = (addrH `shiftL` 8) .|. addrL
+  where addrL = fromIntegral (v ! 0)
+        addrH = fromIntegral (v ! 1)

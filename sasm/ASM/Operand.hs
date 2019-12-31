@@ -1,4 +1,4 @@
-module CPU.Instructions.Operand
+module ASM.Operand
   ( Operand(..)
   )
   where

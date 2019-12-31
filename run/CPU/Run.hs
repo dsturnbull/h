@@ -16,18 +16,18 @@ module CPU.Run
   , step
   ) where
 
+import ASM.Decodes
+import ASM.Length
+import ASM.Opcode
+import ASM.Program
 import CPU
 import CPU.Debugger
 import CPU.Hardware.Sound
 import CPU.Hardware.Sound.SID
 import CPU.Hardware.Timer
-import CPU.Instructions.Decodes
 import CPU.Instructions.Execute
 import CPU.Instructions.Jumps
-import CPU.Instructions.Length
-import CPU.Instructions.Opcode
 import CPU.Instructions.Timing
-import CPU.Program
 
 import Control.Concurrent
 import Control.Concurrent.STM

@@ -2,7 +2,7 @@ module CPU.Instructions.Jumps
   ( Jumps(..)
   ) where
 
-import CPU.Instructions.Opcode
+import ASM.Opcode
 
 class Jumps a where
   jumps :: a -> Bool

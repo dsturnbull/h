@@ -7,14 +7,15 @@ module ASM.Parser (
   parseTokens,
 ) where
 
-import CPU (l, h)
 import ASM.Lexer
-import CPU.Instructions.Opcode
-import CPU.Instructions.Operand
-import CPU.Program
+import ASM.Opcode
+import ASM.Operand
+import ASM.Program
 
 import Control.Monad.Except
 import Control.Monad.IO.Class
+import Data.Bits
+import Data.Word
 
 import qualified Data.ByteString as BS
 
@@ -228,4 +229,10 @@ parseAssembly input =
 
 parseTokens :: String -> Either String [Token]
 parseTokens = runExcept . scanTokens
+
+h :: Word16 -> Word8
+h w = fromIntegral $ w `shiftR` 8
+
+l :: Word16 -> Word8
+l w = fromIntegral $ w .&. 0x00ff
 }

@@ -6,11 +6,11 @@ module CPU.RunSpec
   ) where
 
 import ASM.Assembler
+import ASM.Length
 import CPU
 import CPU.Gen
 import CPU.Instructions.Gen
-import CPU.Instructions.Length
-import CPU.Run
+-- import CPU.Run
 
 import Control.Lens
 import Control.Monad.IO.Class
@@ -35,9 +35,10 @@ spec = describe "cpu runner" $ do
           |]
 
     prog <- liftIO $ assemble code 0x0000 0x0000
-    let cpu' = load prog cpu
-    (step cpu' & rA) === 0x20
-    (step cpu' & pc) === 0x2
+    -- let cpu' = load prog cpu
+    -- (step cpu' & rA) === 0x20
+    -- (step cpu' & pc) === 0x2
+    True === False
 
   it "executes instructions" $ requireProperty $ do
     memSize <- forAll $ G.constant 512
@@ -45,12 +46,13 @@ spec = describe "cpu runner" $ do
     code    <- forAll $ genCodeBreaking (R.linear 1 2) genInstruction
     prog    <- forAll $ genProg code
 
-    let cpu' = load prog cpu
-    (run cpu' & pc) === fromIntegral (sum (insLength <$> code) + 2) -- +2 for brk
+    -- let cpu' = load prog cpu
+    -- (run cpu' & pc) === fromIntegral (sum (insLength <$> code) + 2) -- +2 for brk
+    True === False
 
-run :: CPU -> CPU
-run cpu = do
-  let cpu' = step cpu
-  if cpu' & p & break
-    then cpu'
-    else run cpu'
+-- run :: CPU -> CPU
+-- run cpu = do
+--   let cpu' = step cpu
+--   if cpu' & p & break
+--     then cpu'
+--     else run cpu'

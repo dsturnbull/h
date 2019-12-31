@@ -6,21 +6,21 @@ _posL:
   .byte $00
 
 .org $2000
-!bin "6502/hikaty.spr"
+!bin "6502/hithere.spr"
 .byte $00
-!bin "6502/hikaty.spr"
+!bin "6502/hithere.spr"
 .byte $00
-!bin "6502/hikaty.spr"
+!bin "6502/hithere.spr"
 .byte $00
-!bin "6502/hikaty.spr"
+!bin "6502/hithere.spr"
 .byte $00
-!bin "6502/hikaty.spr"
+!bin "6502/hithere.spr"
 .byte $00
-!bin "6502/hikaty.spr"
+!bin "6502/hithere.spr"
 .byte $00
-!bin "6502/hikaty.spr"
+!bin "6502/hithere.spr"
 .byte $00
-!bin "6502/hikaty.spr"
+!bin "6502/hithere.spr"
 .byte $00
 
 .code

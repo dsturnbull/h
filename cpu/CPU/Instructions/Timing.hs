@@ -3,8 +3,8 @@ module CPU.Instructions.Timing
   )
   where
 
-import CPU.Instructions.Opcode
-import CPU.Instructions.Operand
+import ASM.Opcode
+import ASM.Operand
 
 class Timed a where
   cycles :: a -> Int

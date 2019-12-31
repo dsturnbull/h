@@ -1,9 +1,9 @@
-module CPU.Instructions.Length
+module ASM.Length
   ( Length(..)
   ) where
 
-import CPU.Instructions.Opcode
-import CPU.Instructions.Operand
+import ASM.Opcode
+import ASM.Operand
 
 class Length a where
   insLength :: a -> Int

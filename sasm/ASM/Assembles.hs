@@ -1,19 +1,19 @@
 {-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module CPU.Instructions.Assembles
+module ASM.Assembles
   ( Assembles(..)
   , Segment(..)
   , findLabel
   )
   where
 
-import CPU                      (h, l)
-import CPU.Instructions.Length
-import CPU.Instructions.Opcode
-import CPU.Instructions.Operand
-import CPU.Segment
+import ASM.Length
+import ASM.Opcode
+import ASM.Operand
+import ASM.Segment
 
+import Data.Bits
 import Data.Function
 import Data.List
 import Data.Maybe
@@ -293,3 +293,9 @@ findLabel _ a c d ins s =
     seg       = if insPos >= length datas then CodeSegment else DataSegment
     insPos    = fromMaybe 0 $ findIndex (\case LabelDef s' -> s' == s
                                                _           -> False) ins
+
+h :: Word16 -> Word8
+h w = fromIntegral $ w `shiftR` 8
+
+l :: Word16 -> Word8
+l w = fromIntegral $ w .&. 0x00ff
