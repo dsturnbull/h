@@ -84,6 +84,7 @@ import qualified Data.ByteString as BS
 
     w8    { TokenWord8  _ $$ }
     w16   { TokenWord16 _ $$ }
+    num   { TokenNum  _ $$ }
     '$'   { TokenDollar _ }
     '#'   { TokenHash _ }
     ','   { TokenComma _ }
@@ -98,6 +99,8 @@ import qualified Data.ByteString as BS
     '%'   { TokenPercent _ }
     '\''  { TokenQuote _ }
     '='   { TokenEquals _ }
+    '+'   { TokenPlus _ }
+    '-'   { TokenMinus _ }
 
     code  { TokenCode _ }
     data  { TokenData _ }
@@ -201,6 +204,8 @@ oper         : '('  nm     ',' 'X' ')' { IndX $2 }
 oper         : '('  nm     ')' ',' 'Y' { IndY $2 }
 oper         : '(' lbl ')'             { IndirectLabel $2 }
 oper         : lbl                     { Label $1 }
+oper         : lbl '+' nm              { ArithLabel $1 (fromIntegral $3) }
+oper         : lbl '-' nm              { ArithLabel $1 (fromIntegral (- $3)) }
 oper         : '<' lbl                 { LabelLowByte $2 }
 oper         : '>' lbl                 { LabelHighByte $2 }
 
@@ -210,6 +215,7 @@ rel          : lbl                     { Label $1 }
 nm           : '$'  w8                 { $2 }
 nm           : '%'  w8                 { $2 }
 nm           : w8                      { $1 } -- single-quoted
+nm           : num                     { fromIntegral $1 }
 
 label        : lbl ':'                 { LabelDef $1 }
 

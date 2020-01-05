@@ -94,6 +94,7 @@ tokens :-
   -- Syntax
   $hex{2}                       { tok (\p s -> TokenWord8  p (read ("0x" <> s))) }
   $hex{4}                       { tok (\p s -> TokenWord16 p (read ("0x" <> s))) }
+  $digit+                       { tok (\p s -> TokenNum p (read s)) }
   $label+                       { tok TokenLabel }
   "$"                           { tok (\p _ -> TokenDollar p) }
   "#"                           { tok (\p _ -> TokenHash p) }
@@ -108,6 +109,8 @@ tokens :-
   "%"                           { tok (\p _ -> TokenPercent p) }
   "'"                           { tok (\p _ -> TokenQuote p) }
   "="                           { tok (\p _ -> TokenEquals p) }
+  "+"                           { tok (\p _ -> TokenPlus p) }
+  "-"                           { tok (\p _ -> TokenMinus p) }
   $bits{8}                      { tok (\p s -> TokenWord8 p (fromIntegral $ toDec s)) }
   '$chr{1}'                     { tok (\p s -> TokenWord8 p (fromIntegral $ ord (s !! 1))) }
 
@@ -192,6 +195,7 @@ data Token
   | TokenOpenParen AlexPosn
   | TokenCloseParen AlexPosn
   | TokenEOF AlexPosn
+  | TokenNum AlexPosn Int
   | TokenLabel AlexPosn String
   | TokenColon AlexPosn
   | TokenHighByte AlexPosn
@@ -199,6 +203,8 @@ data Token
   | TokenPercent AlexPosn
   | TokenQuote AlexPosn
   | TokenEquals AlexPosn
+  | TokenPlus AlexPosn
+  | TokenMinus AlexPosn
   | TokenCode AlexPosn
   | TokenData AlexPosn
   | TokenBytes AlexPosn

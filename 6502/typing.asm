@@ -30,7 +30,7 @@ isr_v = $fffe
   lda <isr
   sta isr_v
   lda >isr
-  sta $ffff
+  sta isr_v+1
 
   ldx #$ff
 write_1:

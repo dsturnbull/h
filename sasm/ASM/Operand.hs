@@ -24,6 +24,7 @@ data Operand
   | IndirectLabel String
   | LabelLowByte String
   | LabelHighByte String
+  | ArithLabel String Int16
   deriving Eq
 
 instance Show Operand where
@@ -43,6 +44,7 @@ instance Show Operand where
   show (IndirectLabel s) = "(" <> s <> ")"
   show (LabelLowByte s)  = "<" <> s
   show (LabelHighByte s) = ">" <> s
+  show (ArithLabel s v)  = s <> if v > 0 then "+" else "" <> show v
 
 showImm :: Word8 -> String
 showImm w = '#' : showW8 w

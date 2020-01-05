@@ -15,6 +15,7 @@ import ASM.Segment
 
 import Data.Bits
 import Data.Function
+import Data.Int
 import Data.List
 import Data.Maybe
 import Data.Word
@@ -32,6 +33,7 @@ instance Assembles Opcode where
   asm _ _ _ _ _ (ADC (IndX w))          = [0x61, w]
   asm _ _ _ _ _ (ADC (IndY w))          = [0x71, w]
   asm _ _ c d a (ADC (Label s))         = findLabel Nothing 0x6D c d a s
+  asm _ _ c d a (ADC (ArithLabel s n))  = findLabel (Just n) 0x6D c d a s
   asm _ _ _ _ _ (ADC _)                 = undefined
 
   asm _ _ _ _ _ (AND (Imm  w))          = [0x29, w]
@@ -127,6 +129,7 @@ instance Assembles Opcode where
   asm _ _ _ _ _ (INC (Abs w))           = [0xEE, l w, h w]
   asm _ _ _ _ _ (INC (AbsX w))          = [0xFE, l w, h w]
   asm _ _ c d a (INC (Label s))         = findLabel Nothing 0xEE c d a s
+  asm _ _ c d a (INC (ArithLabel s n))  = findLabel (Just n) 0xEE c d a s
   asm _ _ _ _ _ (INC _)                 = undefined
 
   asm _ _ _ _ _ INX                     = [0xE8]
@@ -135,11 +138,13 @@ instance Assembles Opcode where
   asm _ _ _ _ _ (JMP (Abs w))           = [0x4C, l w, h w]
   asm _ _ _ _ _ (JMP (Ind w))           = [0x6C, l w, h w]
   asm _ _ c d a (JMP (Label s))         = findLabel Nothing 0x4C c d a s
+  asm _ _ c d a (JMP (ArithLabel s n))  = findLabel (Just n) 0x4C c d a s
   asm _ _ c d a (JMP (IndirectLabel s)) = findLabel Nothing 0x6C c d a s
   asm _ _ _ _ _ (JMP _)                 = undefined
 
   asm _ _ _ _ _ (JSR (Abs w))           = [0x20, l w, h w]
   asm _ _ c d a (JSR (Label s))         = findLabel Nothing 0x20 c d a s
+  asm _ _ c d a (JSR (ArithLabel s n))  = findLabel (Just n) 0x20 c d a s
   asm _ _ _ _ _ (JSR _)                 = undefined
 
   asm _ _ _ _ _ (LDA (Imm  w))          = [0xA9, w]
@@ -151,6 +156,7 @@ instance Assembles Opcode where
   asm _ _ _ _ _ (LDA (IndX w))          = [0xA1, w]
   asm _ _ _ _ _ (LDA (IndY w))          = [0xB1, w]
   asm _ _ c d a (LDA (Label s))         = findLabel Nothing 0xAD c d a s
+  asm _ _ c d a (LDA (ArithLabel s n))  = findLabel (Just n) 0xAD c d a s
   asm _ _ c d a (LDA (LabelLowByte s))  = findLabel Nothing 0xA9 c d a s & \case [i, hi, _] -> [i, hi]
                                                                                  _          -> undefined
   asm _ _ c d a (LDA (LabelHighByte s)) = findLabel Nothing 0xA9 c d a s & \case [i, _, lo] -> [i, lo]
@@ -162,6 +168,7 @@ instance Assembles Opcode where
   asm _ _ _ _ _ (LDX (ZpgY w))          = [0xB6, w]
   asm _ _ _ _ _ (LDX (Abs  w))          = [0xAE, l w, h w]
   asm _ _ c d a (LDX (Label s))         = findLabel Nothing 0xAE c d a s
+  asm _ _ c d a (LDX (ArithLabel s n))  = findLabel (Just n) 0xAE c d a s
   asm _ _ _ _ _ (LDX (AbsY w))          = [0xBE, l w, h w]
   asm _ _ _ _ _ (LDX _)                 = undefined
 
@@ -202,6 +209,7 @@ instance Assembles Opcode where
   asm _ _ _ _ _ (ROL (Abs  w))          = [0x2E, l w, h w]
   asm _ _ _ _ _ (ROL (AbsX w))          = [0x3E, l w, h w]
   asm _ _ c d a (ROL (Label s))         = findLabel Nothing 0x2E c d a s
+  asm _ _ c d a (ROL (ArithLabel s n))  = findLabel (Just n) 0x2E c d a s
   asm _ _ _ _ _ (ROL _)                 = undefined
 
   asm _ _ _ _ _ (ROR Acc)               = [0x6A]
@@ -210,6 +218,7 @@ instance Assembles Opcode where
   asm _ _ _ _ _ (ROR (Abs  w))          = [0x6E, l w, h w]
   asm _ _ _ _ _ (ROR (AbsX w))          = [0x7E, l w, h w]
   asm _ _ c d a (ROR (Label s))         = findLabel Nothing 0x6E c d a s
+  asm _ _ c d a (ROR (ArithLabel s n))  = findLabel (Just n) 0x6E c d a s
   asm _ _ _ _ _ (ROR _)                 = undefined
 
   asm _ _ _ _ _ RTI                     = [0x40]
@@ -224,6 +233,7 @@ instance Assembles Opcode where
   asm _ _ _ _ _ (SBC (IndX w))          = [0xE1, w]
   asm _ _ _ _ _ (SBC (IndY w))          = [0xF1, w]
   asm _ _ c d a (SBC (Label s))         = findLabel Nothing 0xED c d a s
+  asm _ _ c d a (SBC (ArithLabel s n))  = findLabel (Just n) 0xED c d a s
   asm _ _ _ _ _ (SBC _)                 = undefined
 
   asm _ _ _ _ _ SEC                     = [0x38]
@@ -238,6 +248,7 @@ instance Assembles Opcode where
   asm _ _ _ _ _ (STA (IndX w))          = [0x81, w]
   asm _ _ _ _ _ (STA (IndY w))          = [0x91, w]
   asm _ _ c d a (STA (Label s))         = findLabel Nothing 0x8D c d a s
+  asm _ _ c d a (STA (ArithLabel s n))  = findLabel (Just n) 0x8D c d a s
   asm _ _ _ _ _ (STA _)                 = undefined
 
   asm _ _ _ _ _ (STX (Zpg  w))          = [0x86, w]
@@ -278,16 +289,16 @@ relLabel base a o s =
         dist p = fromIntegral . sum $ insLength <$> fst (splitAt p codes)
         (_, codes) = splitAt (fromMaybe (length a) $ elemIndex Code a) a
 
-findLabel :: Maybe Word8 -> Word8 -> Word16 -> Word16 -> [Opcode] -> String -> [Word8]
-findLabel _ a c d ins s =
+findLabel :: Maybe Int16 -> Word8 -> Word16 -> Word16 -> [Opcode] -> String -> [Word8]
+findLabel n a c d ins s =
   case seg of
     CodeSegment     -> [a, l codeLoc, h codeLoc]
     DataSegment     -> [a, l dataVal, h dataVal]
     OffsetSegment _ -> undefined
   where
     (datas, codes) = splitAt (fromMaybe (length ins) $ elemIndex Code ins) ins
-    codeLoc   = findLoc $ locate c codes
-    dataVal   = findLoc $ locate d datas
+    codeLoc   = maybe 0 fromIntegral n + findLoc (locate c codes)
+    dataVal   = maybe 0 fromIntegral n + findLoc (locate d datas)
     findLoc i =
       case findVal i of
         (loc, LabelDef _)  -> fromIntegral loc
