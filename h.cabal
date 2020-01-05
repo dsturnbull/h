@@ -96,6 +96,7 @@ library cpu-lib
                         CPU.Hardware.Timer
                         CPU.Hardware.Timer.JiffyTimer
                         CPU.Hardware.Sound
+                        CPU.Hardware.Sound.Signal
                         CPU.Hardware.Sound.SID
                         CPU.Hardware.Sound.Voice
                         CPU.Hardware.Video

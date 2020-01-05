@@ -62,10 +62,10 @@ runShowCPU :: Integer -> TVar CPU -> IO ()
 runShowCPU d cpuSTM = void $ flip repeatedTimer (msDelay $ ceiling (((1 :: Double) / fromInteger d) * 1000)) $
   readTVarIO cpuSTM >>= updateDebugger
 
-runSound :: TVar CPU -> IO ()
-runSound cpuSTM =
+runSound :: TVar CPU -> Voices -> IO ()
+runSound cpuSTM vs =
   void $ flip repeatedTimer (usDelay (fromInteger (ceiling µs))) $
-    stepSound cpuSTM
+    stepSound cpuSTM vs
 
 readProgram :: Get (Word16, Program)
 readProgram = do
@@ -145,10 +145,10 @@ debugged _ (Goto cpu) = do
   let val = read $ "0x" <> [a, b, c, d]
   return $ Broken $ cpu & field @"pc" .~ val
 
-stepSound :: TVar CPU -> IO ()
-stepSound cpuSTM = do
+stepSound :: TVar CPU -> Voices -> IO ()
+stepSound cpuSTM vs = do
   cpu <- readTVarIO cpuSTM
-  cpu' <- cpu & updateSIDClock >>= tickSound
+  cpu' <- cpu & updateSIDClock >>= tickSound vs
   atomically $ writeTVar cpuSTM cpu'
 
 updateSIDClock :: CPU -> IO CPU

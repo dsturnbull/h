@@ -6,6 +6,15 @@ _mag:
 
 .code
 _main:
+  ; $1d1e is 440 Hz
+  lda <#$1d1e       ; note l
+  sta $d400
+  lda >#$1d1e       ; note h
+  sta $d401
+
+  lda $01
+  sta _mag          ; initial magnitude of frequency changes
+
   jsr _start
 _noop:
   jmp _noop
@@ -21,12 +30,6 @@ _start:
   ;     76543210
   lda #%11111111    ; sustain 8 (100ms), release 8 (300ms)
   sta $d406
-
-  ; $1d1e is 440 Hz
-  lda <#$1d1e       ; note l
-  sta $d400
-  lda >#$1d1e       ; note h
-  sta $d401
 
   ;     76543210
   lda #%00010001    ; gate + triangle
@@ -45,9 +48,6 @@ _start:
 
   lda #%00000001    ; enable timer
   sta $0320
-
-  lda $01
-  sta _mag          ; initial magnitude of frequency changes
 
   rts
 

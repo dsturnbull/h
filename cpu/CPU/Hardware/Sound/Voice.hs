@@ -44,6 +44,21 @@ data Voice = Voice
   , wave     :: Waveform
   } deriving (Generic, Eq)
 
+mkVoice :: Voice
+mkVoice = Voice { gate     = False
+                , attackW  = 0
+                , attack   = 0.0
+                , sustainW = 0
+                , sustain  = 0.0
+                , decayW   = 0
+                , decay    = 0.0
+                , releaseW = 0
+                , release  = 0.0
+                , freqW    = 0
+                , freq     = 0.0
+                , wave     = Noise
+                }
+
 attackTable :: Word8 -> Double
 attackTable 0x0 =    2 / ms
 attackTable 0x1 =    8 / ms
@@ -90,21 +105,6 @@ ms = 1000
 
 s :: Double
 s = 1
-
-mkVoice :: Voice
-mkVoice = Voice { gate     = False
-                , attackW  = 0
-                , attack   = 0.0
-                , sustainW = 0
-                , sustain  = 0.0
-                , decayW   = 0
-                , decay    = 0.0
-                , releaseW = 0
-                , release  = 0.0
-                , freqW    = 0
-                , freq     = 0.0
-                , wave     = Noise
-                }
 
 voiceFreqH :: Word16 -> Word16
 voiceFreqH = id

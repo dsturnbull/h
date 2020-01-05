@@ -2,6 +2,7 @@
 {-# LANGUAGE DeriveGeneric       #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TupleSections       #-}
 {-# LANGUAGE TypeApplications    #-}
 
 import CPU
@@ -73,10 +74,10 @@ main = do
                           & field @"pc" .~ cloc
   initial & initDebugger
 
-  cpuSTM <- initSound initial >>= newTVarIO
+  (vs, cpuSTM) <- initSound initial >>= \(v, c) -> (v,) <$> newTVarIO c
   _ <- forkIO $ readTermKbd cpuSTM
   _ <- forkIO $ runCPU (opt ^. field @"hz") cpuSTM
-  _ <- forkIO $ runSound cpuSTM
+  _ <- forkIO $ runSound cpuSTM vs
   _ <- forkIO $ runShowCPU (opt ^. field @"interval") cpuSTM
 
   runVideo cpuSTM
