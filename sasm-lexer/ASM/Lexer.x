@@ -19,7 +19,7 @@ $digit = 0-9
 $alpha = [a-zA-Z]
 $hex   = [0-9a-fA-F]
 $eol   = [\n]
-$label = [a-zA-Z0-9_]
+$label = [a-z0-9_]
 $bits  = [01]
 $chr   = .
 @character = . # \" # \\
@@ -94,7 +94,7 @@ tokens :-
   -- Syntax
   $hex{2}                       { tok (\p s -> TokenWord8  p (read ("0x" <> s))) }
   $hex{4}                       { tok (\p s -> TokenWord16 p (read ("0x" <> s))) }
-  "_" $label+                   { tok TokenLabel }
+  $label+                       { tok TokenLabel }
   "$"                           { tok (\p _ -> TokenDollar p) }
   "#"                           { tok (\p _ -> TokenHash p) }
   ","                           { tok (\p _ -> TokenComma p) }
@@ -107,6 +107,7 @@ tokens :-
   ">"                           { tok (\p _ -> TokenHighByte p) }
   "%"                           { tok (\p _ -> TokenPercent p) }
   "'"                           { tok (\p _ -> TokenQuote p) }
+  "="                           { tok (\p _ -> TokenEquals p) }
   $bits{8}                      { tok (\p s -> TokenWord8 p (fromIntegral $ toDec s)) }
   '$chr{1}'                     { tok (\p s -> TokenWord8 p (fromIntegral $ ord (s !! 1))) }
 
@@ -197,6 +198,7 @@ data Token
   | TokenLowByte AlexPosn
   | TokenPercent AlexPosn
   | TokenQuote AlexPosn
+  | TokenEquals AlexPosn
   | TokenCode AlexPosn
   | TokenData AlexPosn
   | TokenBytes AlexPosn

@@ -1,8 +1,8 @@
 .data
 
-_posH:
+pos_h:
   .byte $04
-_posL:
+pos_l:
   .byte $00
 
 .org $2000
@@ -23,19 +23,21 @@ _posL:
 !bin "6502/hithere.spr"
 .byte $00
 
+isr_v = $fffe
+
 .code
 
-  lda <_isr
-  sta $fffe
-  lda >_isr
+  lda <isr
+  sta isr_v
+  lda >isr
   sta $ffff
 
   ldx #$ff
-_write_1:
+write_1:
   lda #$6e
   sta $d7ff,X
   dex
-  bne _write_1
+  bne write_1
 
   lda #$01
   sta $d015 ; enable sprite 0
@@ -45,35 +47,35 @@ _write_1:
   ldx #$00
   ldy #$00
   lda #$80
-_set_sprite_pos:
+set_sprite_pos:
   sta $d000,X
   sta $d001,X
   inx
   inx
   iny
   cpy #$10
-  bne _set_sprite_pos
+  bne set_sprite_pos
 
   ; set spr ptrs
   ldx #$00
-_load_spr_ptr:
+load_spr_ptr:
   lda #$80
   sta $07f8,X
   inx
   cpx #$08
-  bne _load_spr_ptr
+  bne load_spr_ptr
 
-_main:
+main:
   lda #$00
-_loop:
+loop:
 ;   ldx #$ff
 ;   ldy #$ff
-; _x:
+; x:
 ;   dex
-;   bne _x
-; _y:
+;   bne x
+; y:
 ;   dey
-;   bne _y
+;   bne y
 
   ; spr0 nw
   dec $d000
@@ -100,14 +102,14 @@ _loop:
   ;   $d00e
   dec $d00f
 
-  jsr _change_colour
+  jsr change_colour
   adc #$01
-  jmp _loop
+  jmp loop
 
-_change_colour:
+change_colour:
   ; set spr0 colour
   ldx #$00
-_set_colour:
+set_colour:
   sta $e000,X
   sta $e040,X
   sta $e080,X
@@ -118,9 +120,9 @@ _set_colour:
   sta $e1c0,X
   inx
   cpx #$40
-  bne _set_colour
+  bne set_colour
   rts
-_isr:
+isr:
   pha
   txa
   pha
@@ -128,11 +130,11 @@ _isr:
   pha
 
   lda $0300
-;   sta _posH
-  ldx _posL
+;   sta _pos_h
+  ldx pos_l
   sta $0400,X
   clc
-  inc _posL
+  inc pos_l
 
   pla
   tay

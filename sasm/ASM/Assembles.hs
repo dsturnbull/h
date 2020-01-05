@@ -261,6 +261,7 @@ instance Assembles Opcode where
 
   -- handled in the actual assembler
   asm _ _ _ _ _ (LabelDef _)            = []
+  asm _ _ _ _ _ (Variable _ _)          = []
   asm _ _ _ _ _ Code                    = []
   asm _ _ _ _ _ Data                    = []
   asm _ _ _ _ _ (Bytes _)               = []
@@ -281,18 +282,25 @@ findLabel :: Maybe Word8 -> Word8 -> Word16 -> Word16 -> [Opcode] -> String -> [
 findLabel _ a c d ins s =
   case seg of
     CodeSegment     -> [a, l codeLoc, h codeLoc]
-    DataSegment     -> [a, l dataLoc, h dataLoc]
+    DataSegment     -> [a, l dataVal, h dataVal]
     OffsetSegment _ -> undefined
   where
     (datas, codes) = splitAt (fromMaybe (length ins) $ elemIndex Code ins) ins
     codeLoc   = findLoc $ locate c codes
-    dataLoc   = findLoc $ locate d datas
-    findLoc   = fromIntegral . fst . fromMaybe (0, NOP) . find (\(_, i) -> case i of LabelDef s' -> s' == s
-                                                                                     _           -> False)
+    dataVal   = findLoc $ locate d datas
+    findLoc i =
+      case findVal i of
+        (loc, LabelDef _)  -> fromIntegral loc
+        (_, Variable _ l') -> fromIntegral l'
+        _                  -> undefined
+    findVal   = fromMaybe (undefined, NOP) . find (\(_, i) -> case i of LabelDef s'   -> s' == s
+                                                                        Variable s' _ -> s' == s
+                                                                        _             -> False)
     locate o  = snd . mapAccumL (\p i -> (p + insLength i, (p + insLength i, i))) (fromIntegral o)
     seg       = if insPos >= length datas then CodeSegment else DataSegment
-    insPos    = fromMaybe 0 $ findIndex (\case LabelDef s' -> s' == s
-                                               _           -> False) ins
+    insPos    = fromMaybe 0 $ findIndex (\case LabelDef s'   -> s' == s
+                                               Variable s' _ -> s' == s
+                                               _             -> False) ins
 
 h :: Word16 -> Word8
 h w = fromIntegral $ w `shiftR` 8

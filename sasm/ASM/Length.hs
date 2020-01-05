@@ -226,6 +226,7 @@ instance Length Opcode where
   insLength BRK                       = 1
 
   insLength (LabelDef _)              = 0
+  insLength (Variable _ _)            = 0
   insLength Code                      = 0
   insLength Data                      = 0
   insLength (Bytes ws)                = fromIntegral $ length ws

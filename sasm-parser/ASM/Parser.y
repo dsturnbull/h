@@ -97,6 +97,7 @@ import qualified Data.ByteString as BS
     '>'   { TokenHighByte _ }
     '%'   { TokenPercent _ }
     '\''  { TokenQuote _ }
+    '='   { TokenEquals _ }
 
     code  { TokenCode _ }
     data  { TokenData _ }
@@ -178,7 +179,8 @@ instruction  : adc oper                { ADC $2   }
              | tsx                     { TXS      }
              | txs                     { TSX      }
              | brk                     { BRK      }
-             | labeldef                { $1       }
+             | label                   { $1       }
+             | variable                { $1       }
              | code                    { Code     }
              | data                    { Data     }
              | byte bytes              { Bytes $2 }
@@ -209,7 +211,9 @@ nm           : '$'  w8                 { $2 }
 nm           : '%'  w8                 { $2 }
 nm           : w8                      { $1 } -- single-quoted
 
-labeldef     : lbl ':'                 { LabelDef $1 }
+label        : lbl ':'                 { LabelDef $1 }
+
+variable     : lbl '=' '$' w16         { Variable $1 $4 }
 
 bytes        : byteval                 { [$1] }
              | byteval ',' bytes       { $1 : $3 }
