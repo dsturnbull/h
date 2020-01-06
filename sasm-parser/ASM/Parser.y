@@ -8,7 +8,6 @@ module ASM.Parser (
 ) where
 
 import ASM.Lexer
-import ASM.Opcode
 import ASM.Operand
 import ASM.Program
 
@@ -191,35 +190,42 @@ instruction  : adc oper                { ADC $2   }
              | org '$' w16             { Origin $3 }
 
 oper         : '#'  nm                 { Imm  $2 }
+oper         : '#'  lbl                { Label (LabelOpt LabelImm NoMod) $2 }
+oper         : '#'  lbl '+' num        { Label (LabelOpt LabelImm (Plus (fromIntegral $4))) $2 }
+oper         : '#'  lbl '-' num        { Label (LabelOpt LabelImm (Minus (fromIntegral $4))) $2 }
 oper         : '<' '#' '$' w16         { Imm (l $4) }
 oper         : '>' '#' '$' w16         { Imm (h $4) }
 oper         :     '$' w16             { Abs  $2 }
 oper         :     '$' w16 ',' 'X'     { AbsX $2 }
+oper         :     lbl     ',' 'X'     { Label (LabelOpt LabelAbsX NoMod) $1 } -- no zpg
 oper         :     '$' w16 ',' 'Y'     { AbsY $2 }
+oper         :     lbl     ',' 'Y'     { Label (LabelOpt LabelAbsY NoMod) $1 } -- no zpg
 oper         :      nm                 { Zpg  $1 }
 oper         :      nm     ',' 'X'     { ZpgX $1 }
 oper         :      nm     ',' 'Y'     { ZpgY $1 }
-oper         : '(' '$' w16 ',' 'X' ')' { Ind $3 }
+oper         : '(' '$' w16 ')'         { Ind $3 }
+oper         : '(' lbl     ')'         { Label (LabelOpt LabelIndirect NoMod) $2 }
 oper         : '('  nm     ',' 'X' ')' { IndX $2 }
+oper         : '(' lbl     ',' 'X' ')' { Label (LabelOpt LabelIndirectX NoMod) $2 }
 oper         : '('  nm     ')' ',' 'Y' { IndY $2 }
-oper         : '(' lbl ')'             { IndirectLabel $2 }
-oper         : lbl                     { Label $1 }
-oper         : lbl '+' nm              { ArithLabel $1 (fromIntegral $3) }
-oper         : lbl '-' nm              { ArithLabel $1 (fromIntegral (- $3)) }
-oper         : '<' lbl                 { LabelLowByte $2 }
-oper         : '>' lbl                 { LabelHighByte $2 }
+oper         : '(' lbl     ')' ',' 'Y' { Label (LabelOpt LabelIndirectY NoMod) $2 }
+oper         : lbl                     { Label (LabelOpt LabelAbs NoMod) $1 }
+oper         : lbl '+' num             { Label (LabelOpt LabelAbs (Plus (fromIntegral $3))) $1 }
+oper         : lbl '-' num             { Label (LabelOpt LabelAbs (Minus (fromIntegral $3))) $1 }
+oper         : '<' '#' lbl             { Label (LabelOpt (LabelLowByte LabelImm) NoMod) $3 }
+oper         : '>' '#' lbl             { Label (LabelOpt (LabelHighByte LabelImm) NoMod) $3 }
 
 rel          : '$'  w8                 { Rel (fromIntegral $2) }
-rel          : lbl                     { Label $1 }
+rel          : lbl                     { Label (LabelOpt LabelRel NoMod) $1 }
 
 nm           : '$'  w8                 { $2 }
 nm           : '%'  w8                 { $2 }
 nm           : w8                      { $1 } -- single-quoted
-nm           : num                     { fromIntegral $1 }
 
 label        : lbl ':'                 { LabelDef $1 }
 
-variable     : lbl '=' '$' w16         { Variable $1 $4 }
+variable     : lbl '=' '$' w8          { Variable8 $1 $4 }
+variable     : lbl '=' '$' w16         { Variable16 $1 $4 }
 
 bytes        : byteval                 { [$1] }
              | byteval ',' bytes       { $1 : $3 }

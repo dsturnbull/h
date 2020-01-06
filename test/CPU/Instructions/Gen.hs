@@ -1,7 +1,6 @@
 module CPU.Instructions.Gen where
 
 import ASM.Assembler
-import ASM.Opcode
 import ASM.Operand
 import ASM.Program
 

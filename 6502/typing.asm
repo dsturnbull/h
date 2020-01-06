@@ -24,18 +24,20 @@ pos_l:
 .byte $00
 
 isr_v = $fffe
+colour_ram = $d800
 
 .code
 
-  lda <isr
+  lda <#isr
   sta isr_v
-  lda >isr
+  lda >#isr
   sta isr_v+1
 
   ldx #$ff
 write_1:
   lda #$6e
-  sta $d7ff,X
+  sta colour_ram,X
+  ; sta $d7ff,X
   dex
   bne write_1
 
@@ -122,6 +124,7 @@ set_colour:
   cpx #$40
   bne set_colour
   rts
+
 isr:
   pha
   txa

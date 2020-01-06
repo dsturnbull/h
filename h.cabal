@@ -64,7 +64,6 @@ library sasm-lib
   import:               common-deps, config
   exposed-modules:      ASM.Assembles
                         ASM.Length
-                        ASM.Opcode
                         ASM.Operand
                         ASM.Program
                         ASM.Segment

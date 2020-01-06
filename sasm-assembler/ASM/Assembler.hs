@@ -9,7 +9,7 @@ module ASM.Assembler
 
 import ASM.Assembles
 import ASM.Length
-import ASM.Opcode
+import ASM.Operand
 import ASM.Parser
 import ASM.Program
 
@@ -57,7 +57,7 @@ insPositions seg segOff coff coff' doff doff' ins (i:is) cs ds oss =
                                                                                                             <$> zip [0..] ws) : oss)
         CodeSegment -> undefined -- we shouldn't put bytes in code, I think
     _          -> insPositions seg segOff coff (coff' + insLength i) doff doff' ins is    ((first (coff' +) <$> zip [0..]  c) ++ cs) ds oss
-  where c = asm coff' seg (fromIntegral coff) (fromIntegral doff) ins i
+  where c = asm i coff' (fromIntegral coff) (fromIntegral doff) ins
 insPositions _ _ _ _ _ _ _ [] cs ds oss = (cs, ds, oss)
 
 writeProgram :: Program -> LBS.ByteString

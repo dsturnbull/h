@@ -17,7 +17,7 @@ module CPU.Run
   ) where
 
 import ASM.Length
-import ASM.Opcode
+import ASM.Operand
 import ASM.Program
 import CPU
 import CPU.Debugger

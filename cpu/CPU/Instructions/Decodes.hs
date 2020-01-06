@@ -5,7 +5,6 @@ module CPU.Instructions.Decodes
   , w16
   ) where
 
-import ASM.Opcode
 import ASM.Operand
 
 import Data.Bits

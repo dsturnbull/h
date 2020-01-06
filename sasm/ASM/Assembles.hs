@@ -1,320 +1,307 @@
 {-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications    #-}
 
 module ASM.Assembles
   ( Assembles(..)
   , Segment(..)
   , findLabel
-  )
-  where
+  ) where
 
 import ASM.Length
-import ASM.Opcode
 import ASM.Operand
 import ASM.Segment
 
 import Data.Bits
-import Data.Function
-import Data.Int
 import Data.List
 import Data.Maybe
 import Data.Word
 
 class Assembles a where
-  asm :: Int -> Segment -> Word16 -> Word16 -> [Opcode] -> a -> [Word8]
+  asm :: a -> Int -> Word16 -> Word16 -> [Opcode] -> [Word8]
 
 instance Assembles Opcode where
-  asm _ _ _ _ _ (ADC (Imm  w))          = [0x69, w]
-  asm _ _ _ _ _ (ADC (Zpg  w))          = [0x65, w]
-  asm _ _ _ _ _ (ADC (ZpgX w))          = [0x75, w]
-  asm _ _ _ _ _ (ADC (Abs  w))          = [0x6D, l w, h w]
-  asm _ _ _ _ _ (ADC (AbsX w))          = [0x7D, l w, h w]
-  asm _ _ _ _ _ (ADC (AbsY w))          = [0x79, l w, h w]
-  asm _ _ _ _ _ (ADC (IndX w))          = [0x61, w]
-  asm _ _ _ _ _ (ADC (IndY w))          = [0x71, w]
-  asm _ _ c d a (ADC (Label s))         = findLabel Nothing 0x6D c d a s
-  asm _ _ c d a (ADC (ArithLabel s n))  = findLabel (Just n) 0x6D c d a s
-  asm _ _ _ _ _ (ADC _)                 = undefined
+  asm (ADC (Imm  w))      _ _ _ _ = [0x69, w]
+  asm (ADC (Zpg  w))      _ _ _ _ = [0x65, w]
+  asm (ADC (ZpgX w))      _ _ _ _ = [0x75, w]
+  asm (ADC (Abs  w))      _ _ _ _ = [0x6D, lo w, hi w]
+  asm (ADC (AbsX w))      _ _ _ _ = [0x7D, lo w, hi w]
+  asm (ADC (AbsY w))      _ _ _ _ = [0x79, lo w, hi w]
+  asm (ADC (IndX w))      _ _ _ _ = [0x61, w]
+  asm (ADC (IndY w))      _ _ _ _ = [0x71, w]
+  asm (ADC l@(Label _ s)) f c d a = asm (unLabelWith @Integer ADC (findLabel c d a s) l) f c d a
+  asm (ADC _)             _ _ _ _ = undefined
 
-  asm _ _ _ _ _ (AND (Imm  w))          = [0x29, w]
-  asm _ _ _ _ _ (AND (Zpg  w))          = [0x25, w]
-  asm _ _ _ _ _ (AND (ZpgX w))          = [0x35, w]
-  asm _ _ _ _ _ (AND (Abs  w))          = [0x2D, l w, h w]
-  asm _ _ _ _ _ (AND (AbsX w))          = [0x3D, l w, h w]
-  asm _ _ _ _ _ (AND (AbsY w))          = [0x39, l w, h w]
-  asm _ _ _ _ _ (AND (IndX w))          = [0x21, w]
-  asm _ _ _ _ _ (AND (IndY w))          = [0x31, w]
-  asm _ _ _ _ _ (AND _)                 = undefined
+  asm (AND (Imm  w))      _ _ _ _ = [0x29, w]
+  asm (AND (Zpg  w))      _ _ _ _ = [0x25, w]
+  asm (AND (ZpgX w))      _ _ _ _ = [0x35, w]
+  asm (AND (Abs  w))      _ _ _ _ = [0x2D, lo w, hi w]
+  asm (AND (AbsX w))      _ _ _ _ = [0x3D, lo w, hi w]
+  asm (AND (AbsY w))      _ _ _ _ = [0x39, lo w, hi w]
+  asm (AND (IndX w))      _ _ _ _ = [0x21, w]
+  asm (AND (IndY w))      _ _ _ _ = [0x31, w]
+  asm (AND l@(Label _ s)) f c d a = asm (unLabelWith @Integer AND (findLabel c d a s) l) f c d a
+  asm (AND _)             _ _ _ _ = undefined
 
-  asm _ _ _ _ _ (ASL Acc)               = [0x0A]
-  asm _ _ _ _ _ (ASL (Zpg  w))          = [0x06, w]
-  asm _ _ _ _ _ (ASL (ZpgX w))          = [0x16, w]
-  asm _ _ _ _ _ (ASL (Abs  w))          = [0x0E, l w, h w]
-  asm _ _ _ _ _ (ASL (AbsX w))          = [0x1E, l w, h w]
-  asm _ _ _ _ _ (ASL _)                 = undefined
+  asm (ASL Acc)           _ _ _ _ = [0x0A]
+  asm (ASL (Zpg  w))      _ _ _ _ = [0x06, w]
+  asm (ASL (ZpgX w))      _ _ _ _ = [0x16, w]
+  asm (ASL (Abs  w))      _ _ _ _ = [0x0E, lo w, hi w]
+  asm (ASL (AbsX w))      _ _ _ _ = [0x1E, lo w, hi w]
+  asm (ASL l@(Label _ s)) f c d a = asm (unLabelWith @Integer ASL (findLabel c d a s) l) f c d a
+  asm (ASL _)             _ _ _ _ = undefined
 
-  asm _ _ _ _ _ (BPL (Rel w))           = [0x10, fromIntegral w]
-  asm _ _ _ _ _ (BMI (Rel w))           = [0x30, fromIntegral w]
-  asm _ _ _ _ _ (BVC (Rel w))           = [0x50, fromIntegral w]
-  asm _ _ _ _ _ (BVS (Rel w))           = [0x70, fromIntegral w]
-  asm _ _ _ _ _ (BCC (Rel w))           = [0x90, fromIntegral w]
-  asm _ _ _ _ _ (BCS (Rel w))           = [0xB0, fromIntegral w]
-  asm _ _ _ _ _ (BNE (Rel w))           = [0xD0, fromIntegral w]
-  asm _ _ _ _ _ (BEQ (Rel w))           = [0xF0, fromIntegral w]
+  asm (BPL (Rel w))       _ _ _ _ = [0x10, fromIntegral w]
+  asm (BMI (Rel w))       _ _ _ _ = [0x30, fromIntegral w]
+  asm (BVC (Rel w))       _ _ _ _ = [0x50, fromIntegral w]
+  asm (BVS (Rel w))       _ _ _ _ = [0x70, fromIntegral w]
+  asm (BCC (Rel w))       _ _ _ _ = [0x90, fromIntegral w]
+  asm (BCS (Rel w))       _ _ _ _ = [0xB0, fromIntegral w]
+  asm (BNE (Rel w))       _ _ _ _ = [0xD0, fromIntegral w]
+  asm (BEQ (Rel w))       _ _ _ _ = [0xF0, fromIntegral w]
 
-  asm o _ c _ a (BPL (Label s))         = 0x10 : relLabel c a o s
-  asm o _ c _ a (BMI (Label s))         = 0x30 : relLabel c a o s
-  asm o _ c _ a (BVC (Label s))         = 0x50 : relLabel c a o s
-  asm o _ c _ a (BVS (Label s))         = 0x70 : relLabel c a o s
-  asm o _ c _ a (BCC (Label s))         = 0x90 : relLabel c a o s
-  asm o _ c _ a (BCS (Label s))         = 0xB0 : relLabel c a o s
-  asm o _ c _ a (BNE (Label s))         = 0xD0 : relLabel c a o s
-  asm o _ c _ a (BEQ (Label s))         = 0xF0 : relLabel c a o s
+  asm (BPL l@(Label _ s)) o c d a = asm (unLabelWith @Integer BPL (findLabel c d a s - fromIntegral o) l) o c d a
+  asm (BMI l@(Label _ s)) o c d a = asm (unLabelWith @Integer BMI (findLabel c d a s - fromIntegral o) l) o c d a
+  asm (BVC l@(Label _ s)) o c d a = asm (unLabelWith @Integer BVC (findLabel c d a s - fromIntegral o) l) o c d a
+  asm (BVS l@(Label _ s)) o c d a = asm (unLabelWith @Integer BVS (findLabel c d a s - fromIntegral o) l) o c d a
+  asm (BCC l@(Label _ s)) o c d a = asm (unLabelWith @Integer BCC (findLabel c d a s - fromIntegral o) l) o c d a
+  asm (BCS l@(Label _ s)) o c d a = asm (unLabelWith @Integer BCS (findLabel c d a s - fromIntegral o) l) o c d a
+  asm (BNE l@(Label _ s)) o c d a = asm (unLabelWith @Integer BNE (findLabel c d a s - fromIntegral o) l) o c d a
+  asm (BEQ l@(Label _ s)) o c d a = asm (unLabelWith @Integer BEQ (findLabel c d a s - fromIntegral o) l) o c d a
 
-  asm _ _ _ _ _ (BPL _)                 = undefined
-  asm _ _ _ _ _ (BMI _)                 = undefined
-  asm _ _ _ _ _ (BVC _)                 = undefined
-  asm _ _ _ _ _ (BVS _)                 = undefined
-  asm _ _ _ _ _ (BCC _)                 = undefined
-  asm _ _ _ _ _ (BCS _)                 = undefined
-  asm _ _ _ _ _ (BNE _)                 = undefined
-  asm _ _ _ _ _ (BEQ _)                 = undefined
+  asm (BPL _)             _ _ _ _ = undefined
+  asm (BMI _)             _ _ _ _ = undefined
+  asm (BVC _)             _ _ _ _ = undefined
+  asm (BVS _)             _ _ _ _ = undefined
+  asm (BCC _)             _ _ _ _ = undefined
+  asm (BCS _)             _ _ _ _ = undefined
+  asm (BNE _)             _ _ _ _ = undefined
+  asm (BEQ _)             _ _ _ _ = undefined
 
-  asm _ _ _ _ _ CLC                     = [0x18]
-  asm _ _ _ _ _ CLI                     = [0x58]
-  asm _ _ _ _ _ CLV                     = [0xB8]
-  asm _ _ _ _ _ CLD                     = [0xD8]
+  asm CLC                 _ _ _ _ = [0x18]
+  asm CLI                 _ _ _ _ = [0x58]
+  asm CLV                 _ _ _ _ = [0xB8]
+  asm CLD                 _ _ _ _ = [0xD8]
 
-  asm _ _ _ _ _ (CMP (Imm  w))          = [0xC9, w]
-  asm _ _ _ _ _ (CMP (Zpg  w))          = [0xC5, w]
-  asm _ _ _ _ _ (CMP (ZpgX w))          = [0xD5, w]
-  asm _ _ _ _ _ (CMP (Abs  w))          = [0xCD, l w, h w]
-  asm _ _ _ _ _ (CMP (AbsX w))          = [0xDD, l w, h w]
-  asm _ _ _ _ _ (CMP (AbsY w))          = [0xD9, l w, h w]
-  asm _ _ _ _ _ (CMP (IndX w))          = [0xC1, w]
-  asm _ _ _ _ _ (CMP (IndY w))          = [0xD1, w]
-  asm _ _ _ _ _ (CMP _)                 = undefined
+  asm (CMP (Imm  w))      _ _ _ _ = [0xC9, w]
+  asm (CMP (Zpg  w))      _ _ _ _ = [0xC5, w]
+  asm (CMP (ZpgX w))      _ _ _ _ = [0xD5, w]
+  asm (CMP (Abs  w))      _ _ _ _ = [0xCD, lo w, hi w]
+  asm (CMP (AbsX w))      _ _ _ _ = [0xDD, lo w, hi w]
+  asm (CMP (AbsY w))      _ _ _ _ = [0xD9, lo w, hi w]
+  asm (CMP (IndX w))      _ _ _ _ = [0xC1, w]
+  asm (CMP (IndY w))      _ _ _ _ = [0xD1, w]
+  asm (CMP l@(Label _ s)) f c d a = asm (unLabelWith @Integer CMP (findLabel c d a s) l) f c d a
+  asm (CMP _)             _ _ _ _ = undefined
 
-  asm _ _ _ _ _ (CPX (Imm  w))          = [0xE0, w]
-  asm _ _ _ _ _ (CPX (Zpg  w))          = [0xE4, w]
-  asm _ _ _ _ _ (CPX (Abs  w))          = [0xEC, l w, h w]
-  asm _ _ _ _ _ (CPX _)                 = undefined
+  asm (CPX (Imm  w))      _ _ _ _ = [0xE0, w]
+  asm (CPX (Zpg  w))      _ _ _ _ = [0xE4, w]
+  asm (CPX (Abs  w))      _ _ _ _ = [0xEC, lo w, hi w]
+  asm (CPX l@(Label _ s)) f c d a = asm (unLabelWith @Integer CPX (findLabel c d a s) l) f c d a
+  asm (CPX _)             _ _ _ _ = undefined
 
-  asm _ _ _ _ _ (CPY (Imm  w))          = [0xC0, w]
-  asm _ _ _ _ _ (CPY (Zpg  w))          = [0xC4, w]
-  asm _ _ _ _ _ (CPY (Abs  w))          = [0xCC, l w, h w]
-  asm _ _ _ _ _ (CPY _)                 = undefined
+  asm (CPY (Imm  w))      _ _ _ _ = [0xC0, w]
+  asm (CPY (Zpg  w))      _ _ _ _ = [0xC4, w]
+  asm (CPY (Abs  w))      _ _ _ _ = [0xCC, lo w, hi w]
+  asm (CPY l@(Label _ s)) f c d a = asm (unLabelWith @Integer CPY (findLabel c d a s) l) f c d a
+  asm (CPY _)             _ _ _ _ = undefined
 
-  asm _ _ _ _ _ (DEC (Zpg w))           = [0xC6, w]
-  asm _ _ _ _ _ (DEC (ZpgX w))          = [0xD6, w]
-  asm _ _ _ _ _ (DEC (Abs w))           = [0xCE, l w, h w]
-  asm _ _ _ _ _ (DEC (AbsX w))          = [0xDE, l w, h w]
-  asm _ _ _ _ _ (DEC _)                 = undefined
+  asm (DEC (Zpg w))       _ _ _ _ = [0xC6, w]
+  asm (DEC (ZpgX w))      _ _ _ _ = [0xD6, w]
+  asm (DEC (Abs w))       _ _ _ _ = [0xCE, lo w, hi w]
+  asm (DEC (AbsX w))      _ _ _ _ = [0xDE, lo w, hi w]
+  asm (DEC l@(Label _ s)) f c d a = asm (unLabelWith @Integer DEC (findLabel c d a s) l) f c d a
+  asm (DEC _)             _ _ _ _ = undefined
 
-  asm _ _ _ _ _ DEX                     = [0xCA]
-  asm _ _ _ _ _ DEY                     = [0x88]
+  asm DEX                 _ _ _ _ = [0xCA]
+  asm DEY                 _ _ _ _ = [0x88]
 
-  asm _ _ _ _ _ (EOR (Imm w))           = [0x49, w]
-  asm _ _ _ _ _ (EOR (Zpg w))           = [0x45, w]
-  asm _ _ _ _ _ (EOR (ZpgX w))          = [0x55, w]
-  asm _ _ _ _ _ (EOR (Abs w))           = [0x4D, l w, h w]
-  asm _ _ _ _ _ (EOR (AbsX w))          = [0x5D, l w, h w]
-  asm _ _ _ _ _ (EOR (AbsY w))          = [0x59, l w, h w]
-  asm _ _ _ _ _ (EOR (IndX w))          = [0x41, w]
-  asm _ _ _ _ _ (EOR (IndY w))          = [0x51, w]
-  asm _ _ _ _ _ (EOR _)                 = undefined
+  asm (EOR (Imm w))       _ _ _ _ = [0x49, w]
+  asm (EOR (Zpg w))       _ _ _ _ = [0x45, w]
+  asm (EOR (ZpgX w))      _ _ _ _ = [0x55, w]
+  asm (EOR (Abs w))       _ _ _ _ = [0x4D, lo w, hi w]
+  asm (EOR (AbsX w))      _ _ _ _ = [0x5D, lo w, hi w]
+  asm (EOR (AbsY w))      _ _ _ _ = [0x59, lo w, hi w]
+  asm (EOR (IndX w))      _ _ _ _ = [0x41, w]
+  asm (EOR (IndY w))      _ _ _ _ = [0x51, w]
+  asm (EOR l@(Label _ s)) f c d a = asm (unLabelWith @Integer EOR (findLabel c d a s) l) f c d a
+  asm (EOR _)             _ _ _ _ = undefined
 
-  asm _ _ _ _ _ (INC (Zpg w))           = [0xE6, w]
-  asm _ _ _ _ _ (INC (ZpgX w))          = [0xF6, w]
-  asm _ _ _ _ _ (INC (Abs w))           = [0xEE, l w, h w]
-  asm _ _ _ _ _ (INC (AbsX w))          = [0xFE, l w, h w]
-  asm _ _ c d a (INC (Label s))         = findLabel Nothing 0xEE c d a s
-  asm _ _ c d a (INC (ArithLabel s n))  = findLabel (Just n) 0xEE c d a s
-  asm _ _ _ _ _ (INC _)                 = undefined
+  asm (INC (Zpg w))       _ _ _ _ = [0xE6, w]
+  asm (INC (ZpgX w))      _ _ _ _ = [0xF6, w]
+  asm (INC (Abs w))       _ _ _ _ = [0xEE, lo w, hi w]
+  asm (INC (AbsX w))      _ _ _ _ = [0xFE, lo w, hi w]
+  asm (INC l@(Label _ s)) f c d a = asm (unLabelWith @Integer INC (findLabel c d a s) l) f c d a
+  asm (INC _)             _ _ _ _ = undefined
 
-  asm _ _ _ _ _ INX                     = [0xE8]
-  asm _ _ _ _ _ INY                     = [0xC8]
+  asm INX                 _ _ _ _ = [0xE8]
+  asm INY                 _ _ _ _ = [0xC8]
 
-  asm _ _ _ _ _ (JMP (Abs w))           = [0x4C, l w, h w]
-  asm _ _ _ _ _ (JMP (Ind w))           = [0x6C, l w, h w]
-  asm _ _ c d a (JMP (Label s))         = findLabel Nothing 0x4C c d a s
-  asm _ _ c d a (JMP (ArithLabel s n))  = findLabel (Just n) 0x4C c d a s
-  asm _ _ c d a (JMP (IndirectLabel s)) = findLabel Nothing 0x6C c d a s
-  asm _ _ _ _ _ (JMP _)                 = undefined
+  asm (JMP (Abs w))       _ _ _ _ = [0x4C, lo w, hi w]
+  asm (JMP (Ind w))       _ _ _ _ = [0x6C, lo w, hi w]
+  asm (JMP l@(Label _ s)) f c d a = asm (unLabelWith @Integer JMP (findLabel c d a s) l) f c d a
+  asm (JMP _)             _ _ _ _ = undefined
 
-  asm _ _ _ _ _ (JSR (Abs w))           = [0x20, l w, h w]
-  asm _ _ c d a (JSR (Label s))         = findLabel Nothing 0x20 c d a s
-  asm _ _ c d a (JSR (ArithLabel s n))  = findLabel (Just n) 0x20 c d a s
-  asm _ _ _ _ _ (JSR _)                 = undefined
+  asm (JSR (Abs w))       _ _ _ _ = [0x20, lo w, hi w]
+  asm (JSR l@(Label _ s)) f c d a = asm (unLabelWith @Integer JSR (findLabel c d a s) l) f c d a
+  asm (JSR _)             _ _ _ _ = undefined
 
-  asm _ _ _ _ _ (LDA (Imm  w))          = [0xA9, w]
-  asm _ _ _ _ _ (LDA (Zpg  w))          = [0xA5, w]
-  asm _ _ _ _ _ (LDA (ZpgX w))          = [0xB5, w]
-  asm _ _ _ _ _ (LDA (Abs  w))          = [0xAD, l w, h w]
-  asm _ _ _ _ _ (LDA (AbsX w))          = [0xBD, l w, h w]
-  asm _ _ _ _ _ (LDA (AbsY w))          = [0xB9, l w, h w]
-  asm _ _ _ _ _ (LDA (IndX w))          = [0xA1, w]
-  asm _ _ _ _ _ (LDA (IndY w))          = [0xB1, w]
-  asm _ _ c d a (LDA (Label s))         = findLabel Nothing 0xAD c d a s
-  asm _ _ c d a (LDA (ArithLabel s n))  = findLabel (Just n) 0xAD c d a s
-  asm _ _ c d a (LDA (LabelLowByte s))  = findLabel Nothing 0xA9 c d a s & \case [i, hi, _] -> [i, hi]
-                                                                                 _          -> undefined
-  asm _ _ c d a (LDA (LabelHighByte s)) = findLabel Nothing 0xA9 c d a s & \case [i, _, lo] -> [i, lo]
-                                                                                 _          -> undefined
-  asm _ _ _ _ _ (LDA _)                 = undefined
+  asm (LDA (Imm  w))      _ _ _ _ = [0xA9, w]
+  asm (LDA (Zpg  w))      _ _ _ _ = [0xA5, w]
+  asm (LDA (ZpgX w))      _ _ _ _ = [0xB5, w]
+  asm (LDA (Abs  w))      _ _ _ _ = [0xAD, lo w, hi w]
+  asm (LDA (AbsX w))      _ _ _ _ = [0xBD, lo w, hi w]
+  asm (LDA (AbsY w))      _ _ _ _ = [0xB9, lo w, hi w]
+  asm (LDA (IndX w))      _ _ _ _ = [0xA1, w]
+  asm (LDA (IndY w))      _ _ _ _ = [0xB1, w]
+  asm (LDA l@(Label _ s)) f c d a = asm (unLabelWith @Integer LDA (findLabel c d a s) l) f c d a
+  asm (LDA _)             _ _ _ _ = undefined
 
-  asm _ _ _ _ _ (LDX (Imm  w))          = [0xA2, w]
-  asm _ _ _ _ _ (LDX (Zpg  w))          = [0xA6, w]
-  asm _ _ _ _ _ (LDX (ZpgY w))          = [0xB6, w]
-  asm _ _ _ _ _ (LDX (Abs  w))          = [0xAE, l w, h w]
-  asm _ _ c d a (LDX (Label s))         = findLabel Nothing 0xAE c d a s
-  asm _ _ c d a (LDX (ArithLabel s n))  = findLabel (Just n) 0xAE c d a s
-  asm _ _ _ _ _ (LDX (AbsY w))          = [0xBE, l w, h w]
-  asm _ _ _ _ _ (LDX _)                 = undefined
+  asm (LDX (Imm  w))      _ _ _ _ = [0xA2, w]
+  asm (LDX (Zpg  w))      _ _ _ _ = [0xA6, w]
+  asm (LDX (ZpgY w))      _ _ _ _ = [0xB6, w]
+  asm (LDX (Abs  w))      _ _ _ _ = [0xAE, lo w, hi w]
+  asm (LDX (AbsY w))      _ _ _ _ = [0xBE, lo w, hi w]
+  asm (LDX l@(Label _ s)) f c d a = asm (unLabelWith @Integer LDX (findLabel c d a s) l) f c d a
+  asm (LDX _)             _ _ _ _ = undefined
 
-  asm _ _ _ _ _ (LDY (Imm  w))          = [0xA0, w]
-  asm _ _ _ _ _ (LDY (Zpg  w))          = [0xA4, w]
-  asm _ _ _ _ _ (LDY (ZpgX w))          = [0xB4, w]
-  asm _ _ _ _ _ (LDY (Abs  w))          = [0xAC, l w, h w]
-  asm _ _ _ _ _ (LDY (AbsX w))          = [0xBC, l w, h w]
-  asm _ _ _ _ _ (LDY _)                 = undefined
+  asm (LDY (Imm  w))      _ _ _ _ = [0xA0, w]
+  asm (LDY (Zpg  w))      _ _ _ _ = [0xA4, w]
+  asm (LDY (ZpgX w))      _ _ _ _ = [0xB4, w]
+  asm (LDY (Abs  w))      _ _ _ _ = [0xAC, lo w, hi w]
+  asm (LDY (AbsX w))      _ _ _ _ = [0xBC, lo w, hi w]
+  asm (LDY l@(Label _ s)) f c d a = asm (unLabelWith @Integer LDY (findLabel c d a s) l) f c d a
+  asm (LDY _)             _ _ _ _ = undefined
 
-  asm _ _ _ _ _ (LSR Acc)               = [0x4A]
-  asm _ _ _ _ _ (LSR (Zpg  w))          = [0x46, w]
-  asm _ _ _ _ _ (LSR (ZpgX w))          = [0x56, w]
-  asm _ _ _ _ _ (LSR (Abs  w))          = [0x4E, l w, h w]
-  asm _ _ _ _ _ (LSR (AbsX w))          = [0x5E, l w, h w]
-  asm _ _ _ _ _ (LSR _)                 = undefined
+  asm (LSR Acc)           _ _ _ _ = [0x4A]
+  asm (LSR (Zpg  w))      _ _ _ _ = [0x46, w]
+  asm (LSR (ZpgX w))      _ _ _ _ = [0x56, w]
+  asm (LSR (Abs  w))      _ _ _ _ = [0x4E, lo w, hi w]
+  asm (LSR (AbsX w))      _ _ _ _ = [0x5E, lo w, hi w]
+  asm (LSR l@(Label _ s)) f c d a = asm (unLabelWith @Integer LSR (findLabel c d a s) l) f c d a
+  asm (LSR _)             _ _ _ _ = undefined
 
-  asm _ _ _ _ _ NOP                     = [0xEA]
+  asm NOP _ _ _ _                 = [0xEA]
 
-  asm _ _ _ _ _ (ORA (Imm w))           = [0x09, w]
-  asm _ _ _ _ _ (ORA (Zpg w))           = [0x05, w]
-  asm _ _ _ _ _ (ORA (ZpgX w))          = [0x15, w]
-  asm _ _ _ _ _ (ORA (Abs w))           = [0x0D, l w, h w]
-  asm _ _ _ _ _ (ORA (AbsX w))          = [0x1D, l w, h w]
-  asm _ _ _ _ _ (ORA (AbsY w))          = [0x19, l w, h w]
-  asm _ _ _ _ _ (ORA (IndX w))          = [0x01, w]
-  asm _ _ _ _ _ (ORA (IndY w))          = [0x11, w]
-  asm _ _ _ _ _ (ORA _)                 = undefined
+  asm (ORA (Imm w))       _ _ _ _ = [0x09, w]
+  asm (ORA (Zpg w))       _ _ _ _ = [0x05, w]
+  asm (ORA (ZpgX w))      _ _ _ _ = [0x15, w]
+  asm (ORA (Abs w))       _ _ _ _ = [0x0D, lo w, hi w]
+  asm (ORA (AbsX w))      _ _ _ _ = [0x1D, lo w, hi w]
+  asm (ORA (AbsY w))      _ _ _ _ = [0x19, lo w, hi w]
+  asm (ORA (IndX w))      _ _ _ _ = [0x01, w]
+  asm (ORA (IndY w))      _ _ _ _ = [0x11, w]
+  asm (ORA l@(Label _ s)) f c d a = asm (unLabelWith @Integer ORA (findLabel c d a s) l) f c d a
+  asm (ORA _)             _ _ _ _ = undefined
 
-  asm _ _ _ _ _ PHA                     = [0x48]
-  asm _ _ _ _ _ PHP                     = [0x08]
-  asm _ _ _ _ _ PLA                     = [0x68]
-  asm _ _ _ _ _ PLP                     = [0x28]
+  asm PHA                 _ _ _ _ = [0x48]
+  asm PHP                 _ _ _ _ = [0x08]
+  asm PLA                 _ _ _ _ = [0x68]
+  asm PLP                 _ _ _ _ = [0x28]
 
-  asm _ _ _ _ _ (ROL Acc)               = [0xAA]
-  asm _ _ _ _ _ (ROL (Zpg  w))          = [0x26, w]
-  asm _ _ _ _ _ (ROL (ZpgX w))          = [0x36, w]
-  asm _ _ _ _ _ (ROL (Abs  w))          = [0x2E, l w, h w]
-  asm _ _ _ _ _ (ROL (AbsX w))          = [0x3E, l w, h w]
-  asm _ _ c d a (ROL (Label s))         = findLabel Nothing 0x2E c d a s
-  asm _ _ c d a (ROL (ArithLabel s n))  = findLabel (Just n) 0x2E c d a s
-  asm _ _ _ _ _ (ROL _)                 = undefined
+  asm (ROL Acc)           _ _ _ _ = [0xAA]
+  asm (ROL (Zpg  w))      _ _ _ _ = [0x26, w]
+  asm (ROL (ZpgX w))      _ _ _ _ = [0x36, w]
+  asm (ROL (Abs  w))      _ _ _ _ = [0x2E, lo w, hi w]
+  asm (ROL (AbsX w))      _ _ _ _ = [0x3E, lo w, hi w]
+  asm (ROL l@(Label _ s)) f c d a = asm (unLabelWith @Integer ROL (findLabel c d a s) l) f c d a
+  asm (ROL _)             _ _ _ _ = undefined
 
-  asm _ _ _ _ _ (ROR Acc)               = [0x6A]
-  asm _ _ _ _ _ (ROR (Zpg  w))          = [0x66, w]
-  asm _ _ _ _ _ (ROR (ZpgX w))          = [0x76, w]
-  asm _ _ _ _ _ (ROR (Abs  w))          = [0x6E, l w, h w]
-  asm _ _ _ _ _ (ROR (AbsX w))          = [0x7E, l w, h w]
-  asm _ _ c d a (ROR (Label s))         = findLabel Nothing 0x6E c d a s
-  asm _ _ c d a (ROR (ArithLabel s n))  = findLabel (Just n) 0x6E c d a s
-  asm _ _ _ _ _ (ROR _)                 = undefined
+  asm (ROR Acc)           _ _ _ _ = [0x6A]
+  asm (ROR (Zpg  w))      _ _ _ _ = [0x66, w]
+  asm (ROR (ZpgX w))      _ _ _ _ = [0x76, w]
+  asm (ROR (Abs  w))      _ _ _ _ = [0x6E, lo w, hi w]
+  asm (ROR (AbsX w))      _ _ _ _ = [0x7E, lo w, hi w]
+  asm (ROR l@(Label _ s)) f c d a = asm (unLabelWith @Integer ROR (findLabel c d a s) l) f c d a
+  asm (ROR _)             _ _ _ _ = undefined
 
-  asm _ _ _ _ _ RTI                     = [0x40]
-  asm _ _ _ _ _ RTS                     = [0x60]
+  asm RTI                 _ _ _ _ = [0x40]
+  asm RTS                 _ _ _ _ = [0x60]
 
-  asm _ _ _ _ _ (SBC (Imm  w))          = [0xE9, w]
-  asm _ _ _ _ _ (SBC (Zpg  w))          = [0xE5, w]
-  asm _ _ _ _ _ (SBC (ZpgX w))          = [0xF5, w]
-  asm _ _ _ _ _ (SBC (Abs  w))          = [0xED, l w, h w]
-  asm _ _ _ _ _ (SBC (AbsX w))          = [0xFD, l w, h w]
-  asm _ _ _ _ _ (SBC (AbsY w))          = [0xF9, l w, h w]
-  asm _ _ _ _ _ (SBC (IndX w))          = [0xE1, w]
-  asm _ _ _ _ _ (SBC (IndY w))          = [0xF1, w]
-  asm _ _ c d a (SBC (Label s))         = findLabel Nothing 0xED c d a s
-  asm _ _ c d a (SBC (ArithLabel s n))  = findLabel (Just n) 0xED c d a s
-  asm _ _ _ _ _ (SBC _)                 = undefined
+  asm (SBC (Imm  w))      _ _ _ _ = [0xE9, w]
+  asm (SBC (Zpg  w))      _ _ _ _ = [0xE5, w]
+  asm (SBC (ZpgX w))      _ _ _ _ = [0xF5, w]
+  asm (SBC (Abs  w))      _ _ _ _ = [0xED, lo w, hi w]
+  asm (SBC (AbsX w))      _ _ _ _ = [0xFD, lo w, hi w]
+  asm (SBC (AbsY w))      _ _ _ _ = [0xF9, lo w, hi w]
+  asm (SBC (IndX w))      _ _ _ _ = [0xE1, w]
+  asm (SBC (IndY w))      _ _ _ _ = [0xF1, w]
+  asm (SBC l@(Label _ s)) f c d a = asm (unLabelWith @Integer SBC (findLabel c d a s) l) f c d a
+  asm (SBC _)             _ _ _ _ = undefined
 
-  asm _ _ _ _ _ SEC                     = [0x38]
-  asm _ _ _ _ _ SEI                     = [0x78]
-  asm _ _ _ _ _ SED                     = [0xF8]
+  asm SEC                 _ _ _ _ = [0x38]
+  asm SEI                 _ _ _ _ = [0x78]
+  asm SED                 _ _ _ _ = [0xF8]
 
-  asm _ _ _ _ _ (STA (Zpg  w))          = [0x85, w]
-  asm _ _ _ _ _ (STA (ZpgX w))          = [0x95, w]
-  asm _ _ _ _ _ (STA (Abs  w))          = [0x8D, l w, h w]
-  asm _ _ _ _ _ (STA (AbsX w))          = [0x9D, l w, h w]
-  asm _ _ _ _ _ (STA (AbsY w))          = [0x99, l w, h w]
-  asm _ _ _ _ _ (STA (IndX w))          = [0x81, w]
-  asm _ _ _ _ _ (STA (IndY w))          = [0x91, w]
-  asm _ _ c d a (STA (Label s))         = findLabel Nothing 0x8D c d a s
-  asm _ _ c d a (STA (ArithLabel s n))  = findLabel (Just n) 0x8D c d a s
-  asm _ _ _ _ _ (STA _)                 = undefined
+  asm (STA (Zpg  w))      _ _ _ _ = [0x85, w]
+  asm (STA (ZpgX w))      _ _ _ _ = [0x95, w]
+  asm (STA (Abs  w))      _ _ _ _ = [0x8D, lo w, hi w]
+  asm (STA (AbsX w))      _ _ _ _ = [0x9D, lo w, hi w]
+  asm (STA (AbsY w))      _ _ _ _ = [0x99, lo w, hi w]
+  asm (STA (IndX w))      _ _ _ _ = [0x81, w]
+  asm (STA (IndY w))      _ _ _ _ = [0x91, w]
+  asm (STA l@(Label _ s)) f c d a = asm (unLabelWith @Integer STA (findLabel c d a s) l) f c d a
+  asm (STA _)             _ _ _ _ = undefined
 
-  asm _ _ _ _ _ (STX (Zpg  w))          = [0x86, w]
-  asm _ _ _ _ _ (STX (ZpgY w))          = [0x96, w]
-  asm _ _ _ _ _ (STX (Abs  w))          = [0x8E, l w, h w]
-  asm _ _ _ _ _ (STX _)                 = undefined
+  asm (STX (Zpg  w))      _ _ _ _ = [0x86, w]
+  asm (STX (ZpgY w))      _ _ _ _ = [0x96, w]
+  asm (STX (Abs  w))      _ _ _ _ = [0x8E, lo w, hi w]
+  asm (STX l@(Label _ s)) f c d a = asm (unLabelWith @Integer STX (findLabel c d a s) l) f c d a
+  asm (STX _)             _ _ _ _ = undefined
 
-  asm _ _ _ _ _ (STY (Zpg  w))          = [0x84, w]
-  asm _ _ _ _ _ (STY (ZpgX w))          = [0x94, w]
-  asm _ _ _ _ _ (STY (Abs  w))          = [0x8C, l w, h w]
-  asm _ _ _ _ _ (STY _)                 = undefined
+  asm (STY (Zpg  w))      _ _ _ _ = [0x84, w]
+  asm (STY (ZpgX w))      _ _ _ _ = [0x94, w]
+  asm (STY (Abs  w))      _ _ _ _ = [0x8C, lo w, hi w]
+  asm (STY l@(Label _ s)) f c d a = asm (unLabelWith @Integer STY (findLabel c d a s) l) f c d a
+  asm (STY _)             _ _ _ _ = undefined
 
-  asm _ _ _ _ _ TAX                     = [0xAA]
-  asm _ _ _ _ _ TXA                     = [0x8A]
-  asm _ _ _ _ _ TAY                     = [0xA8]
-  asm _ _ _ _ _ TYA                     = [0x98]
-  asm _ _ _ _ _ TSX                     = [0x9A]
-  asm _ _ _ _ _ TXS                     = [0xBA]
+  asm TAX                 _ _ _ _ = [0xAA]
+  asm TXA                 _ _ _ _ = [0x8A]
+  asm TAY                 _ _ _ _ = [0xA8]
+  asm TYA                 _ _ _ _ = [0x98]
+  asm TSX                 _ _ _ _ = [0x9A]
+  asm TXS                 _ _ _ _ = [0xBA]
 
-  asm _ _ _ _ _ BRK                     = [0x00]
+  asm BRK                 _ _ _ _ = [0x00]
 
   -- handled in the actual assembler
-  asm _ _ _ _ _ (LabelDef _)            = []
-  asm _ _ _ _ _ (Variable _ _)          = []
-  asm _ _ _ _ _ Code                    = []
-  asm _ _ _ _ _ Data                    = []
-  asm _ _ _ _ _ (Bytes _)               = []
-  asm _ _ _ _ _ (Origin _)              = []
+  asm (LabelDef _)        _ _ _ _ = []
+  asm (Variable8 _ _)     _ _ _ _ = []
+  asm (Variable16 _ _)    _ _ _ _ = []
+  asm Code                _ _ _ _ = []
+  asm Data                _ _ _ _ = []
+  asm (Bytes _)           _ _ _ _ = []
+  asm (Origin _)          _ _ _ _ = []
 
-relLabel :: Word16 -> [Opcode] -> Int -> String -> [Word8]
-relLabel base a o s =
-  case findIndex (\case
-                    LabelDef s' -> s' == s
-                    _           -> False) codes of
-    Just p  -> [fromIntegral (w p)]
-    Nothing -> error $ "cannot find label " <> s
-  where w p = fromIntegral base + dist p - o
-        dist p = fromIntegral . sum $ insLength <$> fst (splitAt p codes)
-        (_, codes) = splitAt (fromMaybe (length a) $ elemIndex Code a) a
-
-findLabel :: Maybe Int16 -> Word8 -> Word16 -> Word16 -> [Opcode] -> String -> [Word8]
-findLabel n a c d ins s =
+findLabel :: Num a => Word16 -> Word16 -> [Opcode] -> String -> a
+findLabel c d ins s =
   case seg of
-    CodeSegment     -> [a, l codeLoc, h codeLoc]
-    DataSegment     -> [a, l dataVal, h dataVal]
+    CodeSegment     -> codeLoc
+    DataSegment     -> dataVal
     OffsetSegment _ -> undefined
   where
     (datas, codes) = splitAt (fromMaybe (length ins) $ elemIndex Code ins) ins
-    codeLoc   = maybe 0 fromIntegral n + findLoc (locate c codes)
-    dataVal   = maybe 0 fromIntegral n + findLoc (locate d datas)
+    codeLoc   = findLoc (locate c codes)
+    dataVal   = findLoc (locate d datas)
     findLoc i =
       case findVal i of
-        (loc, LabelDef _)  -> fromIntegral loc
-        (_, Variable _ l') -> fromIntegral l'
-        _                  -> undefined
-    findVal   = fromMaybe (undefined, NOP) . find (\(_, i) -> case i of LabelDef s'   -> s' == s
-                                                                        Variable s' _ -> s' == s
-                                                                        _             -> False)
+        (loc, LabelDef _)    -> fromIntegral loc
+        (_, Variable8 _ l')  -> fromIntegral l'
+        (_, Variable16 _ l') -> fromIntegral l'
+        _                    -> undefined
+    findVal   = fromMaybe (undefined, NOP) . find (\(_, i) -> case i of LabelDef s'     -> s' == s
+                                                                        Variable8 s' _  -> s' == s
+                                                                        Variable16 s' _ -> s' == s
+                                                                        _               -> False)
     locate o  = snd . mapAccumL (\p i -> (p + insLength i, (p + insLength i, i))) (fromIntegral o)
     seg       = if insPos >= length datas then CodeSegment else DataSegment
-    insPos    = fromMaybe 0 $ findIndex (\case LabelDef s'   -> s' == s
-                                               Variable s' _ -> s' == s
-                                               _             -> False) ins
+    insPos    = fromMaybe 0 $ findIndex (\case LabelDef s'     -> s' == s
+                                               Variable8 s' _  -> s' == s
+                                               Variable16 s' _ -> s' == s
+                                               _               -> False) ins
 
-h :: Word16 -> Word8
-h w = fromIntegral $ w `shiftR` 8
+hi :: Word16 -> Word8
+hi w = fromIntegral $ w `shiftR` 8
 
-l :: Word16 -> Word8
-l w = fromIntegral $ w .&. 0x00ff
+lo :: Word16 -> Word8
+lo w = fromIntegral $ w .&. 0x00ff

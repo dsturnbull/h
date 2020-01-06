@@ -7,7 +7,7 @@ module CPU.Disassembler
   ) where
 
 import ASM.Length
-import ASM.Opcode
+import ASM.Operand
 import ASM.Program
 import CPU.Instructions.Decodes
 
