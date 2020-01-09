@@ -84,17 +84,19 @@ drawSprites vic cpu =
 
 drawSprite :: VIC -> CPU -> Word16 -> IO ()
 drawSprite VIC {..} cpu spr = do
-  let sprp = (*64) $ fromIntegral $ (cpu & mem) ! fromIntegral (spritePointerV + spr)
-  -- let sprc = (cpu & mem) ! fromIntegral (vicV + spr + 0x27)
-  let sprc = DVS.toList $ DVS.slice (fromIntegral (vicExtendedV + spr * 64)) 64 (cpu & mem)
-  let sprx = fromIntegral $ (cpu & mem) ! fromIntegral (vicV + spr * 2 + 0)
-  let spry = fromIntegral $ (cpu & mem) ! fromIntegral (vicV + spr * 2 + 1)
-  case sprites M.!? fromIntegral spr of
-    Just (t, _) -> do
-      let bin = loadSprite sprp cpu
-      updateSpriteColourExtended (t, bin) pitch sprc Transparent
-      copy renderer t Nothing (pure $ Rectangle (P (V2 (sprx * scale) (spry * scale))) (V2 (24 * scale) (21 * scale)))
-    Nothing -> return ()
+  let sper = (cpu & mem) ! fromIntegral (vicV + 0x15)
+  let on = sper ^. bitAt (fromIntegral spr)
+  when on $ do
+    let sprp = (*64) $ fromIntegral $ (cpu & mem) ! fromIntegral (spritePointerV + spr)
+    let sprc = DVS.toList $ DVS.slice (fromIntegral (vicExtendedV + spr * 64)) 64 (cpu & mem)
+    let sprx = fromIntegral $ (cpu & mem) ! fromIntegral (vicV + spr * 2 + 0)
+    let spry = fromIntegral $ (cpu & mem) ! fromIntegral (vicV + spr * 2 + 1)
+    case sprites M.!? fromIntegral spr of
+      Just (t, _) -> do
+        let bin = loadSprite sprp cpu
+        updateSpriteColourExtended (t, bin) pitch sprc Transparent
+        copy renderer t Nothing (pure $ Rectangle (P (V2 (sprx * scale) (spry * scale))) (V2 (24 * scale) (21 * scale)))
+      Nothing -> return ()
 
 loadSprite :: Word16 -> CPU -> [Word8]
 loadSprite addr cpu = DVS.toList $ DVS.slice (fromIntegral addr) 63 (cpu & mem)

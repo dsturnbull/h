@@ -92,11 +92,10 @@ tokens :-
   brk                           { tok (\p _ -> TokenBRK p) }
 
   -- Syntax
-  $hex{2}                       { tok (\p s -> TokenWord8  p (read ("0x" <> s))) }
-  $hex{4}                       { tok (\p s -> TokenWord16 p (read ("0x" <> s))) }
+  "$" $hex{2}                   { tok (\p s -> TokenWord8  p (read ("0x" <> drop 1 s))) }
+  "$" $hex{4}                   { tok (\p s -> TokenWord16 p (read ("0x" <> drop 1 s))) }
   $digit+                       { tok (\p s -> TokenNum p (read s)) }
   $label+                       { tok TokenLabel }
-  "$"                           { tok (\p _ -> TokenDollar p) }
   "#"                           { tok (\p _ -> TokenHash p) }
   ","                           { tok (\p _ -> TokenComma p) }
   "X"                           { tok (\p _ -> TokenX p) }
@@ -111,7 +110,7 @@ tokens :-
   "="                           { tok (\p _ -> TokenEquals p) }
   "+"                           { tok (\p _ -> TokenPlus p) }
   "-"                           { tok (\p _ -> TokenMinus p) }
-  $bits{8}                      { tok (\p s -> TokenWord8 p (fromIntegral $ toDec s)) }
+  "%" $bits{8}                  { tok (\p s -> TokenWord8 p (fromIntegral $ toDec (drop 1 s))) }
   '$chr{1}'                     { tok (\p s -> TokenWord8 p (fromIntegral $ ord (s !! 1))) }
 
   -- Control
@@ -187,7 +186,6 @@ data Token
   | TokenBRK AlexPosn
   | TokenWord8  AlexPosn Word8
   | TokenWord16 AlexPosn Word16
-  | TokenDollar AlexPosn
   | TokenHash AlexPosn
   | TokenComma AlexPosn
   | TokenX AlexPosn

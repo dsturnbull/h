@@ -25,6 +25,22 @@ pos_l:
 
 isr_v = $fffe
 colour_ram = $d800
+sper = $d015
+sprite_base = $d000
+sprite_ptr_base = $07f8
+
+screen_ram = $0400
+
+colour_ram_0 = $e000
+colour_ram_1 = $e040
+colour_ram_2 = $e080
+colour_ram_3 = $e0c0
+colour_ram_4 = $e100
+colour_ram_5 = $e140
+colour_ram_6 = $e180
+colour_ram_7 = $e1c0
+
+kbd = $0300
 
 .code
 
@@ -37,21 +53,18 @@ colour_ram = $d800
 write_1:
   lda #$6e
   sta colour_ram,X
-  ; sta $d7ff,X
   dex
   bne write_1
 
-  lda #$01
-  sta $d015 ; enable sprite 0
-  lda #$00
-  sta $d01b ; draw sprite in front
+  lda #$ff
+  sta sper ; enable sprites
 
   ldx #$00
   ldy #$00
   lda #$80
 set_sprite_pos:
-  sta $d000,X
-  sta $d001,X
+  sta sprite_base,X
+  sta sprite_base+1,X
   inx
   inx
   iny
@@ -62,7 +75,7 @@ set_sprite_pos:
   ldx #$00
 load_spr_ptr:
   lda #$80
-  sta $07f8,X
+  sta sprite_ptr_base,X
   inx
   cpx #$08
   bne load_spr_ptr
@@ -80,29 +93,29 @@ loop:
 ;   bne y
 
   ; spr0 nw
-  dec $d000
-  dec $d001
+  dec sprite_base
+  dec sprite_base+1
   ; spr1 ne
-  inc $d002
-  dec $d003
+  inc sprite_base+2
+  dec sprite_base+3
   ; spr2 e
-  inc $d004
+  inc sprite_base+4
   ;   $d005
   ; spr3 se
-  inc $d006
-  inc $d007
+  inc sprite_base+6
+  inc sprite_base+7
   ; spr4 s
   ;   $d008
-  inc $d009
+  inc sprite_base+9
   ; spr5 sw
-  dec $d00a
-  inc $d00b
+  dec sprite_base+10
+  inc sprite_base+11
   ; spr6 w
-  dec $d00c
+  dec sprite_base+12
   ;   $d00d
   ; spr7 n
   ;   $d00e
-  dec $d00f
+  dec sprite_base+15
 
   jsr change_colour
   adc #$01
@@ -112,14 +125,14 @@ change_colour:
   ; set spr0 colour
   ldx #$00
 set_colour:
-  sta $e000,X
-  sta $e040,X
-  sta $e080,X
-  sta $e0c0,X
-  sta $e100,X
-  sta $e140,X
-  sta $e180,X
-  sta $e1c0,X
+  sta colour_ram_0,X
+  sta colour_ram_1,X
+  sta colour_ram_2,X
+  sta colour_ram_3,X
+  sta colour_ram_4,X
+  sta colour_ram_5,X
+  sta colour_ram_6,X
+  sta colour_ram_7,X
   inx
   cpx #$40
   bne set_colour
@@ -132,10 +145,10 @@ isr:
   tya
   pha
 
-  lda $0300
+  lda kbd
 ;   sta _pos_h
   ldx pos_l
-  sta $0400,X
+  sta screen_ram,X
   clc
   inc pos_l
 

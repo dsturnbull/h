@@ -84,7 +84,6 @@ import qualified Data.ByteString as BS
     w8    { TokenWord8  _ $$ }
     w16   { TokenWord16 _ $$ }
     num   { TokenNum  _ $$ }
-    '$'   { TokenDollar _ }
     '#'   { TokenHash _ }
     ','   { TokenComma _ }
     'X'   { TokenX _ }
@@ -187,23 +186,25 @@ instruction  : adc oper                { ADC $2   }
              | data                    { Data     }
              | byte bytes              { Bytes $2 }
              | bin str                 {% do contents <- ExceptT (fmap Right (BS.readFile $2)); return (Bytes (BS.unpack contents)) }
-             | org '$' w16             { Origin $3 }
+             | org w16                 { Origin $2 }
 
-oper         : '#'  nm                 { Imm  $2 }
+oper         : '#'  nm                 { Imm $2 }
 oper         : '#'  lbl                { Label (LabelOpt LabelImm NoMod) $2 }
 oper         : '#'  lbl '+' num        { Label (LabelOpt LabelImm (Plus (fromIntegral $4))) $2 }
 oper         : '#'  lbl '-' num        { Label (LabelOpt LabelImm (Minus (fromIntegral $4))) $2 }
-oper         : '<' '#' '$' w16         { Imm (l $4) }
-oper         : '>' '#' '$' w16         { Imm (h $4) }
-oper         :     '$' w16             { Abs  $2 }
-oper         :     '$' w16 ',' 'X'     { AbsX $2 }
-oper         :     lbl     ',' 'X'     { Label (LabelOpt LabelAbsX NoMod) $1 } -- no zpg
-oper         :     '$' w16 ',' 'Y'     { AbsY $2 }
-oper         :     lbl     ',' 'Y'     { Label (LabelOpt LabelAbsY NoMod) $1 } -- no zpg
+oper         : '<' '#' w16             { Imm (l $3) }
+oper         : '>' '#' w16             { Imm (h $3) }
+oper         :     w16                 { Abs  $1 }
+oper         :     w16 ',' 'X'         { AbsX $1 }
+oper         :     lbl ',' 'X'         { Label (LabelOpt LabelAbsX NoMod) $1 } -- no zpg
+oper         :     lbl '+' num ',' 'X' { Label (LabelOpt LabelAbsX (Plus (fromIntegral $3))) $1 } -- no zpg
+oper         :     w16 ',' 'Y'         { AbsY $1 }
+oper         :     lbl '+' num ',' 'Y' { Label (LabelOpt LabelAbsY (Minus (fromIntegral $3))) $1 } -- no zpg
+oper         :     lbl ',' 'Y'         { Label (LabelOpt LabelAbsY NoMod) $1 } -- no zpg
 oper         :      nm                 { Zpg  $1 }
 oper         :      nm     ',' 'X'     { ZpgX $1 }
 oper         :      nm     ',' 'Y'     { ZpgY $1 }
-oper         : '(' '$' w16 ')'         { Ind $3 }
+oper         : '(' w16 ')'             { Ind $2 }
 oper         : '(' lbl     ')'         { Label (LabelOpt LabelIndirect NoMod) $2 }
 oper         : '('  nm     ',' 'X' ')' { IndX $2 }
 oper         : '(' lbl     ',' 'X' ')' { Label (LabelOpt LabelIndirectX NoMod) $2 }
@@ -215,22 +216,19 @@ oper         : lbl '-' num             { Label (LabelOpt LabelAbs (Minus (fromIn
 oper         : '<' '#' lbl             { Label (LabelOpt (LabelLowByte LabelImm) NoMod) $3 }
 oper         : '>' '#' lbl             { Label (LabelOpt (LabelHighByte LabelImm) NoMod) $3 }
 
-rel          : '$'  w8                 { Rel (fromIntegral $2) }
+rel          : w8                      { Rel (fromIntegral $1) }
 rel          : lbl                     { Label (LabelOpt LabelRel NoMod) $1 }
 
-nm           : '$'  w8                 { $2 }
-nm           : '%'  w8                 { $2 }
-nm           : w8                      { $1 } -- single-quoted
+nm           : w8                      { $1 }
 
 label        : lbl ':'                 { LabelDef $1 }
 
-variable     : lbl '=' '$' w8          { Variable8 $1 $4 }
-variable     : lbl '=' '$' w16         { Variable16 $1 $4 }
+variable     : lbl '=' w8              { Variable8 $1 $3 }
+variable     : lbl '=' w16             { Variable16 $1 $3 }
 
 bytes        : byteval                 { [$1] }
              | byteval ',' bytes       { $1 : $3 }
-byteval      : '$' w8                  { $2 }
-             | '%' w8                  { $2 }
+byteval      : w8                      { $1 }
 
 {
 parseError :: [Token] -> ExceptT String IO a
