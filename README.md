@@ -11,8 +11,8 @@
    o fix keyboard spam problem
 
 3. Refactor
-   * minimalise modules
-   * clearly separate ASM from decoder (separate project?)
+   o minimalise modules
+   o clearly separate ASM from decoder (separate project?)
 
 4. exe format
    o code, data segments

@@ -3,26 +3,26 @@
 module CPU.Hardware.Sound.Signal
   where
 
-import CPU.Hardware.Sound.Voice
+-- import CPU.Hardware.Sound.Voice
 
-import Control.Monad
+-- import Control.Monad
 import Data.Binary   (encode)
 import Data.Int
 import System.IO
 
-import qualified Synthesizer.Basic.Binary                     as BinSmp
-import qualified Synthesizer.Basic.Wave                       as Wave
-import qualified Synthesizer.Plain.Control                    as Ctrl
-import qualified Synthesizer.Plain.File                       as File
-import qualified Synthesizer.Plain.Filter.NonRecursive        as Filt
-import qualified Synthesizer.Plain.Filter.Recursive           as FiltRec
-import qualified Synthesizer.Plain.Filter.Recursive.Universal as UniFilter
-import qualified Synthesizer.Plain.Oscillator                 as Osci
-import qualified Synthesizer.Plain.Play                       as Play
-import qualified Synthesizer.Storable.Signal                  as SigSt
+-- import qualified Synthesizer.Basic.Binary                     as BinSmp
+-- import qualified Synthesizer.Basic.Wave                       as Wave
+-- import qualified Synthesizer.Plain.Control                    as Ctrl
+-- import qualified Synthesizer.Plain.File                       as File
+-- import qualified Synthesizer.Plain.Filter.NonRecursive        as Filt
+-- import qualified Synthesizer.Plain.Filter.Recursive           as FiltRec
+-- import qualified Synthesizer.Plain.Filter.Recursive.Universal as UniFilter
+-- import qualified Synthesizer.Plain.Oscillator                 as Osci
+-- import qualified Synthesizer.Plain.Play                       as Play
+-- import qualified Synthesizer.Storable.Signal                  as SigSt
 
 import qualified Data.ByteString.Lazy     as BS (concat, hPutStr)
-import qualified Data.StorableVector.Lazy as DSVL
+-- import qualified Data.StorableVector.Lazy as DSVL
 import qualified Data.Vector.Storable     as DVS
 
 type Amplitude = Double
@@ -35,12 +35,12 @@ silence = const 0
 
 -- |Oscillate in a form of a sine wave at 'freq' Hz.
 sine :: Time -> Signal
-sine freq t = sin $ freq * (2.0 * pi) * t
+sine f t = sin $ f * (2.0 * pi) * t
 
 -- |Square wave at 'freq' Hz.
 square :: Time -> Signal
-square freq t = if odd i then 1.0 else -1.0
-  where (i :: Int, _) = properFraction (t * freq)
+square f t = if odd i then 1.0 else -1.0
+  where (i :: Int, _) = properFraction (t * f)
 
 -- |Multiplies the signal by a fixed value.
 volume :: Amplitude -> Signal -> Signal
@@ -111,44 +111,44 @@ r = do
   BS.hPutStr o w
   hClose o
 
-ss :: Int -> Int -> Waveform -> Double -> Double -> Double -> Int -> ([Int16], [Int16])
-ss vol rate w freq' a d s = do
-  let al = ceiling $ realToFrac rate * a
-  let dl = ceiling $ realToFrac rate * d
-  let a = Ctrl.line al (0.0, fromInteger (fromIntegral vol) :: Double)
-  let d = Ctrl.line dl (fromInteger (fromIntegral vol) :: Double, fromInteger (fromIntegral s) :: Double)
-  let s = Ctrl.line 13230 (0.25, 0.25)
-  let ad = a ++ d
-  let siw = Filt.envelope ad (Osci.static Wave.saw 0 freq')
-  let ad = map BinSmp.int16FromCanonical (take 4000 siw)
-  let sustain = Filt.envelope s (Osci.static Wave.saw 0 freq')
-  let s' = map BinSmp.int16FromCanonical (take 4000 sustain)
-  (ad, s')
+-- ss :: Int -> Int -> Waveform -> Double -> Double -> Double -> Int -> ([Int16], [Int16])
+-- ss vol rate w freq' a d s = do
+--   let al = ceiling $ realToFrac rate * a
+--   let dl = ceiling $ realToFrac rate * d
+--   let a = Ctrl.line al (0.0, fromInteger (fromIntegral vol) :: Double)
+--   let d = Ctrl.line dl (fromInteger (fromIntegral vol) :: Double, fromInteger (fromIntegral s) :: Double)
+--   let s = Ctrl.line 13230 (0.25, 0.25)
+--   let ad = a ++ d
+--   let siw = Filt.envelope ad (Osci.static Wave.saw 0 freq')
+--   let ad = map BinSmp.int16FromCanonical (take 4000 siw)
+--   let sustain = Filt.envelope s (Osci.static Wave.saw 0 freq')
+--   let s' = map BinSmp.int16FromCanonical (take 4000 sustain)
+--   (ad, s')
 
-sf :: Int -> Int -> Waveform -> Double -> Double -> Double -> Double -> IO ()
-sf vol rate w freq' a d s = do
-  let al = ceiling $ realToFrac rate * a
-  let dl = ceiling $ realToFrac rate * d
-  let ae = Ctrl.line al (0.0, fromInteger (fromIntegral vol) :: Double)
-  let de = Ctrl.line dl (fromInteger (fromIntegral vol) :: Double, s)
-  let se = Ctrl.line 13230 (0.25, 0.25)
-  let ads = ae ++ de ++ se
-  let w' = Osci.static Wave.saw 0 freq'
-  let siw = Filt.envelope ads w'
-  void $ File.writeToInt16 "sine.aiff" (realToFrac rate :: Double) (take (rate * ceiling a) siw)
-  void $ Play.monoToInt16 (realToFrac rate :: Double) (take (rate * ceiling a) siw)
+-- sf :: Int -> Int -> Waveform -> Double -> Double -> Double -> Double -> IO ()
+-- sf vol rate w freq' a d s = do
+--   let al = ceiling $ realToFrac rate * a
+--   let dl = ceiling $ realToFrac rate * d
+--   let ae = Ctrl.line al (0.0, fromInteger (fromIntegral vol) :: Double)
+--   let de = Ctrl.line dl (fromInteger (fromIntegral vol) :: Double, s)
+--   let se = Ctrl.line 13230 (0.25, 0.25)
+--   let ads = ae ++ de ++ se
+--   let w' = Osci.static Wave.saw 0 freq'
+--   let siw = Filt.envelope ads w'
+--   void $ File.writeToInt16 "sine.aiff" (realToFrac rate :: Double) (take (rate * ceiling a) siw)
+--   void $ Play.monoToInt16 (realToFrac rate :: Double) (take (rate * ceiling a) siw)
 
-test :: Int -> Int -> IO ()
-test rate attack = do
-  let a = Ctrl.line 22050 (0, 0.5)
-  let d = Ctrl.line 13230 (0.5, 0.25)
-  let s = Ctrl.line 13230 (0.25, 0.25)
-  let r = Ctrl.exponential 33075 0.25
-  let ad = a ++ d ++ s ++ r
-  let siw :: [Double] = Filt.envelope ad (Osci.static Wave.saw 0 (0.01::Double))
-  -- let laser = Osci.freqMod Wave.saw 0 $ map (\f -> 0.12+0.11*f) $ Osci.static Wave.saw 0 (0.0011::Double)
-  -- let ping = Filt.envelope (Ctrl.exponential 5000 1) (Osci.static Wave.sine 0 (0.01::Double))
-  -- let fmping = Osci.phaseMod Wave.sine (0.01::Double) $ map (2*) ping
-  -- let fs = map UniFilter.lowpass $ UniFilter.run (map (\f -> UniFilter.parameter $ FiltRec.Pole 10 (0.04+0.02*f)) $ Osci.static Wave.sine 0 (0.00001::Double)) $ Osci.static Wave.saw 0 (0.002::Double)
-  void $ File.writeToInt16 "sine.aiff" (realToFrac rate :: Double) (take (rate * attack) siw)
-  void $ Play.monoToInt16 (realToFrac rate :: Double) (take (rate * attack) siw)
+-- test :: Int -> Int -> IO ()
+-- test rate attack = do
+--   let a = Ctrl.line 22050 (0, 0.5)
+--   let d = Ctrl.line 13230 (0.5, 0.25)
+--   let s = Ctrl.line 13230 (0.25, 0.25)
+--   let r = Ctrl.exponential 33075 0.25
+--   let ad = a ++ d ++ s ++ r
+--   let siw :: [Double] = Filt.envelope ad (Osci.static Wave.saw 0 (0.01::Double))
+--   -- let laser = Osci.freqMod Wave.saw 0 $ map (\f -> 0.12+0.11*f) $ Osci.static Wave.saw 0 (0.0011::Double)
+--   -- let ping = Filt.envelope (Ctrl.exponential 5000 1) (Osci.static Wave.sine 0 (0.01::Double))
+--   -- let fmping = Osci.phaseMod Wave.sine (0.01::Double) $ map (2*) ping
+--   -- let fs = map UniFilter.lowpass $ UniFilter.run (map (\f -> UniFilter.parameter $ FiltRec.Pole 10 (0.04+0.02*f)) $ Osci.static Wave.sine 0 (0.00001::Double)) $ Osci.static Wave.saw 0 (0.002::Double)
+--   void $ File.writeToInt16 "sine.aiff" (realToFrac rate :: Double) (take (rate * attack) siw)
+--   void $ Play.monoToInt16 (realToFrac rate :: Double) (take (rate * attack) siw)

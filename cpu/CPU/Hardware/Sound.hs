@@ -168,7 +168,7 @@ silence :: Signal
 silence = const 0
 
 sine :: Time -> Signal
-sine freq t = sin $ freq * (2.0 * pi) * t
+sine f t = sin $ f * (2.0 * pi) * t
 
 volume' :: Amplitude -> Signal -> Signal
 volume' x s t = s t * x
@@ -249,20 +249,20 @@ updateVoice v set get vt cpu = do
   let decaying  = high && voice ^. field @"attack" == 0
   let releasing = not high
 
-  when rising $ do
-    h <- openFile "log" AppendMode
-    hPutStrLn h $ printf "rising. w: %s f: %f with attack %f, decay: %f, sustain level: %i" (show $ wave' vctrl) freq' (attackTable $ attack' vad) (drTable $ decay' vad) (sustain' vsr)
-    let vol = cpu & sid & volume
-    let bs = BS.concat $ map encode (fst $ R.ss (fromIntegral vol) (fromIntegral rate) (wave' vctrl) freq' (attackTable $ attack' vad) (drTable $ decay' vad) (fromIntegral $ sustain' vsr))
-    o <- openBinaryFile "wav" WriteMode
-    BS.hPutStr o bs
-    hClose o
-    hClose h
+  -- when rising $ do
+  --   h <- openFile "log" AppendMode
+  --   hPutStrLn h $ printf "rising. w: %s f: %f with attack %f, decay: %f, sustain level: %i" (show $ wave' vctrl) freq' (attackTable $ attack' vad) (drTable $ decay' vad) (sustain' vsr)
+  --   let vol = cpu & sid & volume
+  --   let bs = BS.concat $ map encode (fst $ R.ss (fromIntegral vol) (fromIntegral rate) (wave' vctrl) freq' (attackTable $ attack' vad) (drTable $ decay' vad) (fromIntegral $ sustain' vsr))
+  --   o <- openBinaryFile "wav" WriteMode
+  --   BS.hPutStr o bs
+  --   hClose o
+  --   hClose h
 
-  when falling $ do
-    h <- openFile "log" AppendMode
-    hPutStrLn h $ printf "falling, release: %f" (drTable $ release' vsr)
-    hClose h
+  -- when falling $ do
+  --   h <- openFile "log" AppendMode
+  --   hPutStrLn h $ printf "falling, release: %f" (drTable $ release' vsr)
+  --   hClose h
 
   let cpu' = cpu & field @"sid" . set %~ \vc ->
                 vc & field @"gate"      .~ gate'    vctrl
